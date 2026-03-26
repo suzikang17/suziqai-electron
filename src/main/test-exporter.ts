@@ -1,4 +1,4 @@
-import { claudeCode } from '@anthropic-ai/claude-code';
+import { spawn } from 'child_process';
 import { writeFile } from 'fs/promises';
 import type { Step } from '../shared/types';
 
@@ -11,6 +11,39 @@ Rules:
 - Use Playwright's recommended locator strategy: getByRole > getByLabel > getByText > getByTestId > CSS
 - Generate meaningful test names from the step intent
 - Output ONLY the TypeScript code, no markdown fences, no explanation`;
+
+function invokeClaudeCli(prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '--print', prompt,
+      '--output-format', 'text',
+      '--max-turns', '1',
+    ];
+
+    const proc = spawn('claude', args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env },
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => { stdout += data.toString(); });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`claude CLI exited with code ${code}: ${stderr}`));
+      } else {
+        resolve(stdout.trim());
+      }
+    });
+
+    proc.on('error', (err) => {
+      reject(new Error(`Failed to spawn claude CLI: ${err.message}. Is Claude Code installed?`));
+    });
+  });
+}
 
 export class TestExporter {
   async exportSteps(testName: string, steps: Step[], outputPath: string): Promise<string> {
@@ -28,17 +61,9 @@ ${stepsDescription}
 
 Generate the Playwright test file:`;
 
-    const response = await claudeCode({
-      prompt,
-      options: { maxTokens: 4096 },
-    });
+    const code = await invokeClaudeCli(prompt);
 
-    const code = typeof response === 'string'
-      ? response
-      : Array.isArray(response.content)
-        ? response.content.find((c: any) => c.type === 'text')?.text ?? ''
-        : '';
-
+    // Strip markdown code fences if present
     const cleanCode = code.replace(/^```\w*\n/, '').replace(/\n```$/, '').trim();
 
     await writeFile(outputPath, cleanCode, 'utf-8');

@@ -1,5 +1,5 @@
-import { claudeCode } from '@anthropic-ai/claude-code';
-import type { Step, StepAction } from '../shared/types';
+import { spawn } from 'child_process';
+import type { StepAction } from '../shared/types';
 
 interface PageContext {
   url: string;
@@ -40,6 +40,40 @@ Use Playwright's recommended locator strategy:
 
 Always respond with valid JSON. Keep conversational messages concise.`;
 
+function invokeClaudeCli(prompt: string, systemPrompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '--print', prompt,
+      '--output-format', 'text',
+      '--system-prompt', systemPrompt,
+      '--max-turns', '1',
+    ];
+
+    const proc = spawn('claude', args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env },
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => { stdout += data.toString(); });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`claude CLI exited with code ${code}: ${stderr}`));
+      } else {
+        resolve(stdout.trim());
+      }
+    });
+
+    proc.on('error', (err) => {
+      reject(new Error(`Failed to spawn claude CLI: ${err.message}. Is Claude Code installed?`));
+    });
+  });
+}
+
 export class ClaudeSession {
   private conversationHistory: Array<{ role: string; content: string }> = [];
 
@@ -51,27 +85,18 @@ export class ClaudeSession {
 
     this.conversationHistory.push({ role: 'user', content: fullMessage });
 
-    const response = await claudeCode({
-      prompt: fullMessage,
-      systemPrompt: SYSTEM_PROMPT,
-      options: {
-        maxTokens: 4096,
-      },
-    });
-
-    const text = typeof response === 'string'
-      ? response
-      : Array.isArray(response.content)
-        ? response.content.find((c: any) => c.type === 'text')?.text ?? ''
-        : '';
+    const text = await invokeClaudeCli(fullMessage, SYSTEM_PROMPT);
 
     try {
-      const parsed: ClaudeResponse = JSON.parse(text);
-      this.conversationHistory.push({ role: 'assistant', content: text });
+      // Try to extract JSON from the response (may be wrapped in markdown fences)
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      const parsed: ClaudeResponse = JSON.parse(jsonStr);
+      this.conversationHistory.push({ role: 'assistant', content: jsonStr });
 
       return {
         message: parsed.message,
-        steps: (parsed.steps ?? []).map((s, i) => ({
+        steps: (parsed.steps ?? []).map((s) => ({
           label: s.label,
           action: s.action,
         })),

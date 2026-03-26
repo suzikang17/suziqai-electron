@@ -1,18 +1,45 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TestExporter } from '../../src/main/test-exporter';
+import { EventEmitter } from 'events';
 import type { Step } from '../../src/shared/types';
 
-vi.mock('@anthropic-ai/claude-code', () => ({
-  claudeCode: vi.fn(),
-}));
+const { mockSpawn } = vi.hoisted(() => ({ mockSpawn: vi.fn() }));
+
+vi.mock('child_process', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('child_process')>();
+  return { ...actual, default: actual, spawn: mockSpawn };
+});
 
 vi.mock('fs/promises', () => {
   const writeFile = vi.fn().mockResolvedValue(undefined);
   return { writeFile, default: { writeFile } };
 });
 
-import { claudeCode } from '@anthropic-ai/claude-code';
 import { writeFile } from 'fs/promises';
+import { TestExporter } from '../../src/main/test-exporter';
+
+function createMockProc(stdout: string) {
+  const proc = new EventEmitter() as any;
+  const stdoutEmitter = new EventEmitter();
+  const stderrEmitter = new EventEmitter();
+  proc.stdout = stdoutEmitter;
+  proc.stderr = stderrEmitter;
+  proc.stdin = { write: vi.fn(), end: vi.fn() };
+
+  const origOn = stdoutEmitter.on.bind(stdoutEmitter);
+  stdoutEmitter.on = (event: string, listener: (...args: any[]) => void) => {
+    origOn(event, listener);
+    if (event === 'data') {
+      setImmediate(() => {
+        stdoutEmitter.emit('data', Buffer.from(stdout));
+        proc.emit('close', 0);
+      });
+    }
+    return stdoutEmitter;
+  };
+
+  return proc;
+}
 
 describe('TestExporter', () => {
   let exporter: TestExporter;
@@ -26,7 +53,7 @@ describe('TestExporter', () => {
 
   beforeEach(() => {
     exporter = new TestExporter();
-    vi.clearAllMocks();
+    mockSpawn.mockReset();
   });
 
   it('generates a valid playwright test file from steps', async () => {
@@ -41,9 +68,7 @@ test.describe('Login flow', () => {
   });
 });`;
 
-    vi.mocked(claudeCode).mockResolvedValue({
-      content: [{ type: 'text', text: expectedCode }],
-    } as any);
+    mockSpawn.mockReturnValue(createMockProc(expectedCode));
 
     const result = await exporter.exportSteps('Login flow', mockSteps, '/tmp/login.spec.ts');
 
