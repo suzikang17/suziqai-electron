@@ -1,5 +1,7 @@
 import { app, BrowserWindow, BrowserView, ipcMain, dialog } from 'electron';
 import path from 'path';
+import { readdir } from 'fs/promises';
+import os from 'os';
 import { BrowserManager } from './browser-manager';
 import { ClaudeSession } from './claude-session';
 import { Recorder } from './recorder';
@@ -82,6 +84,27 @@ function createWindow(): void {
       filters: [{ name: 'TypeScript', extensions: ['ts'] }],
     });
     return result.canceled ? null : result.filePath;
+  });
+
+  ipcMain.handle('fs:read-dir', async (_event, dirPath: string) => {
+    const entries = await readdir(dirPath, { withFileTypes: true });
+    return entries
+      .filter(e => !e.name.startsWith('.')) // hide dotfiles
+      .sort((a, b) => {
+        // directories first, then alphabetical
+        if (a.isDirectory() && !b.isDirectory()) return -1;
+        if (!a.isDirectory() && b.isDirectory()) return 1;
+        return a.name.localeCompare(b.name);
+      })
+      .map(e => ({
+        name: e.name,
+        path: path.join(dirPath, e.name),
+        isDirectory: e.isDirectory(),
+      }));
+  });
+
+  ipcMain.handle('fs:home-path', () => {
+    return os.homedir();
   });
 
   mainWindow.on('closed', async () => {

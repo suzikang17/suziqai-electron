@@ -19,6 +19,7 @@ const IPC = {
   PROJECT_CONFIG: 'project:config',
   EXPORT_TEST: 'export:test',
   EXPORT_RESULT: 'export:result',
+  READ_DIR: 'fs:read-dir',
 } as const;
 
 contextBridge.exposeInMainWorld('suziqai', {
@@ -62,4 +63,8 @@ contextBridge.exposeInMainWorld('suziqai', {
   // Dialog
   showOpenDialog: () => ipcRenderer.invoke('dialog:open'),
   showSaveDialog: (defaultPath: string) => ipcRenderer.invoke('dialog:save', defaultPath),
+
+  // Filesystem
+  readDir: (dirPath: string) => ipcRenderer.invoke('fs:read-dir', dirPath),
+  getHomePath: () => ipcRenderer.invoke('fs:home-path'),
 });

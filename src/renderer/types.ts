@@ -20,6 +20,8 @@ export interface SuziQaiAPI {
   onExportResult: (callback: (path: string) => void) => void;
   showOpenDialog: () => Promise<string | null>;
   showSaveDialog: (defaultPath: string) => Promise<string | null>;
+  readDir: (dirPath: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }>>;
+  getHomePath: () => Promise<string>;
 }
 
 declare global {
