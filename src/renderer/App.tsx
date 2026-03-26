@@ -1,18 +1,12 @@
 import React, { useState } from 'react';
 import type { Step, TestCase, ChatMessage, AppMode } from '@shared/types';
-
-// Placeholder components until Tasks 5-7 create the real ones
-function StepSidebar(props: any) {
-  return <div style={{ padding: 10, color: 'var(--text-muted)' }}>Step Sidebar (placeholder)</div>;
-}
-function ChatPanel(props: any) {
-  return <div style={{ padding: 10, color: 'var(--text-muted)' }}>Chat Panel (placeholder)</div>;
-}
-function BrowserToolbar(props: any) {
-  return <div style={{ padding: 10, color: 'var(--text-muted)' }}>Browser Toolbar (placeholder)</div>;
-}
+import { ProjectSetup } from './components/ProjectSetup';
+import { StepSidebar } from './components/StepSidebar';
+import { ChatPanel } from './components/ChatPanel';
+import { BrowserToolbar } from './components/BrowserToolbar';
 
 export function App() {
+  const [projectPath, setProjectPath] = useState<string | null>(null);
   const [mode, setMode] = useState<AppMode>('command');
   const [currentTest, setCurrentTest] = useState<TestCase>({
     id: '1',
@@ -24,6 +18,10 @@ export function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [chatHeight, setChatHeight] = useState(200);
+
+  if (!projectPath) {
+    return <ProjectSetup onProjectOpened={setProjectPath} />;
+  }
 
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
