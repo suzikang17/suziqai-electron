@@ -32,7 +32,7 @@ export function StepItem({ step, index, onAccept, onDeny }: StepItemProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
         <span style={{ color, fontSize: 12 }}>{icon}</span>
         <span style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 'bold' }}>
-          {index + 1}. {step.label}
+          <span>{index + 1}. </span><span>{step.label}</span>
         </span>
       </div>
       <div style={{ color: 'var(--text-muted)', fontSize: 10, paddingLeft: 17 }}>

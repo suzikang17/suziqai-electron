@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ProjectConfigManager } from '../../src/main/project-config';
 import path from 'path';
 
-vi.mock('fs/promises', () => ({
-  readFile: vi.fn(),
-  writeFile: vi.fn().mockResolvedValue(undefined),
-  mkdir: vi.fn().mockResolvedValue(undefined),
-  access: vi.fn(),
-}));
+vi.mock('fs/promises', () => {
+  const readFile = vi.fn();
+  const writeFile = vi.fn().mockResolvedValue(undefined);
+  const mkdir = vi.fn().mockResolvedValue(undefined);
+  const access = vi.fn();
+  return { readFile, writeFile, mkdir, access, default: { readFile, writeFile, mkdir, access } };
+});
 
 import { readFile, writeFile, mkdir, access } from 'fs/promises';
 

@@ -6,9 +6,10 @@ vi.mock('@anthropic-ai/claude-code', () => ({
   claudeCode: vi.fn(),
 }));
 
-vi.mock('fs/promises', () => ({
-  writeFile: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('fs/promises', () => {
+  const writeFile = vi.fn().mockResolvedValue(undefined);
+  return { writeFile, default: { writeFile } };
+});
 
 import { claudeCode } from '@anthropic-ai/claude-code';
 import { writeFile } from 'fs/promises';
