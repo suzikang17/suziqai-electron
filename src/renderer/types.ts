@@ -25,6 +25,8 @@ export interface SuziQaiAPI {
   getLastProject: () => Promise<string | null>;
   setLastProject: (path: string) => Promise<void>;
   setViewportBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<void>;
+  saveSession: (data: any) => Promise<void>;
+  loadSession: () => Promise<any>;
 }
 
 declare global {

@@ -89,6 +89,29 @@ export function App() {
     return () => observer.disconnect();
   }, [projectPath]);
 
+  // Load saved session when project opens
+  useEffect(() => {
+    if (!projectPath) return;
+    window.suziqai.loadSession().then((data) => {
+      if (data) {
+        if (data.messages) setMessages(data.messages);
+        if (data.currentTest) setCurrentTest(data.currentTest);
+      }
+    });
+  }, [projectPath]);
+
+  // Save session when state changes
+  useEffect(() => {
+    if (!projectPath) return;
+    const timeout = setTimeout(() => {
+      window.suziqai.saveSession({
+        messages,
+        currentTest,
+      });
+    }, 500); // debounce 500ms
+    return () => clearTimeout(timeout);
+  }, [messages, currentTest, projectPath]);
+
   if (!projectPath) {
     return <ProjectSetup onProjectOpened={(path, _baseUrl) => setProjectPath(path)} />;
   }

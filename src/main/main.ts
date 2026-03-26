@@ -420,6 +420,27 @@ function createWindow(): void {
     await writeFile(lastProjectFile, projectPath, 'utf-8');
   });
 
+  ipcMain.handle('session:save', async (_event, data: any) => {
+    const projectPath = projectConfig.getProjectPath();
+    if (!projectPath) return;
+    const { writeFile, mkdir } = await import('fs/promises');
+    const sessionDir = path.join(projectPath, '.suziqai');
+    await mkdir(sessionDir, { recursive: true });
+    await writeFile(path.join(sessionDir, 'session.json'), JSON.stringify(data, null, 2), 'utf-8');
+  });
+
+  ipcMain.handle('session:load', async () => {
+    const projectPath = projectConfig.getProjectPath();
+    if (!projectPath) return null;
+    try {
+      const { readFile } = await import('fs/promises');
+      const data = await readFile(path.join(projectPath, '.suziqai', 'session.json'), 'utf-8');
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
+  });
+
   mainWindow.on('closed', async () => {
     await browserManager.close();
     mainWindow = null;

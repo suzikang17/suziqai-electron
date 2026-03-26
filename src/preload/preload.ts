@@ -75,6 +75,10 @@ contextBridge.exposeInMainWorld('suziqai', {
   setViewportBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
     ipcRenderer.invoke(IPC.VIEWPORT_BOUNDS, bounds),
 
+  // Session persistence
+  saveSession: (data: any) => ipcRenderer.invoke('session:save', data),
+  loadSession: () => ipcRenderer.invoke('session:load'),
+
   // Cleanup — remove all listeners for a channel
   removeAllListeners: (channel: string) => ipcRenderer.removeAllListeners(channel),
 });
