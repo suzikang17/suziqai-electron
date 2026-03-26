@@ -7,6 +7,31 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
+  const isSystem = (message as any).role === 'system';
+  const isAi = message.role === 'assistant';
+
+  // System/log messages — compact monospace style
+  if (isSystem) {
+    const content = message.content;
+    const isError = content.includes('✗') || content.toLowerCase().includes('error') || content.toLowerCase().includes('failed');
+    const isSuccess = content.includes('✓');
+    const isNav = content.startsWith('Navigated');
+
+    return (
+      <div style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: 11,
+        color: isError ? 'var(--accent-red)' : isSuccess ? 'var(--accent-green)' : isNav ? 'var(--accent-blue, #0969da)' : 'var(--text-muted)',
+        padding: '1px 0',
+        opacity: 0.9,
+      }}>
+        <span style={{ color: 'var(--text-muted)', marginRight: 6, fontSize: 9 }}>
+          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        </span>
+        {content}
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', gap: 6 }}>

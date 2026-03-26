@@ -44,6 +44,8 @@ const PICKER_SCRIPT = `
       id: el.id || null,
       role: el.getAttribute('role') || null,
       ariaLabel: el.getAttribute('aria-label') || null,
+      ariaLabelledBy: null,
+      ariaDescribedBy: null,
       placeholder: el.getAttribute('placeholder') || null,
       testId: el.getAttribute('data-testid') || el.getAttribute('data-test-id') || null,
       type: el.getAttribute('type') || null,
@@ -51,7 +53,34 @@ const PICKER_SCRIPT = `
       classes: Array.from(el.classList || []).slice(0, 3),
       labelFor: null,
       parentLabelText: null,
+      outerHtml: el.outerHTML.substring(0, 500),
+      parentChain: [],
     };
+
+    // Capture parent chain (tag + key attrs, 3 levels)
+    var par = el.parentElement;
+    for (var d = 0; d < 3 && par && par !== document.body; d++) {
+      var ptag = par.tagName.toLowerCase();
+      var pattrs = '';
+      if (par.id) pattrs += ' id="' + par.id + '"';
+      if (par.className && typeof par.className === 'string' && par.className.trim()) pattrs += ' class="' + par.className.trim().substring(0, 40) + '"';
+      result.parentChain.push(ptag + pattrs);
+      par = par.parentElement;
+    }
+
+    // Resolve aria-labelledby
+    var labelledBy = el.getAttribute('aria-labelledby');
+    if (labelledBy) {
+      var labelEl = document.getElementById(labelledBy);
+      if (labelEl) result.ariaLabelledBy = labelEl.textContent.trim();
+    }
+
+    // Resolve aria-describedby
+    var describedBy = el.getAttribute('aria-describedby');
+    if (describedBy) {
+      var descEl = document.getElementById(describedBy);
+      if (descEl) result.ariaDescribedBy = descEl.textContent.trim();
+    }
 
     // Check for associated label
     if (el.id) {
@@ -75,17 +104,20 @@ const PICKER_SCRIPT = `
 true;
 `;
 
+// Generates selectors in Playwright's recommended priority order:
+// 1. getByRole — most resilient, accessibility-based
+// 2. getByLabel — great for form inputs
+// 3. getByPlaceholder — inputs without labels
+// 4. getByText — non-interactive elements
+// 5. getByTestId — explicit test hooks
+// 6. CSS — last resort, most brittle
 function generateSelectors(info: any): Array<{ type: string; selector: string; confidence: string }> {
   const selectors: Array<{ type: string; selector: string; confidence: string }> = [];
   const tag = info.tag;
-
-  // getByText
   const text = info.directText || '';
-  if (text && text.length > 0 && text.length < 80) {
-    selectors.push({ type: 'getByText', selector: "getByText('" + text.replace(/'/g, "\\'") + "')", confidence: 'high' });
-  }
+  const esc = (s: string) => s.replace(/'/g, "\\'");
 
-  // getByRole
+  // 1. getByRole (best)
   const implicitRoles: Record<string, string> = {
     a: 'link', button: 'button', h1: 'heading', h2: 'heading', h3: 'heading',
     h4: 'heading', h5: 'heading', h6: 'heading', input: 'textbox',
@@ -97,33 +129,38 @@ function generateSelectors(info: any): Array<{ type: string; selector: string; c
   }
   const role = info.role || implicitRoles[tag];
   if (role) {
-    const name = info.ariaLabel || text || info.text?.substring(0, 50) || '';
+    const name = info.ariaLabel || info.ariaLabelledBy || text || info.text?.substring(0, 50) || '';
     if (name) {
-      selectors.push({ type: 'getByRole', selector: "getByRole('" + role + "', { name: '" + name.replace(/'/g, "\\'") + "' })", confidence: 'high' });
+      selectors.push({ type: 'getByRole', selector: "getByRole('" + role + "', { name: '" + esc(name) + "' })", confidence: 'recommended' });
     } else {
-      selectors.push({ type: 'getByRole', selector: "getByRole('" + role + "')", confidence: 'medium' });
+      selectors.push({ type: 'getByRole', selector: "getByRole('" + role + "')", confidence: 'high' });
     }
   }
 
-  // getByLabel
-  const labelText = info.labelFor || info.parentLabelText || info.ariaLabel;
+  // 2. getByLabel (includes aria-labelledby resolution)
+  const labelText = info.labelFor || info.parentLabelText || info.ariaLabel || info.ariaLabelledBy;
   if (labelText) {
-    selectors.push({ type: 'getByLabel', selector: "getByLabel('" + labelText.replace(/'/g, "\\'") + "')", confidence: 'high' });
+    selectors.push({ type: 'getByLabel', selector: "getByLabel('" + esc(labelText) + "')", confidence: 'recommended' });
   }
 
-  // getByPlaceholder
+  // 3. getByPlaceholder
   if (info.placeholder) {
-    selectors.push({ type: 'getByPlaceholder', selector: "getByPlaceholder('" + info.placeholder.replace(/'/g, "\\'") + "')", confidence: 'high' });
+    selectors.push({ type: 'getByPlaceholder', selector: "getByPlaceholder('" + esc(info.placeholder) + "')", confidence: 'high' });
   }
 
-  // getByTestId
+  // 4. getByText
+  if (text && text.length > 0 && text.length < 80) {
+    selectors.push({ type: 'getByText', selector: "getByText('" + esc(text) + "')", confidence: 'high' });
+  }
+
+  // 5. getByTestId
   if (info.testId) {
     selectors.push({ type: 'getByTestId', selector: "getByTestId('" + info.testId + "')", confidence: 'high' });
   }
 
-  // CSS
+  // 6. CSS (least preferred)
   if (info.id) {
-    selectors.push({ type: 'css', selector: '#' + info.id, confidence: 'medium' });
+    selectors.push({ type: 'css', selector: '#' + info.id, confidence: 'low' });
   } else if (info.classes && info.classes.length > 0) {
     selectors.push({ type: 'css', selector: tag + '.' + info.classes.join('.'), confidence: 'low' });
   } else {
@@ -143,9 +180,23 @@ export async function startPicker(view: BrowserView, mainWindow: BrowserWindow):
       );
       if (result) {
         const selectors = generateSelectors(result);
+        // Build DOM context in TypeScript from the captured data
+        let domContext = '';
+        const parents = (result.parentChain || []).reverse();
+        for (let i = 0; i < parents.length; i++) {
+          domContext += '  '.repeat(i) + '<' + parents[i] + '>\n';
+        }
+        // Trim outerHTML for display
+        const html = (result.outerHtml || '').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+        domContext += '  '.repeat(parents.length) + html.substring(0, 200) + (html.length > 200 ? '...' : '');
+        for (let i = parents.length - 1; i >= 0; i--) {
+          const closeTag = parents[i].split(' ')[0];
+          domContext += '\n' + '  '.repeat(i) + '</' + closeTag + '>';
+        }
+
         mainWindow.webContents.send('picker:result', {
           selectors,
-          element: { tag: result.tag, text: result.text, id: result.id },
+          element: { tag: result.tag, text: result.text, id: result.id, domContext },
         });
       }
     } catch (e) {

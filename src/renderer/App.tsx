@@ -56,6 +56,15 @@ export function App() {
     setTests(prev => prev.map(t => t.id === activeTestId ? updater(t) : t));
   };
 
+  const log = (content: string, role: 'assistant' | 'system' = 'system' as any) => {
+    setMessages(prev => [...prev, {
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      role,
+      content,
+      timestamp: Date.now(),
+    }]);
+  };
+
   const createNewTest = () => {
     const newTest: TestCase = {
       id: `test-${Date.now()}`,
@@ -95,6 +104,7 @@ export function App() {
 
     window.suziqai.onUrlChanged((url) => {
       setCurrentUrl(url);
+      log(`Navigated → ${url}`);
     });
 
     window.suziqai.onChatResponse((message) => {
@@ -119,15 +129,27 @@ export function App() {
         return { ...t, steps: newSteps };
       }));
       setInsertAtIndex(null); // reset after insert
+      log(`${(steps as any[]).length} step(s) added`);
     });
 
     window.suziqai.onStepResult((stepId, status, error) => {
-      setTests(prev => prev.map(t => t.id === activeTestId ? {
-        ...t,
-        steps: t.steps.map(s =>
-          s.id === stepId ? { ...s, status: status as any, error } : s
-        ),
-      } : t));
+      setTests(prev => {
+        const updated = prev.map(t => t.id === activeTestId ? {
+          ...t,
+          steps: t.steps.map(s =>
+            s.id === stepId ? { ...s, status: status as any, error } : s
+          ),
+        } : t);
+        // Log the result
+        const test = updated.find(t => t.id === activeTestId);
+        const step = test?.steps.find(s => s.id === stepId);
+        if (step) {
+          const icon = status === 'passed' ? '✓' : status === 'failed' ? '✗' : '●';
+          const msg = `${icon} ${step.label}` + (error ? ` — ${error}` : '');
+          log(msg);
+        }
+        return updated;
+      });
     });
 
     return () => {
@@ -195,6 +217,7 @@ export function App() {
   useEffect(() => {
     window.suziqai.removeAllListeners('picker:result');
     window.suziqai.onPickerResult((data: any) => {
+      log(`Picked <${data.element?.tag}> "${data.element?.text?.substring(0, 40) || ''}" — ${data.selectors.length} selectors`);
       setPickedSelectors(data.selectors);
       setPickedElement(data.element);
     });
@@ -347,6 +370,7 @@ export function App() {
           onAcceptStep={(stepId: string) => {
             const step = currentTest.steps.find(s => s.id === stepId);
             if (step) {
+              log(`▶ Running: ${step.label}`);
               window.suziqai.executeStep(stepId, step.action);
             }
           }}
@@ -394,6 +418,7 @@ export function App() {
             const pendingSteps = currentTest.steps
               .filter(s => s.status === 'pending' || s.status === 'passed')
               .map(s => ({ id: s.id, action: s.action }));
+            log(`▶▶ Running all ${pendingSteps.length} steps...`);
             window.suziqai.executeAllSteps(pendingSteps);
           }}
           onExport={() => {
@@ -486,6 +511,14 @@ export function App() {
               setPickedElement(null);
             }}
             onDismissPicker={() => {
+              setPickedSelectors(null);
+              setPickedElement(null);
+            }}
+            onAskAiSelector={(selectors, element) => {
+              const selectorList = selectors.map((s: any) => `[${s.confidence}] ${s.selector}`).join('\n');
+              const prompt = `I picked this element and got these selector candidates. Which is the best selector for a robust, reliable Playwright test? Consider uniqueness, stability across code changes, and Playwright best practices.\n\nElement: <${element?.tag}> "${element?.text?.substring(0, 60) || ''}"\nDOM Context:\n${element?.domContext || 'N/A'}\n\nSelector candidates:\n${selectorList}\n\nRecommend the best selector and explain why in 1-2 sentences.`;
+              setIsChatLoading(true);
+              window.suziqai.sendChat(prompt);
               setPickedSelectors(null);
               setPickedElement(null);
             }}
