@@ -1,5 +1,25 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC } from '../shared/types';
+
+// IPC channel names inlined to avoid cross-module require in sandboxed preload
+const IPC = {
+  BROWSER_NAVIGATE: 'browser:navigate',
+  BROWSER_URL_CHANGED: 'browser:url-changed',
+  STEP_EXECUTE: 'step:execute',
+  STEP_EXECUTE_ALL: 'step:execute-all',
+  STEP_RESULT: 'step:result',
+  STEPS_PROPOSED: 'steps:proposed',
+  CHAT_SEND: 'chat:send',
+  CHAT_RESPONSE: 'chat:response',
+  MODE_CHANGE: 'mode:change',
+  RECORD_START: 'record:start',
+  RECORD_STOP: 'record:stop',
+  RECORD_EVENT: 'record:event',
+  OBSERVE_SUGGESTIONS: 'observe:suggestions',
+  PROJECT_OPEN: 'project:open',
+  PROJECT_CONFIG: 'project:config',
+  EXPORT_TEST: 'export:test',
+  EXPORT_RESULT: 'export:result',
+} as const;
 
 contextBridge.exposeInMainWorld('suziqai', {
   // Chat

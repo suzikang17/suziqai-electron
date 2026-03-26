@@ -4,7 +4,7 @@
   "description": "AI-assisted browser test authoring with Playwright",
   "main": "dist/main/main/main.js",
   "scripts": {
-    "dev": "tsc -p tsconfig.main.json && concurrently \"vite\" \"tsc -p tsconfig.main.json --watch\" \"electron .\"",
+    "dev": "tsc -p tsconfig.main.json && concurrently \"vite\" \"tsc -p tsconfig.main.json --watch\" \"NODE_ENV=development electron .\"",
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json",
     "build": "npm run build:renderer && npm run build:main",
