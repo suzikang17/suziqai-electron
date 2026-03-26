@@ -5,6 +5,7 @@ import type { ChatMessage as ChatMessageType, AppMode } from '@shared/types';
 interface ChatPanelProps {
   messages: ChatMessageType[];
   mode: AppMode;
+  isLoading?: boolean;
   onSend: (content: string) => void;
 }
 
@@ -14,7 +15,7 @@ const modeBadge: Record<AppMode, { label: string; color: string }> = {
   observe: { label: 'Observing', color: 'var(--accent-yellow)' },
 };
 
-export function ChatPanel({ messages, mode, onSend }: ChatPanelProps) {
+export function ChatPanel({ messages, mode, isLoading, onSend }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +66,16 @@ export function ChatPanel({ messages, mode, onSend }: ChatPanelProps) {
         {messages.map(msg => (
           <ChatMessage key={msg.id} message={msg} />
         ))}
+        {isLoading && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span style={{ color: 'var(--accent-green)', fontSize: 11, fontWeight: 'bold', minWidth: 30 }}>AI:</span>
+            <span style={{ display: 'flex', gap: 4 }}>
+              <span className="loading-dot" />
+              <span className="loading-dot" />
+              <span className="loading-dot" />
+            </span>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 4, marginTop: 6 }}>

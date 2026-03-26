@@ -3,8 +3,8 @@ import type { Step, ChatMessage, ProjectConfig, AppMode } from '@shared/types';
 export interface SuziQaiAPI {
   sendChat: (message: string) => Promise<void>;
   onChatResponse: (callback: (message: string) => void) => void;
-  executeStep: (stepId: string) => Promise<void>;
-  executeAllSteps: () => Promise<void>;
+  executeStep: (stepId: string, action?: any) => Promise<void>;
+  executeAllSteps: (steps?: Array<{ id: string; action: any }>) => Promise<void>;
   onStepsProposed: (callback: (steps: Step[]) => void) => void;
   onStepResult: (callback: (stepId: string, status: string, error?: string) => void) => void;
   changeMode: (mode: AppMode) => Promise<void>;
@@ -22,6 +22,8 @@ export interface SuziQaiAPI {
   showSaveDialog: (defaultPath: string) => Promise<string | null>;
   readDir: (dirPath: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }>>;
   getHomePath: () => Promise<string>;
+  getLastProject: () => Promise<string | null>;
+  setLastProject: (path: string) => Promise<void>;
   setViewportBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<void>;
 }
 

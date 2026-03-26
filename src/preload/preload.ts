@@ -30,8 +30,8 @@ contextBridge.exposeInMainWorld('suziqai', {
     ipcRenderer.on(IPC.CHAT_RESPONSE, (_event, message) => callback(message)),
 
   // Steps
-  executeStep: (stepId: string) => ipcRenderer.invoke(IPC.STEP_EXECUTE, stepId),
-  executeAllSteps: () => ipcRenderer.invoke(IPC.STEP_EXECUTE_ALL),
+  executeStep: (stepId: string, action?: any) => ipcRenderer.invoke(IPC.STEP_EXECUTE, stepId, action),
+  executeAllSteps: (steps?: any[]) => ipcRenderer.invoke(IPC.STEP_EXECUTE_ALL, steps),
   onStepsProposed: (callback: (steps: unknown[]) => void) =>
     ipcRenderer.on(IPC.STEPS_PROPOSED, (_event, steps) => callback(steps)),
   onStepResult: (callback: (stepId: string, status: string, error?: string) => void) =>
@@ -52,7 +52,7 @@ contextBridge.exposeInMainWorld('suziqai', {
     ipcRenderer.on(IPC.BROWSER_URL_CHANGED, (_event, url) => callback(url)),
 
   // Project
-  openProject: (path: string) => ipcRenderer.invoke(IPC.PROJECT_OPEN, path),
+  openProject: (path: string, baseUrl?: string) => ipcRenderer.invoke(IPC.PROJECT_OPEN, path, baseUrl),
   onProjectConfig: (callback: (config: unknown) => void) =>
     ipcRenderer.on(IPC.PROJECT_CONFIG, (_event, config) => callback(config)),
 
@@ -68,8 +68,13 @@ contextBridge.exposeInMainWorld('suziqai', {
   // Filesystem
   readDir: (dirPath: string) => ipcRenderer.invoke('fs:read-dir', dirPath),
   getHomePath: () => ipcRenderer.invoke('fs:home-path'),
+  getLastProject: () => ipcRenderer.invoke('project:get-last'),
+  setLastProject: (path: string) => ipcRenderer.invoke('project:set-last', path),
 
   // Viewport
   setViewportBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
     ipcRenderer.invoke(IPC.VIEWPORT_BOUNDS, bounds),
+
+  // Cleanup — remove all listeners for a channel
+  removeAllListeners: (channel: string) => ipcRenderer.removeAllListeners(channel),
 });

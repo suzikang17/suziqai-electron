@@ -6,11 +6,12 @@ interface StepSidebarProps {
   testCase: TestCase;
   onAcceptStep: (stepId: string) => void;
   onDenyStep: (stepId: string) => void;
+  onResetStep: (stepId: string) => void;
   onRunAll: () => void;
   onExport: () => void;
 }
 
-export function StepSidebar({ testCase, onAcceptStep, onDenyStep, onRunAll, onExport }: StepSidebarProps) {
+export function StepSidebar({ testCase, onAcceptStep, onDenyStep, onResetStep, onRunAll, onExport }: StepSidebarProps) {
   return (
     <div
       style={{
@@ -34,6 +35,7 @@ export function StepSidebar({ testCase, onAcceptStep, onDenyStep, onRunAll, onEx
             index={i}
             onAccept={() => onAcceptStep(step.id)}
             onDeny={() => onDenyStep(step.id)}
+            onReset={() => onResetStep(step.id)}
           />
         ))}
         {testCase.steps.length === 0 && (

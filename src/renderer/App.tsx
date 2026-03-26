@@ -18,13 +18,53 @@ export function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [chatHeight, setChatHeight] = useState(200);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
 
-  // Listen for URL changes from the BrowserView
+  // Listen for URL changes, chat responses, steps, and step results from the main process
   useEffect(() => {
+    // Clean up any existing listeners first
+    window.suziqai.removeAllListeners('browser:url-changed');
+    window.suziqai.removeAllListeners('chat:response');
+    window.suziqai.removeAllListeners('steps:proposed');
+    window.suziqai.removeAllListeners('step:result');
+
     window.suziqai.onUrlChanged((url) => {
       setCurrentUrl(url);
     });
+
+    window.suziqai.onChatResponse((message) => {
+      setIsChatLoading(false);
+      setMessages(prev => [...prev, {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        role: 'assistant' as const,
+        content: message,
+        timestamp: Date.now(),
+      }]);
+    });
+
+    window.suziqai.onStepsProposed((steps) => {
+      setCurrentTest(prev => ({
+        ...prev,
+        steps: [...prev.steps, ...steps],
+      }));
+    });
+
+    window.suziqai.onStepResult((stepId, status, error) => {
+      setCurrentTest(prev => ({
+        ...prev,
+        steps: prev.steps.map(s =>
+          s.id === stepId ? { ...s, status: status as any, error } : s
+        ),
+      }));
+    });
+
+    return () => {
+      window.suziqai.removeAllListeners('browser:url-changed');
+      window.suziqai.removeAllListeners('chat:response');
+      window.suziqai.removeAllListeners('steps:proposed');
+      window.suziqai.removeAllListeners('step:result');
+    };
   }, []);
 
   // Report viewport bounds to main process so BrowserView can be positioned
@@ -50,7 +90,7 @@ export function App() {
   }, [projectPath]);
 
   if (!projectPath) {
-    return <ProjectSetup onProjectOpened={setProjectPath} />;
+    return <ProjectSetup onProjectOpened={(path, _baseUrl) => setProjectPath(path)} />;
   }
 
   return (
@@ -78,7 +118,10 @@ export function App() {
         <StepSidebar
           testCase={currentTest}
           onAcceptStep={(stepId: string) => {
-            window.suziqai.executeStep(stepId);
+            const step = currentTest.steps.find(s => s.id === stepId);
+            if (step) {
+              window.suziqai.executeStep(stepId, step.action);
+            }
           }}
           onDenyStep={(stepId: string) => {
             setCurrentTest(prev => ({
@@ -86,8 +129,19 @@ export function App() {
               steps: prev.steps.filter(s => s.id !== stepId),
             }));
           }}
+          onResetStep={(stepId: string) => {
+            setCurrentTest(prev => ({
+              ...prev,
+              steps: prev.steps.map(s =>
+                s.id === stepId ? { ...s, status: 'pending' as const, error: undefined } : s
+              ),
+            }));
+          }}
           onRunAll={() => {
-            window.suziqai.executeAllSteps();
+            const pendingSteps = currentTest.steps
+              .filter(s => s.status === 'pending' || s.status === 'passed')
+              .map(s => ({ id: s.id, action: s.action }));
+            window.suziqai.executeAllSteps(pendingSteps);
           }}
           onExport={() => {
             window.suziqai.showSaveDialog(`${currentTest.name}.spec.ts`).then(path => {
@@ -142,8 +196,10 @@ export function App() {
                 timestamp: Date.now(),
               };
               setMessages(prev => [...prev, userMsg]);
+              setIsChatLoading(true);
               window.suziqai.sendChat(content);
             }}
+            isLoading={isChatLoading}
           />
         </div>
       </div>

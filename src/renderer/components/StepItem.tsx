@@ -13,9 +13,10 @@ interface StepItemProps {
   index: number;
   onAccept: () => void;
   onDeny: () => void;
+  onReset?: () => void;
 }
 
-export function StepItem({ step, index, onAccept, onDeny }: StepItemProps) {
+export function StepItem({ step, index, onAccept, onDeny, onReset }: StepItemProps) {
   const { icon, color } = statusIcons[step.status];
   const actionSummary = formatAction(step.action);
 
@@ -35,7 +36,7 @@ export function StepItem({ step, index, onAccept, onDeny }: StepItemProps) {
           <span>{index + 1}. </span><span>{step.label}</span>
         </span>
       </div>
-      <div style={{ color: 'var(--text-muted)', fontSize: 10, paddingLeft: 17 }}>
+      <div style={{ color: 'var(--text-muted)', fontSize: 10, paddingLeft: 17, fontFamily: 'var(--font-mono)' }}>
         {actionSummary}
       </div>
       {step.status === 'pending' && (
@@ -65,6 +66,37 @@ export function StepItem({ step, index, onAccept, onDeny }: StepItemProps) {
             }}
           >
             Deny
+          </button>
+        </div>
+      )}
+      {(step.status === 'passed' || step.status === 'failed') && (
+        <div style={{ display: 'flex', gap: 4, marginTop: 6, paddingLeft: 17 }}>
+          <button
+            onClick={onAccept}
+            style={{
+              background: 'var(--bg-tertiary)',
+              color: 'var(--accent-green)',
+              borderRadius: 3,
+              padding: '2px 8px',
+              fontSize: 9,
+              fontWeight: 'bold',
+              border: '1px solid var(--accent-green)',
+            }}
+          >
+            Re-run
+          </button>
+          <button
+            onClick={onDeny}
+            style={{
+              background: 'var(--bg-primary)',
+              color: 'var(--text-muted)',
+              borderRadius: 3,
+              padding: '2px 8px',
+              fontSize: 9,
+              border: '1px solid var(--border)',
+            }}
+          >
+            Remove
           </button>
         </div>
       )}

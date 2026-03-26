@@ -7,11 +7,12 @@ interface DirEntry {
 }
 
 interface ProjectSetupProps {
-  onProjectOpened: (path: string) => void;
+  onProjectOpened: (path: string, baseUrl: string) => void;
 }
 
 export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
   const [query, setQuery] = useState('');
+  const [baseUrl, setBaseUrl] = useState('http://localhost:3000');
   const [results, setResults] = useState<DirEntry[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -20,11 +21,23 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const resultRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Get home path on mount
+  // Get home path and last project on mount
   useEffect(() => {
     window.suziqai.getHomePath().then((p) => {
       setHomePath(p);
-      setQuery(p + '/');
+      window.suziqai.getLastProject().then((last) => {
+        if (last) {
+          try {
+            const parsed = JSON.parse(last);
+            setQuery((parsed.path || p) + '/');
+            if (parsed.url) setBaseUrl(parsed.url);
+          } catch {
+            setQuery(last + '/');
+          }
+        } else {
+          setQuery(p + '/');
+        }
+      });
     });
   }, []);
 
@@ -108,8 +121,23 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       const selected = results[selectedIndex];
-      if (selected && selected.isDirectory) {
-        handleOpen(selected.path);
+      const resolved = resolvePath(query);
+
+      if (e.metaKey || e.ctrlKey) {
+        // Cmd+Enter / Ctrl+Enter: open the directory shown in the input
+        const dirPath = resolved.endsWith('/') ? resolved.slice(0, -1) : resolved;
+        handleOpen(dirPath);
+      } else if (selected && selected.isDirectory) {
+        // First Enter on a directory: drill into it (like Tab)
+        // If we're already showing its contents (query ends with this dir), open it
+        if (resolved.endsWith('/') && results.length >= 0) {
+          handleOpen(resolved.slice(0, -1));
+        } else {
+          setQuery(selected.path + '/');
+        }
+      } else if (resolved.endsWith('/')) {
+        // Enter when input is a directory path: open it
+        handleOpen(resolved.slice(0, -1));
       }
     }
   };
@@ -117,8 +145,9 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
   const handleOpen = async (dirPath: string) => {
     setStatus('loading');
     try {
-      await window.suziqai.openProject(dirPath);
-      onProjectOpened(dirPath);
+      await window.suziqai.openProject(dirPath, baseUrl);
+      await window.suziqai.setLastProject(JSON.stringify({ path: dirPath, url: baseUrl }));
+      onProjectOpened(dirPath, baseUrl);
     } catch (err) {
       setStatus('error');
       setError((err as Error).message);
@@ -261,12 +290,71 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
         )}
       </div>
 
+      {/* Selected directory + URL */}
+      {query && (
+        <div style={{
+          marginTop: 12,
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: 6,
+          padding: '10px 14px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+                Project directory
+              </span>
+              <div style={{ color: 'var(--accent-green)', fontSize: 13, fontFamily: 'monospace', marginTop: 2 }}>
+                {resolvePath(query).replace(/\/$/, '') || '/'}
+              </div>
+            </div>
+            <button
+              onClick={() => handleOpen(resolvePath(query).replace(/\/$/, ''))}
+              style={{
+                background: 'var(--accent-green)',
+                color: 'var(--bg-primary)',
+                borderRadius: 4,
+                padding: '6px 16px',
+                fontSize: 12,
+                fontWeight: 'bold',
+              }}
+            >
+              Open Project
+            </button>
+          </div>
+          <div>
+            <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+              App URL
+            </span>
+            <input
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder="http://localhost:3000"
+              style={{
+                display: 'block',
+                width: '100%',
+                marginTop: 4,
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                borderRadius: 4,
+                padding: '6px 10px',
+                fontSize: 13,
+                fontFamily: 'monospace',
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Footer hints */}
       <div style={{
         display: 'flex',
         justifyContent: 'center',
         gap: 16,
-        marginTop: 12,
+        marginTop: 8,
       }}>
         <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
           <kbd style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>↑↓</kbd> navigate
@@ -275,7 +363,10 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
           <kbd style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>Tab</kbd> autocomplete
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-          <kbd style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>Enter</kbd> open project
+          <kbd style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>Enter</kbd> drill in
+        </span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+          <kbd style={{ background: 'var(--bg-tertiary)', padding: '1px 5px', borderRadius: 3, fontSize: 10 }}>⌘↵</kbd> open project
         </span>
       </div>
 
