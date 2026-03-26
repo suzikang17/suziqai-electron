@@ -1,0 +1,15 @@
+{
+  "appId": "com.suziqai.app",
+  "productName": "suziQai",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "resources/**/*"
+  ],
+  "mac": {
+    "target": "dmg",
+    "icon": "resources/icon.png"
+  }
+}
