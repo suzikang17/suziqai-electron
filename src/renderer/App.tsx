@@ -8,11 +8,13 @@ import { BrowserToolbar } from './components/BrowserToolbar';
 export function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);
   const [mode, setMode] = useState<AppMode>('command');
-  const [currentTest, setCurrentTest] = useState<TestCase>({
+  const [tests, setTests] = useState<TestCase[]>([{
     id: '1',
     name: 'Untitled Test',
     steps: [],
-  });
+  }]);
+  const [activeTestId, setActiveTestId] = useState<string>('1');
+  const currentTest = tests.find(t => t.id === activeTestId) || tests[0];
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentUrl, setCurrentUrl] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -20,6 +22,39 @@ export function App() {
   const [chatHeight, setChatHeight] = useState(200);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
+
+  const updateCurrentTest = (updater: (test: TestCase) => TestCase) => {
+    setTests(prev => prev.map(t => t.id === activeTestId ? updater(t) : t));
+  };
+
+  const createNewTest = () => {
+    const newTest: TestCase = {
+      id: `test-${Date.now()}`,
+      name: 'Untitled Test',
+      steps: [],
+    };
+    setTests(prev => [...prev, newTest]);
+    setActiveTestId(newTest.id);
+  };
+
+  const renameTest = (testId: string, name: string) => {
+    setTests(prev => prev.map(t => t.id === testId ? { ...t, name } : t));
+  };
+
+  const deleteTest = (testId: string) => {
+    setTests(prev => {
+      const filtered = prev.filter(t => t.id !== testId);
+      if (filtered.length === 0) {
+        const newTest: TestCase = { id: `test-${Date.now()}`, name: 'Untitled Test', steps: [] };
+        if (activeTestId === testId) setActiveTestId(newTest.id);
+        return [newTest];
+      }
+      if (activeTestId === testId) {
+        setActiveTestId(filtered[0].id);
+      }
+      return filtered;
+    });
+  };
 
   // Listen for URL changes, chat responses, steps, and step results from the main process
   useEffect(() => {
@@ -44,19 +79,19 @@ export function App() {
     });
 
     window.suziqai.onStepsProposed((steps) => {
-      setCurrentTest(prev => ({
-        ...prev,
-        steps: [...prev.steps, ...steps],
-      }));
+      setTests(prev => prev.map(t => t.id === activeTestId ? {
+        ...t,
+        steps: [...t.steps, ...steps],
+      } : t));
     });
 
     window.suziqai.onStepResult((stepId, status, error) => {
-      setCurrentTest(prev => ({
-        ...prev,
-        steps: prev.steps.map(s =>
+      setTests(prev => prev.map(t => t.id === activeTestId ? {
+        ...t,
+        steps: t.steps.map(s =>
           s.id === stepId ? { ...s, status: status as any, error } : s
         ),
-      }));
+      } : t));
     });
 
     return () => {
@@ -65,7 +100,7 @@ export function App() {
       window.suziqai.removeAllListeners('steps:proposed');
       window.suziqai.removeAllListeners('step:result');
     };
-  }, []);
+  }, [activeTestId]);
 
   // Report viewport bounds to main process so BrowserView can be positioned
   useEffect(() => {
@@ -95,7 +130,14 @@ export function App() {
     window.suziqai.loadSession().then((data) => {
       if (data) {
         if (data.messages) setMessages(data.messages);
-        if (data.currentTest) setCurrentTest(data.currentTest);
+        if (data.tests) {
+          setTests(data.tests);
+          setActiveTestId(data.activeTestId || data.tests[0]?.id || '1');
+        } else if (data.currentTest) {
+          // Backwards compat with old session format
+          setTests([data.currentTest]);
+          setActiveTestId(data.currentTest.id);
+        }
       }
     });
   }, [projectPath]);
@@ -106,11 +148,12 @@ export function App() {
     const timeout = setTimeout(() => {
       window.suziqai.saveSession({
         messages,
-        currentTest,
+        tests,
+        activeTestId,
       });
     }, 500); // debounce 500ms
     return () => clearTimeout(timeout);
-  }, [messages, currentTest, projectPath]);
+  }, [messages, tests, activeTestId, projectPath]);
 
   if (!projectPath) {
     return <ProjectSetup onProjectOpened={(path, _baseUrl) => setProjectPath(path)} />;
@@ -139,7 +182,12 @@ export function App() {
           <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>change</span>
         </div>
         <StepSidebar
-          testCase={currentTest}
+          tests={tests}
+          activeTestId={activeTestId}
+          onSwitchTest={setActiveTestId}
+          onCreateTest={createNewTest}
+          onRenameTest={renameTest}
+          onDeleteTest={deleteTest}
           onAcceptStep={(stepId: string) => {
             const step = currentTest.steps.find(s => s.id === stepId);
             if (step) {
@@ -147,15 +195,15 @@ export function App() {
             }
           }}
           onDenyStep={(stepId: string) => {
-            setCurrentTest(prev => ({
-              ...prev,
-              steps: prev.steps.filter(s => s.id !== stepId),
+            updateCurrentTest(t => ({
+              ...t,
+              steps: t.steps.filter(s => s.id !== stepId),
             }));
           }}
           onResetStep={(stepId: string) => {
-            setCurrentTest(prev => ({
-              ...prev,
-              steps: prev.steps.map(s =>
+            updateCurrentTest(t => ({
+              ...t,
+              steps: t.steps.map(s =>
                 s.id === stepId ? { ...s, status: 'pending' as const, error: undefined } : s
               ),
             }));
