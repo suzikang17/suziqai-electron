@@ -315,7 +315,7 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
               onClick={() => handleOpen(resolvePath(query).replace(/\/$/, ''))}
               style={{
                 background: 'var(--accent-green)',
-                color: 'var(--bg-primary)',
+                color: '#ffffff',
                 borderRadius: 4,
                 padding: '6px 16px',
                 fontSize: 12,

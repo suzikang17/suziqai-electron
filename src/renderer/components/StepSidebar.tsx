@@ -1,6 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StepItem } from './StepItem';
-import type { TestCase } from '@shared/types';
+import { StepComposer } from './StepComposer';
+import type { TestCase, StepAction } from '@shared/types';
+
+function InsertButton({ onClick }: { onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: hovered ? 24 : 8,
+        cursor: 'pointer',
+        transition: 'height 0.15s ease',
+        opacity: hovered ? 1 : 0,
+      }}
+    >
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        fontSize: 10,
+        color: 'var(--accent-blue, var(--accent-green))',
+        fontWeight: 500,
+      }}>
+        <span>＋ insert step here</span>
+      </div>
+    </div>
+  );
+}
 
 interface StepSidebarProps {
   tests: TestCase[];
@@ -12,6 +44,9 @@ interface StepSidebarProps {
   onAcceptStep: (stepId: string) => void;
   onDenyStep: (stepId: string) => void;
   onResetStep: (stepId: string) => void;
+  onUpdateStep: (stepId: string, action: any, label: string) => void;
+  onInsertStep: (index: number, step: { label: string; action: StepAction }) => void;
+  onInsertPrompt: (index: number, prompt: string) => void;
   onRunAll: () => void;
   onExport: () => void;
 }
@@ -26,10 +61,14 @@ export function StepSidebar({
   onAcceptStep,
   onDenyStep,
   onResetStep,
+  onUpdateStep,
+  onInsertStep,
+  onInsertPrompt,
   onRunAll,
   onExport,
 }: StepSidebarProps) {
   const activeTest = tests.find(t => t.id === activeTestId) || tests[0];
+  const [composerAt, setComposerAt] = useState<number | null>(null);
 
   return (
     <div
@@ -108,16 +147,49 @@ export function StepSidebar({
       </div>
       <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
 
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {activeTest.steps.map((step, i) => (
-          <StepItem
-            key={step.id}
-            step={step}
-            index={i}
-            onAccept={() => onAcceptStep(step.id)}
-            onDeny={() => onDenyStep(step.id)}
-            onReset={() => onResetStep(step.id)}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {/* Insert at top */}
+        {composerAt === 0 ? (
+          <StepComposer
+            onSubmit={(result) => {
+              if ('prompt' in result) {
+                onInsertPrompt(0, result.prompt);
+              } else {
+                onInsertStep(0, result);
+              }
+              setComposerAt(null);
+            }}
+            onCancel={() => setComposerAt(null)}
           />
+        ) : (
+          <InsertButton onClick={() => setComposerAt(0)} />
+        )}
+        {activeTest.steps.map((step, i) => (
+          <React.Fragment key={step.id}>
+            <StepItem
+              step={step}
+              index={i}
+              onAccept={() => onAcceptStep(step.id)}
+              onDeny={() => onDenyStep(step.id)}
+              onReset={() => onResetStep(step.id)}
+              onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
+            />
+            {composerAt === i + 1 ? (
+              <StepComposer
+                onSubmit={(result) => {
+                  if ('prompt' in result) {
+                    onInsertPrompt(i + 1, result.prompt);
+                  } else {
+                    onInsertStep(i + 1, result);
+                  }
+                  setComposerAt(null);
+                }}
+                onCancel={() => setComposerAt(null)}
+              />
+            ) : (
+              <InsertButton onClick={() => setComposerAt(i + 1)} />
+            )}
+          </React.Fragment>
         ))}
         {activeTest.steps.length === 0 && (
           <div style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', marginTop: 40 }}>
@@ -132,7 +204,7 @@ export function StepSidebar({
           style={{
             flex: 1,
             background: 'var(--accent-green)',
-            color: 'var(--bg-primary)',
+            color: '#ffffff',
             borderRadius: 4,
             padding: 6,
             fontSize: 11,

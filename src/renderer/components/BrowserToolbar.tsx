@@ -5,18 +5,22 @@ interface BrowserToolbarProps {
   url: string;
   mode: AppMode;
   isRecording: boolean;
+  isPicking: boolean;
   onNavigate: (url: string) => void;
   onModeChange: (mode: AppMode) => void;
   onRecordToggle: () => void;
+  onPickToggle: () => void;
 }
 
 export function BrowserToolbar({
   url,
   mode,
   isRecording,
+  isPicking,
   onNavigate,
   onModeChange,
   onRecordToggle,
+  onPickToggle,
 }: BrowserToolbarProps) {
   const [urlInput, setUrlInput] = useState(url);
 
@@ -63,6 +67,24 @@ export function BrowserToolbar({
           }}
         />
       </form>
+
+      {/* Pick element button */}
+      <button
+        onClick={onPickToggle}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          background: isPicking ? 'var(--accent-blue, #0969da)' : 'var(--bg-tertiary)',
+          color: isPicking ? 'white' : 'var(--text-secondary)',
+          borderRadius: 4,
+          padding: '4px 10px',
+          fontSize: 10,
+          fontWeight: 'bold',
+        }}
+      >
+        {isPicking ? '⊙ Picking...' : '⊙ Pick'}
+      </button>
 
       {/* Record button */}
       <button

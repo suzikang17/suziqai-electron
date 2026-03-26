@@ -81,4 +81,13 @@ contextBridge.exposeInMainWorld('suziqai', {
 
   // Cleanup — remove all listeners for a channel
   removeAllListeners: (channel: string) => ipcRenderer.removeAllListeners(channel),
+
+  // Element picker
+  startPicker: () => ipcRenderer.invoke('picker:start'),
+  stopPicker: () => ipcRenderer.invoke('picker:stop'),
+  onPickerResult: (callback: (data: any) => void) =>
+    ipcRenderer.on('picker:result', (_event, data) => callback(data)),
+
+  // Clipboard
+  copyToClipboard: (text: string) => ipcRenderer.invoke('clipboard:copy', text),
 });

@@ -27,6 +27,11 @@ export interface SuziQaiAPI {
   setViewportBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<void>;
   saveSession: (data: any) => Promise<void>;
   loadSession: () => Promise<any>;
+  startPicker: () => Promise<void>;
+  stopPicker: () => Promise<void>;
+  onPickerResult: (callback: (data: any) => void) => void;
+  copyToClipboard: (text: string) => Promise<void>;
+  removeAllListeners: (channel: string) => void;
 }
 
 declare global {

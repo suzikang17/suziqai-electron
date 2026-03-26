@@ -2,11 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from './ChatMessage';
 import type { ChatMessage as ChatMessageType, AppMode } from '@shared/types';
 
+interface PickerResult {
+  selectors: Array<{ type: string; selector: string; confidence: string }>;
+  element: { tag: string; text: string; id: string | null } | null;
+}
+
 interface ChatPanelProps {
   messages: ChatMessageType[];
   mode: AppMode;
   isLoading?: boolean;
+  pickerResult?: PickerResult | null;
   onSend: (content: string) => void;
+  onPickSelector?: (selector: string, element: any) => void;
+  onDismissPicker?: () => void;
 }
 
 const modeBadge: Record<AppMode, { label: string; color: string }> = {
@@ -15,7 +23,15 @@ const modeBadge: Record<AppMode, { label: string; color: string }> = {
   observe: { label: 'Observing', color: 'var(--accent-yellow)' },
 };
 
-export function ChatPanel({ messages, mode, isLoading, onSend }: ChatPanelProps) {
+const typeLabels: Record<string, string> = {
+  getByText: 'Text', getByRole: 'Role', getByLabel: 'Label',
+  getByTestId: 'TestID', getByPlaceholder: 'Placeholder', css: 'CSS',
+};
+const confColors: Record<string, string> = {
+  high: 'var(--accent-green)', medium: 'var(--accent-yellow)', low: 'var(--text-muted)',
+};
+
+export function ChatPanel({ messages, mode, isLoading, pickerResult, onSend, onPickSelector, onDismissPicker }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +92,50 @@ export function ChatPanel({ messages, mode, isLoading, onSend }: ChatPanelProps)
             </span>
           </div>
         )}
+        {pickerResult && pickerResult.selectors.length > 0 && (
+          <div style={{ background: 'var(--bg-tertiary)', borderRadius: 6, padding: 8, marginTop: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+              Picked: <span style={{ fontFamily: 'var(--font-mono)' }}>&lt;{pickerResult.element?.tag}&gt;</span>
+              {pickerResult.element?.text && <span> "{pickerResult.element.text.substring(0, 40)}"</span>}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {pickerResult.selectors.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => onPickSelector?.(s.selector, pickerResult.element)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '4px 8px', background: 'var(--bg-primary)',
+                    borderRadius: 4, textAlign: 'left', fontSize: 11,
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <span style={{
+                    fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                    background: 'var(--bg-secondary)',
+                    color: confColors[s.confidence] || 'var(--text-muted)',
+                    fontWeight: 600, minWidth: 60, textAlign: 'center',
+                  }}>
+                    {typeLabels[s.type] || s.type}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                    {s.selector}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={onDismissPicker}
+              style={{
+                width: '100%', marginTop: 6, padding: '3px 0',
+                background: 'var(--bg-secondary)', color: 'var(--text-muted)',
+                borderRadius: 4, fontSize: 10,
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 4, marginTop: 6 }}>
@@ -96,7 +156,7 @@ export function ChatPanel({ messages, mode, isLoading, onSend }: ChatPanelProps)
           type="submit"
           style={{
             background: 'var(--accent-green)',
-            color: 'var(--bg-primary)',
+            color: '#ffffff',
             borderRadius: 4,
             padding: '6px 12px',
             fontSize: 11,
