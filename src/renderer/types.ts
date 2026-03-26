@@ -22,6 +22,7 @@ export interface SuziQaiAPI {
   showSaveDialog: (defaultPath: string) => Promise<string | null>;
   readDir: (dirPath: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }>>;
   getHomePath: () => Promise<string>;
+  setViewportBounds: (bounds: { x: number; y: number; width: number; height: number }) => Promise<void>;
 }
 
 declare global {

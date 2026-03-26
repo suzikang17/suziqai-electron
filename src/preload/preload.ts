@@ -20,6 +20,7 @@ const IPC = {
   EXPORT_TEST: 'export:test',
   EXPORT_RESULT: 'export:result',
   READ_DIR: 'fs:read-dir',
+  VIEWPORT_BOUNDS: 'browser:viewport-bounds',
 } as const;
 
 contextBridge.exposeInMainWorld('suziqai', {
@@ -67,4 +68,8 @@ contextBridge.exposeInMainWorld('suziqai', {
   // Filesystem
   readDir: (dirPath: string) => ipcRenderer.invoke('fs:read-dir', dirPath),
   getHomePath: () => ipcRenderer.invoke('fs:home-path'),
+
+  // Viewport
+  setViewportBounds: (bounds: { x: number; y: number; width: number; height: number }) =>
+    ipcRenderer.invoke(IPC.VIEWPORT_BOUNDS, bounds),
 });

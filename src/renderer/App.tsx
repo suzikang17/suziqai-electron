@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Step, TestCase, ChatMessage, AppMode } from '@shared/types';
 import { ProjectSetup } from './components/ProjectSetup';
 import { StepSidebar } from './components/StepSidebar';
@@ -18,6 +18,36 @@ export function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [chatHeight, setChatHeight] = useState(200);
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  // Listen for URL changes from the BrowserView
+  useEffect(() => {
+    window.suziqai.onUrlChanged((url) => {
+      setCurrentUrl(url);
+    });
+  }, []);
+
+  // Report viewport bounds to main process so BrowserView can be positioned
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const updateBounds = () => {
+      const rect = el.getBoundingClientRect();
+      window.suziqai.setViewportBounds({
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+
+    const observer = new ResizeObserver(updateBounds);
+    observer.observe(el);
+    updateBounds();
+
+    return () => observer.disconnect();
+  }, [projectPath]);
 
   if (!projectPath) {
     return <ProjectSetup onProjectOpened={setProjectPath} />;
@@ -26,7 +56,25 @@ export function App() {
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       {/* Left: Step Sidebar */}
-      <div style={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid var(--border)' }}>
+      <div style={{ width: sidebarWidth, flexShrink: 0, borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
+        {/* Project header */}
+        <div
+          onClick={() => setProjectPath(null)}
+          style={{
+            padding: '8px 10px',
+            borderBottom: '1px solid var(--border)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span style={{ color: 'var(--accent-yellow)', fontSize: 11 }}>📁</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 11, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {projectPath?.split('/').pop()}
+          </span>
+          <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>change</span>
+        </div>
         <StepSidebar
           testCase={currentTest}
           onAcceptStep={(stepId: string) => {
@@ -72,6 +120,7 @@ export function App() {
         />
         {/* Browser viewport area — BrowserView is positioned here by main process */}
         <div
+          ref={viewportRef}
           id="browser-viewport"
           style={{
             flex: 1,

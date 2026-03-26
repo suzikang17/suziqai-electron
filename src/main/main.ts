@@ -12,6 +12,7 @@ import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
 
 let mainWindow: BrowserWindow | null = null;
+let browserView: BrowserView | null = null;
 
 const browserManager = new BrowserManager();
 const claudeSession = new ClaudeSession();
@@ -60,10 +61,63 @@ function createWindow(): void {
       // Could prompt to install — for now just proceed
     }
 
-    await browserManager.launch(config.browser);
+    // Remove any existing BrowserView
+    if (browserView && mainWindow) {
+      mainWindow.removeBrowserView(browserView);
+      browserView = null;
+    }
+
+    // Create BrowserView for the target app
+    browserView = new BrowserView({
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    mainWindow!.addBrowserView(browserView);
+
+    // Navigate to the project's base URL
+    browserView.webContents.loadURL(config.baseUrl);
+
+    // Sync URL bar when BrowserView navigates
+    browserView.webContents.on('did-navigate', (_event, url) => {
+      if (mainWindow) {
+        mainWindow.webContents.send(IPC.BROWSER_URL_CHANGED, url);
+      }
+    });
+
+    browserView.webContents.on('did-navigate-in-page', (_event, url) => {
+      if (mainWindow) {
+        mainWindow.webContents.send(IPC.BROWSER_URL_CHANGED, url);
+      }
+    });
 
     if (mainWindow) {
       mainWindow.webContents.send(IPC.PROJECT_CONFIG, config);
+    }
+  });
+
+  // Viewport bounds — position the BrowserView over the viewport div
+  ipcMain.handle('browser:viewport-bounds', (_event, bounds: { x: number; y: number; width: number; height: number }) => {
+    if (browserView) {
+      browserView.setBounds({
+        x: Math.round(bounds.x),
+        y: Math.round(bounds.y),
+        width: Math.round(bounds.width),
+        height: Math.round(bounds.height),
+      });
+    }
+  });
+
+  // Override browser navigation to use BrowserView
+  ipcMain.removeHandler(IPC.BROWSER_NAVIGATE);
+  ipcMain.handle(IPC.BROWSER_NAVIGATE, async (_event, url: string) => {
+    if (browserView) {
+      const fullUrl = url.startsWith('http') ? url : `http://${url}`;
+      await browserView.webContents.loadURL(fullUrl);
+      if (mainWindow) {
+        mainWindow.webContents.send(IPC.BROWSER_URL_CHANGED, browserView.webContents.getURL());
+      }
     }
   });
 

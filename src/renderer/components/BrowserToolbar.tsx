@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { AppMode } from '@shared/types';
 
 interface BrowserToolbarProps {
@@ -19,6 +19,10 @@ export function BrowserToolbar({
   onRecordToggle,
 }: BrowserToolbarProps) {
   const [urlInput, setUrlInput] = useState(url);
+
+  useEffect(() => {
+    setUrlInput(url);
+  }, [url]);
 
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
