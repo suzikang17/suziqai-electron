@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Step, TestCase, ChatMessage, AppMode } from '@shared/types';
+import type { Step, TestCase, ChatMessage, AppMode, LibraryEntry } from '@shared/types';
 import { ProjectSetup } from './components/ProjectSetup';
 import { StepSidebar } from './components/StepSidebar';
 import { ChatPanel } from './components/ChatPanel';
@@ -29,6 +29,8 @@ export function App() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
   const [isAutopilot, setIsAutopilot] = useState(false);
+  const [sidebarMode, setSidebarMode] = useState<'session' | 'library'>('session');
+  const [libraryEntries, setLibraryEntries] = useState<LibraryEntry[]>([]);
   const autopilotRef = useRef(false);
   const autopilotRetriesRef = useRef(0);
   const AUTOPILOT_MAX_RETRIES = 3;
@@ -97,6 +99,48 @@ export function App() {
       }
       return filtered;
     });
+  };
+
+  const refreshLibrary = async () => {
+    const entries = await window.suziqai.listLibrary();
+    setLibraryEntries(entries);
+  };
+
+  const saveTest = async () => {
+    const test = tests.find(t => t.id === activeTestId);
+    if (!test) return;
+    try {
+      const result = await window.suziqai.saveToLibrary(test);
+      log(`Saved "${test.name}" → ${result.fileName}.spec.ts`);
+    } catch (err) {
+      log(`Save failed: ${(err as Error).message}`);
+    }
+  };
+
+  const loadFromLibrary = async (fileName: string) => {
+    try {
+      const loaded = await window.suziqai.loadFromLibrary(fileName);
+      const newTest: TestCase = {
+        ...loaded,
+        id: `test-${Date.now()}`,
+      };
+      setTests(prev => [...prev, newTest]);
+      setActiveTestId(newTest.id);
+      setSidebarMode('session');
+      log(`Loaded "${loaded.name}" from library`);
+    } catch (err) {
+      log(`Load failed: ${(err as Error).message}`);
+    }
+  };
+
+  const deleteFromLibrary = async (fileName: string) => {
+    try {
+      await window.suziqai.deleteFromLibrary(fileName);
+      await refreshLibrary();
+      log(`Deleted "${fileName}" from library`);
+    } catch (err) {
+      log(`Delete failed: ${(err as Error).message}`);
+    }
   };
 
   // Listen for URL changes, chat responses, steps, and step results from the main process
@@ -260,6 +304,12 @@ export function App() {
       window.suziqai.removeAllListeners('picker:result');
     };
   }, []);
+
+  useEffect(() => {
+    if (sidebarMode === 'library') {
+      refreshLibrary();
+    }
+  }, [sidebarMode]);
 
   const togglePicker = async () => {
     if (isPicking) {
@@ -461,6 +511,13 @@ export function App() {
               if (path) window.suziqai.exportTest(currentTest.id, path);
             });
           }}
+          sidebarMode={sidebarMode}
+          onSidebarModeChange={setSidebarMode}
+          onSaveTest={saveTest}
+          libraryEntries={libraryEntries}
+          onLoadFromLibrary={loadFromLibrary}
+          onDeleteFromLibrary={deleteFromLibrary}
+          onRefreshLibrary={refreshLibrary}
         />
       </div>
 
