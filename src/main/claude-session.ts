@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { StepAction, Snapshot } from '../shared/types';
 
 interface PageContext {
@@ -44,38 +44,30 @@ Always respond with valid JSON. Keep conversational messages concise.
 
 Use this priority order for selectors — higher is better:
 
-1. **getByRole(role, { name })** — BEST. Uses ARIA roles and accessible names. Resilient to DOM changes, class renames, and refactors. Mirrors how users and screen readers find elements.
-   - Use for buttons, links, headings, textboxes, checkboxes, etc.
+1. **getByRole(role, { name })** — BEST. Uses ARIA roles and accessible names. Resilient to DOM changes, class renames, and refactors.
    - Example: getByRole('button', { name: 'Submit' })
-   - The "name" comes from: visible text, aria-label, aria-labelledby, or associated <label>
 
-2. **getByLabel(text)** — GREAT for form inputs. Finds inputs by their associated label text.
-   - Works with <label for="id">, wrapping <label>, aria-label, aria-labelledby
+2. **getByLabel(text)** — GREAT for form inputs.
    - Example: getByLabel('Email address')
 
 3. **getByPlaceholder(text)** — GOOD for inputs without visible labels.
    - Example: getByPlaceholder('Search...')
 
-4. **getByText(text)** — GOOD for non-interactive elements (paragraphs, headings, spans).
-   - Avoid for buttons/links — use getByRole instead
+4. **getByText(text)** — GOOD for non-interactive elements.
    - Example: getByText('Welcome back')
 
-5. **getByTestId(id)** — OK. Stable but requires developers to add data-testid attributes.
+5. **getByTestId(id)** — OK. Stable but requires data-testid attributes.
    - Example: getByTestId('submit-button')
 
-6. **CSS selectors** — LAST RESORT. Brittle, breaks on class renames, restructuring.
-   - Never use auto-generated classes (e.g., .css-1a2b3c)
-   - If you must, prefer #id over .class over tag
+6. **CSS selectors** — LAST RESORT. Brittle.
 
 ## Selector Guidelines
 
 - NEVER use XPath
 - NEVER use nth-child or index-based selectors unless absolutely necessary
-- Prefer exact text matches over partial (getByText('Submit') not getByText('Sub'))
+- Prefer exact text matches over partial
 - For buttons/links, always use getByRole — not getByText
 - For form fields, always try getByLabel first
-- If multiple elements match, add { exact: true } or use a more specific role+name
-- Consider i18n: if text might be translated, prefer getByRole or getByTestId over getByText
 
 ## Testing Best Practices
 
@@ -83,7 +75,6 @@ Use this priority order for selectors — higher is better:
 - Assert on what the user sees (text, visibility, URL) not internal state
 - Use waitFor for elements that appear after async operations
 - Group related actions: navigate → interact → assert
-- One assertion per logical check — don't combine unrelated assertions
 - Add assertions after actions to verify the action had the expected effect
 - Consider error states: what happens with invalid input?
 
@@ -106,31 +97,128 @@ function buildStepsSummary(steps?: Array<{ label: string; status: string }>): st
   return `\nCurrent test steps:\n${lines.join('\n')}`;
 }
 
+async function runQuery(prompt: string, systemPrompt: string): Promise<string> {
+  let result = '';
+  for await (const message of query({
+    prompt,
+    options: {
+      systemPrompt,
+      maxTurns: 1,
+      allowedTools: [],
+    },
+  })) {
+    if ('result' in message && message.type === 'result') {
+      result = (message as any).result ?? '';
+    }
+  }
+  return result;
+}
+
+async function runQueryWithImage(
+  textContent: string,
+  imageBase64: string,
+  systemPrompt: string,
+): Promise<string> {
+  const userMessage = {
+    type: 'user' as const,
+    message: {
+      role: 'user' as const,
+      content: [
+        {
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: 'image/png' as const,
+            data: imageBase64,
+          },
+        },
+        {
+          type: 'text' as const,
+          text: textContent,
+        },
+      ],
+    },
+    parent_tool_use_id: null,
+    session_id: '',
+  };
+
+  let result = '';
+  for await (const message of query({
+    prompt: (async function* () {
+      yield userMessage;
+    })(),
+    options: {
+      systemPrompt,
+      maxTurns: 1,
+      allowedTools: [],
+    },
+  })) {
+    if ('result' in message && message.type === 'result') {
+      result = (message as any).result ?? '';
+    }
+  }
+  return result;
+}
+
+async function runQueryWithTwoImages(
+  textContent: string,
+  image1Base64: string,
+  image2Base64: string,
+  systemPrompt: string,
+): Promise<string> {
+  const userMessage = {
+    type: 'user' as const,
+    message: {
+      role: 'user' as const,
+      content: [
+        {
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: 'image/png' as const,
+            data: image1Base64,
+          },
+        },
+        {
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: 'image/png' as const,
+            data: image2Base64,
+          },
+        },
+        {
+          type: 'text' as const,
+          text: textContent,
+        },
+      ],
+    },
+    parent_tool_use_id: null,
+    session_id: '',
+  };
+
+  let result = '';
+  for await (const message of query({
+    prompt: (async function* () {
+      yield userMessage;
+    })(),
+    options: {
+      systemPrompt,
+      maxTurns: 1,
+      allowedTools: [],
+    },
+  })) {
+    if ('result' in message && message.type === 'result') {
+      result = (message as any).result ?? '';
+    }
+  }
+  return result;
+}
+
 export class ClaudeSession {
-  private client: Anthropic;
-  private messages: Anthropic.MessageParam[] = [];
   private snapshots: Snapshot[] = [];
 
-  constructor() {
-    this.client = new Anthropic();
-  }
-
   async send(userMessage: string, context: PageContext): Promise<ClaudeResponse> {
-    const contentBlocks: Anthropic.ContentBlockParam[] = [];
-
-    // Add screenshot as image block
-    if (context.screenshot && context.screenshot.length > 0) {
-      contentBlocks.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: 'image/png',
-          data: context.screenshot.toString('base64'),
-        },
-      });
-    }
-
-    // Build text context
     const textParts = [
       `[Current page: ${context.url}]`,
       `[Accessibility tree: ${context.accessibilityTree}]`,
@@ -139,28 +227,18 @@ export class ClaudeSession {
       '',
       `User: ${userMessage}`,
     ];
+    const textContent = textParts.filter(Boolean).join('\n');
 
-    contentBlocks.push({
-      type: 'text',
-      text: textParts.filter(Boolean).join('\n'),
-    });
-
-    this.messages.push({ role: 'user', content: contentBlocks });
-
-    const response = await this.client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: this.messages,
-    });
-
-    const textBlock = response.content.find(
-      (b): b is Anthropic.TextBlock => b.type === 'text',
-    );
-    const text = textBlock?.text ?? '';
-
-    // Store assistant response in conversation history
-    this.messages.push({ role: 'assistant', content: response.content });
+    let text: string;
+    if (context.screenshot && context.screenshot.length > 0) {
+      text = await runQueryWithImage(
+        textContent,
+        context.screenshot.toString('base64'),
+        SYSTEM_PROMPT,
+      );
+    } else {
+      text = await runQuery(textContent, SYSTEM_PROMPT);
+    }
 
     return this.parseResponse(text);
   }
@@ -170,44 +248,14 @@ export class ClaudeSession {
     after: Buffer,
     stepLabel: string,
   ): Promise<ClaudeResponse> {
-    const contentBlocks: Anthropic.ContentBlockParam[] = [
-      {
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: 'image/png',
-          data: before.toString('base64'),
-        },
-      },
-      {
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: 'image/png',
-          data: after.toString('base64'),
-        },
-      },
-      {
-        type: 'text',
-        text: `I just executed this step: "${stepLabel}". The first image is BEFORE and the second is AFTER. What changed visually? Suggest assertions to verify the change, and recommend what to test next. Respond with JSON { "message": "...", "steps": [...] }.`,
-      },
-    ];
+    const textContent = `I just executed this step: "${stepLabel}". The first image is BEFORE and the second is AFTER. What changed visually? Suggest assertions to verify the change, and recommend what to test next. Respond with JSON { "message": "...", "steps": [...] }.`;
 
-    this.messages.push({ role: 'user', content: contentBlocks });
-
-    const response = await this.client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: this.messages,
-    });
-
-    const textBlock = response.content.find(
-      (b): b is Anthropic.TextBlock => b.type === 'text',
+    const text = await runQueryWithTwoImages(
+      textContent,
+      before.toString('base64'),
+      after.toString('base64'),
+      SYSTEM_PROMPT,
     );
-    const text = textBlock?.text ?? '';
-
-    this.messages.push({ role: 'assistant', content: response.content });
 
     return this.parseResponse(text);
   }
@@ -239,7 +287,6 @@ ${JSON.stringify(rawEvents, null, 2)}`;
   }
 
   clearHistory(): void {
-    this.messages = [];
     this.snapshots = [];
   }
 

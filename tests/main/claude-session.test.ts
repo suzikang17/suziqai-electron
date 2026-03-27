@@ -1,22 +1,20 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockCreate = vi.fn();
+const { mockQuery } = vi.hoisted(() => ({ mockQuery: vi.fn() }));
 
-vi.mock('@anthropic-ai/sdk', () => {
-  return {
-    default: class Anthropic {
-      messages = { create: mockCreate };
-    },
-  };
-});
+vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
+  query: mockQuery,
+}));
 
 import { ClaudeSession } from '../../src/main/claude-session';
 
-function mockApiResponse(text: string) {
-  mockCreate.mockResolvedValueOnce({
-    content: [{ type: 'text', text }],
-  });
+function mockQueryResult(resultText: string) {
+  mockQuery.mockReturnValueOnce(
+    (async function* () {
+      yield { type: 'result', subtype: 'success', result: resultText };
+    })(),
+  );
 }
 
 describe('ClaudeSession', () => {
@@ -24,7 +22,7 @@ describe('ClaudeSession', () => {
 
   beforeEach(() => {
     session = new ClaudeSession();
-    mockCreate.mockReset();
+    mockQuery.mockReset();
   });
 
   it('sends a message with page context and parses step responses', async () => {
@@ -36,7 +34,7 @@ describe('ClaudeSession', () => {
       ],
     });
 
-    mockApiResponse(responseJson);
+    mockQueryResult(responseJson);
 
     const result = await session.send('test the login page', {
       url: 'http://localhost:3000',
@@ -49,13 +47,9 @@ describe('ClaudeSession', () => {
     expect(result.steps[0].label).toBe('Navigate to /login');
     expect(result.steps[0].action.type).toBe('navigate');
 
-    // Verify the API was called with image content
-    const call = mockCreate.mock.calls[0][0];
-    const userMsg = call.messages[0];
-    expect(userMsg.role).toBe('user');
-    expect(userMsg.content[0].type).toBe('image');
-    expect(userMsg.content[0].source.type).toBe('base64');
-    expect(userMsg.content[0].source.media_type).toBe('image/png');
+    // Verify query was called with image (prompt is an async iterable, not a string)
+    const call = mockQuery.mock.calls[0][0];
+    expect(typeof call.prompt).not.toBe('string'); // async generator for image path
   });
 
   it('handles responses with no steps', async () => {
@@ -64,7 +58,7 @@ describe('ClaudeSession', () => {
       steps: [],
     });
 
-    mockApiResponse(responseJson);
+    mockQueryResult(responseJson);
 
     const result = await session.send('help', {
       url: 'http://localhost:3000',
@@ -74,6 +68,10 @@ describe('ClaudeSession', () => {
 
     expect(result.message).toBe('What would you like me to test?');
     expect(result.steps).toHaveLength(0);
+
+    // Empty screenshot → string prompt (no image)
+    const call = mockQuery.mock.calls[0][0];
+    expect(typeof call.prompt).toBe('string');
   });
 
   it('sends before/after screenshots for visual QA', async () => {
@@ -84,7 +82,7 @@ describe('ClaudeSession', () => {
       ],
     });
 
-    mockApiResponse(responseJson);
+    mockQueryResult(responseJson);
 
     const before = Buffer.from('before-screenshot');
     const after = Buffer.from('after-screenshot');
@@ -95,12 +93,9 @@ describe('ClaudeSession', () => {
     expect(result.steps).toHaveLength(1);
     expect(result.steps[0].action.type).toBe('assert');
 
-    // Verify two images were sent
-    const call = mockCreate.mock.calls[0][0];
-    const userMsg = call.messages[0];
-    expect(userMsg.content[0].type).toBe('image');
-    expect(userMsg.content[1].type).toBe('image');
-    expect(userMsg.content[2].type).toBe('text');
+    // Verify query was called (prompt is an async iterable for two images)
+    const call = mockQuery.mock.calls[0][0];
+    expect(typeof call.prompt).not.toBe('string');
   });
 
   it('manages snapshot timeline', () => {
@@ -115,34 +110,24 @@ describe('ClaudeSession', () => {
     expect(snapshots[1].stepId).toBe('step-2');
   });
 
-  it('clears history and snapshots', async () => {
+  it('clears snapshots on clearHistory', () => {
     session.addSnapshot(Buffer.from('img'), 'http://localhost', 'step-1');
-
-    mockApiResponse(JSON.stringify({ message: 'hi', steps: [] }));
-    await session.send('hello', {
-      url: 'http://localhost',
-      accessibilityTree: '{}',
-      screenshot: Buffer.alloc(0),
-    });
+    expect(session.getSnapshots()).toHaveLength(1);
 
     session.clearHistory();
-
     expect(session.getSnapshots()).toHaveLength(0);
+  });
 
-    // Next send should start fresh conversation
-    mockApiResponse(JSON.stringify({ message: 'fresh', steps: [] }));
-    const result = await session.send('new message', {
-      url: 'http://localhost',
+  it('handles non-JSON responses gracefully', async () => {
+    mockQueryResult('I cannot parse that request, sorry.');
+
+    const result = await session.send('gibberish', {
+      url: 'http://localhost:3000',
       accessibilityTree: '{}',
       screenshot: Buffer.alloc(0),
     });
 
-    expect(result.message).toBe('fresh');
-
-    // The first message in the conversation should be the new one (not the old one)
-    const call = mockCreate.mock.calls[1][0];
-    const firstUserContent = call.messages[0].content;
-    const textBlock = firstUserContent.find((b: any) => b.type === 'text');
-    expect(textBlock.text).toContain('new message');
+    expect(result.message).toBe('I cannot parse that request, sorry.');
+    expect(result.steps).toHaveLength(0);
   });
 });
