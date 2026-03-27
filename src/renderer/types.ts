@@ -32,6 +32,10 @@ export interface SuziQaiAPI {
   onPickerResult: (callback: (data: any) => void) => void;
   copyToClipboard: (text: string) => Promise<void>;
   removeAllListeners: (channel: string) => void;
+  listLibrary: () => Promise<import('@shared/types').LibraryEntry[]>;
+  saveToLibrary: (test: import('@shared/types').TestCase, fileName?: string) => Promise<{ fileName: string; path: string }>;
+  loadFromLibrary: (fileName: string) => Promise<import('@shared/types').TestCase>;
+  deleteFromLibrary: (fileName: string) => Promise<void>;
 }
 
 declare global {

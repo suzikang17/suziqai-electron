@@ -21,6 +21,10 @@ const IPC = {
   EXPORT_RESULT: 'export:result',
   READ_DIR: 'fs:read-dir',
   VIEWPORT_BOUNDS: 'browser:viewport-bounds',
+  LIBRARY_LIST: 'library:list',
+  LIBRARY_SAVE: 'library:save',
+  LIBRARY_LOAD: 'library:load',
+  LIBRARY_DELETE: 'library:delete',
 } as const;
 
 contextBridge.exposeInMainWorld('suziqai', {
@@ -90,4 +94,10 @@ contextBridge.exposeInMainWorld('suziqai', {
 
   // Clipboard
   copyToClipboard: (text: string) => ipcRenderer.invoke('clipboard:copy', text),
+
+  // Library
+  listLibrary: () => ipcRenderer.invoke(IPC.LIBRARY_LIST),
+  saveToLibrary: (test: any, fileName?: string) => ipcRenderer.invoke(IPC.LIBRARY_SAVE, test, fileName),
+  loadFromLibrary: (fileName: string) => ipcRenderer.invoke(IPC.LIBRARY_LOAD, fileName),
+  deleteFromLibrary: (fileName: string) => ipcRenderer.invoke(IPC.LIBRARY_DELETE, fileName),
 });

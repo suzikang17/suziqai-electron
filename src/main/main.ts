@@ -7,6 +7,7 @@ import { Recorder } from './recorder';
 import { Observer } from './observer';
 import { TestExporter } from './test-exporter';
 import { ProjectConfigManager } from './project-config';
+import { TestLibrary } from './test-library';
 import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
 // Lazy-loaded to avoid importing playwright at startup
@@ -23,6 +24,7 @@ const recorder = new Recorder();
 const observer = new Observer();
 const testExporter = new TestExporter();
 const projectConfig = new ProjectConfigManager();
+let testLibrary: TestLibrary = new TestLibrary('');
 
 let ipcRegistered = false;
 function registerAllIpcHandlers(): void {
@@ -158,6 +160,7 @@ function createWindow(): void {
       recorder,
       observer,
       testExporter,
+      testLibrary,
       getWindow: () => mainWindow,
     });
   }
@@ -170,6 +173,9 @@ function createWindow(): void {
       config.baseUrl = baseUrl;
       await projectConfig.update({ baseUrl });
     }
+
+    // Re-create TestLibrary with the resolved testOutputDir for this project
+    testLibrary = new TestLibrary(path.join(projectPath, config.testOutputDir || 'tests'));
 
     // Remove any existing BrowserView
     if (browserView && mainWindow) {
