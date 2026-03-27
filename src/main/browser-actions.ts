@@ -4,30 +4,14 @@ const CDP_PORT = parseInt(process.env.SUZIQAI_CDP_PORT || '9222', 10);
 
 let browser: Browser | null = null;
 
-/**
- * Connect Playwright to the Electron app via CDP.
- * Lazily called on first action.
- */
-export async function connectToElectron(): Promise<Page> {
-  // Always reconnect to ensure we have the right page
-  if (browser) {
-    await browser.close().catch(() => {});
-    browser = null;
-  }
-
-  browser = await chromium.connectOverCDP('http://127.0.0.1:' + CDP_PORT);
-  const contexts = browser.contexts();
-
-  // Log all available pages for debugging
+function findTargetPage(b: Browser): Page | null {
   const allPages: Page[] = [];
-  for (const ctx of contexts) {
+  for (const ctx of b.contexts()) {
     for (const p of ctx.pages()) {
       allPages.push(p);
-      console.log('[suziQai] Found CDP page:', p.url());
     }
   }
 
-  // Find the BrowserView's page — skip Electron's own renderer
   for (const p of allPages) {
     const url = p.url();
     if (
@@ -37,15 +21,36 @@ export async function connectToElectron(): Promise<Page> {
       !url.startsWith('chrome://') &&
       url !== 'about:blank'
     ) {
-      console.log('[suziQai] Using CDP page:', url);
       return p;
     }
   }
 
-  // Fallback: use the last page
-  const fallback = allPages[allPages.length - 1];
-  console.log('[suziQai] Fallback CDP page:', fallback?.url());
-  return fallback;
+  return allPages[allPages.length - 1] ?? null;
+}
+
+/**
+ * Connect Playwright to the Electron app via CDP.
+ * Lazily called on first action.
+ */
+export async function connectToElectron(): Promise<Page> {
+  // Reuse existing connection if still open
+  if (browser && browser.isConnected()) {
+    const page = findTargetPage(browser);
+    if (page) return page;
+  }
+
+  // Close stale connection
+  if (browser) {
+    await browser.close().catch(() => {});
+    browser = null;
+  }
+
+  browser = await chromium.connectOverCDP('http://127.0.0.1:' + CDP_PORT);
+
+  const page = findTargetPage(browser);
+  if (!page) throw new Error('No suitable page found via CDP');
+  console.log('[suziQai] Using CDP page:', page.url());
+  return page;
 }
 
 /**
