@@ -391,7 +391,8 @@ function createWindow(): void {
   });
 
   mainWindow.on('closed', async () => {
-    await browserManager.close();
+    const { disconnectPlaywright } = await import('./browser-actions');
+    await disconnectPlaywright();
     mainWindow = null;
   });
 }
