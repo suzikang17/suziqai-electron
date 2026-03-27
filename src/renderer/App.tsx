@@ -158,6 +158,15 @@ export function App() {
           const msg = `${icon} ${step.label}` + (error ? ` — ${error}` : '');
           log(msg);
         }
+
+        // Autopilot: on failure, ask AI for diagnosis and alternative approach
+        if (autopilotRef.current && status === 'failed' && step) {
+          const prompt = `Step failed: "${step.label}"\nError: ${error}\n\nLook at the current screenshot and suggest an alternative approach. Either fix the selector/action or propose different steps to accomplish the same goal.`;
+          log('⚡ Autopilot: asking AI to diagnose failure...');
+          setIsChatLoading(true);
+          window.suziqai.sendChat(prompt);
+        }
+
         return updated;
       });
     });
