@@ -5,6 +5,7 @@ import type { ClaudeSession } from './claude-session';
 import type { Recorder } from './recorder';
 import type { Observer } from './observer';
 import type { TestExporter } from './test-exporter';
+import type { TestLibrary } from './test-library';
 import type { StepAction } from '../shared/types';
 
 interface Deps {
@@ -13,6 +14,7 @@ interface Deps {
   recorder: Recorder;
   observer: Observer;
   testExporter: TestExporter;
+  testLibrary: TestLibrary;
   getWindow: () => BrowserWindow | null;
 }
 
@@ -21,7 +23,7 @@ function delay(ms: number): Promise<void> {
 }
 
 export function registerIpcHandlers(deps: Deps): void {
-  const { browserManager, claudeSession, recorder, observer, testExporter, getWindow } = deps;
+  const { browserManager, claudeSession, recorder, observer, testExporter, testLibrary, getWindow } = deps;
 
   // Browser navigation
   ipcMain.handle(IPC.BROWSER_NAVIGATE, async (_event, url: string) => {
@@ -172,5 +174,22 @@ export function registerIpcHandlers(deps: Deps): void {
     if (!win) return;
     const result = await testExporter.export(testId, outputPath);
     win.webContents.send(IPC.EXPORT_RESULT, result);
+  });
+
+  // Library
+  ipcMain.handle(IPC.LIBRARY_LIST, async () => {
+    return testLibrary.list();
+  });
+
+  ipcMain.handle(IPC.LIBRARY_SAVE, async (_event, test: any, fileName?: string) => {
+    return testLibrary.save(test, fileName);
+  });
+
+  ipcMain.handle(IPC.LIBRARY_LOAD, async (_event, fileName: string) => {
+    return testLibrary.load(fileName);
+  });
+
+  ipcMain.handle(IPC.LIBRARY_DELETE, async (_event, fileName: string) => {
+    return testLibrary.delete(fileName);
   });
 }
