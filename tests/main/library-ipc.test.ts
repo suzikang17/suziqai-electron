@@ -36,11 +36,14 @@ function makeDeps(overrides: Record<string, any> = {}) {
     testExporter: {
       export: vi.fn().mockResolvedValue('/tmp/out.spec.ts'),
     },
-    testLibrary: {
+    _testLibrary: {
       list: vi.fn().mockResolvedValue([]),
       save: vi.fn().mockResolvedValue({ fileName: 'test', path: '/tmp/test.spec.ts' }),
       load: vi.fn().mockResolvedValue({ id: 'test-1', name: 'Test', steps: [] }),
       delete: vi.fn().mockResolvedValue(undefined),
+    },
+    get getTestLibrary() {
+      return () => this._testLibrary;
     },
     getWindow: vi.fn().mockReturnValue(null),
     ...overrides,
@@ -73,7 +76,7 @@ describe('library IPC handlers', () => {
     const handler = listCall![1];
     await handler();
 
-    expect(deps.testLibrary.list).toHaveBeenCalledOnce();
+    expect(deps._testLibrary.list).toHaveBeenCalledOnce();
   });
 
   it('library:save handler calls testLibrary.save() with test and fileName', async () => {
@@ -87,7 +90,7 @@ describe('library IPC handlers', () => {
     const mockTest = { id: 'test-1', name: 'My Test', steps: [] };
     await handler({} /* _event */, mockTest, 'my-test');
 
-    expect(deps.testLibrary.save).toHaveBeenCalledWith(mockTest, 'my-test');
+    expect(deps._testLibrary.save).toHaveBeenCalledWith(mockTest, 'my-test');
   });
 
   it('library:load handler calls testLibrary.load() with fileName', async () => {
@@ -100,7 +103,7 @@ describe('library IPC handlers', () => {
     const handler = loadCall![1];
     await handler({} /* _event */, 'my-test');
 
-    expect(deps.testLibrary.load).toHaveBeenCalledWith('my-test');
+    expect(deps._testLibrary.load).toHaveBeenCalledWith('my-test');
   });
 
   it('library:delete handler calls testLibrary.delete() with fileName', async () => {
@@ -113,6 +116,6 @@ describe('library IPC handlers', () => {
     const handler = deleteCall![1];
     await handler({} /* _event */, 'my-test');
 
-    expect(deps.testLibrary.delete).toHaveBeenCalledWith('my-test');
+    expect(deps._testLibrary.delete).toHaveBeenCalledWith('my-test');
   });
 });

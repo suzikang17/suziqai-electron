@@ -160,7 +160,7 @@ function createWindow(): void {
       recorder,
       observer,
       testExporter,
-      testLibrary,
+      getTestLibrary: () => testLibrary,
       getWindow: () => mainWindow,
     });
   }

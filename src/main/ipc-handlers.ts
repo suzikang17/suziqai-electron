@@ -14,7 +14,7 @@ interface Deps {
   recorder: Recorder;
   observer: Observer;
   testExporter: TestExporter;
-  testLibrary: TestLibrary;
+  getTestLibrary: () => TestLibrary;
   getWindow: () => BrowserWindow | null;
 }
 
@@ -23,7 +23,7 @@ function delay(ms: number): Promise<void> {
 }
 
 export function registerIpcHandlers(deps: Deps): void {
-  const { browserManager, claudeSession, recorder, observer, testExporter, testLibrary, getWindow } = deps;
+  const { browserManager, claudeSession, recorder, observer, testExporter, getTestLibrary, getWindow } = deps;
 
   // Browser navigation
   ipcMain.handle(IPC.BROWSER_NAVIGATE, async (_event, url: string) => {
@@ -178,18 +178,18 @@ export function registerIpcHandlers(deps: Deps): void {
 
   // Library
   ipcMain.handle(IPC.LIBRARY_LIST, async () => {
-    return testLibrary.list();
+    return getTestLibrary().list();
   });
 
   ipcMain.handle(IPC.LIBRARY_SAVE, async (_event, test: any, fileName?: string) => {
-    return testLibrary.save(test, fileName);
+    return getTestLibrary().save(test, fileName);
   });
 
   ipcMain.handle(IPC.LIBRARY_LOAD, async (_event, fileName: string) => {
-    return testLibrary.load(fileName);
+    return getTestLibrary().load(fileName);
   });
 
   ipcMain.handle(IPC.LIBRARY_DELETE, async (_event, fileName: string) => {
-    return testLibrary.delete(fileName);
+    return getTestLibrary().delete(fileName);
   });
 }
