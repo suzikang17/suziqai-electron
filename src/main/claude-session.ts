@@ -1,10 +1,11 @@
-import { spawn } from 'child_process';
-import type { StepAction } from '../shared/types';
+import Anthropic from '@anthropic-ai/sdk';
+import type { StepAction, Snapshot } from '../shared/types';
 
 interface PageContext {
   url: string;
   accessibilityTree: string;
-  screenshot: string;
+  screenshot: Buffer;
+  currentSteps?: Array<{ label: string; status: string }>;
 }
 
 interface ClaudeResponse {
@@ -84,72 +85,131 @@ Use this priority order for selectors — higher is better:
 - Group related actions: navigate → interact → assert
 - One assertion per logical check — don't combine unrelated assertions
 - Add assertions after actions to verify the action had the expected effect
-- Consider error states: what happens with invalid input?`;
+- Consider error states: what happens with invalid input?
 
-function invokeClaudeCli(prompt: string, systemPrompt: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const args = [
-      '--print', prompt,
-      '--output-format', 'text',
-      '--system-prompt', systemPrompt,
-      '--max-turns', '1',
-    ];
+## Visual QA
 
-    const proc = spawn('claude', args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env },
-    });
+You can see screenshots of the browser. When you receive before/after screenshots:
+- Describe what changed visually (layout shifts, new elements, removed elements, text changes)
+- Suggest assertions to verify the change (prefer getByRole/getByText visibility and text checks)
+- Recommend what to test next based on what you see
+- Flag anything that looks off: misalignment, missing elements, unexpected states, error messages
 
-    let stdout = '';
-    let stderr = '';
+When you receive a single screenshot with a chat message:
+- Use the visual context to give better answers
+- Proactively suggest assertions for what you see on screen
+- If you notice UI issues (broken layouts, truncated text, overlapping elements), mention them`;
 
-    proc.stdout.on('data', (data) => { stdout += data.toString(); });
-    proc.stderr.on('data', (data) => { stderr += data.toString(); });
-
-    proc.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`claude CLI exited with code ${code}: ${stderr}`));
-      } else {
-        resolve(stdout.trim());
-      }
-    });
-
-    proc.on('error', (err) => {
-      reject(new Error(`Failed to spawn claude CLI: ${err.message}. Is Claude Code installed?`));
-    });
-  });
+function buildStepsSummary(steps?: Array<{ label: string; status: string }>): string {
+  if (!steps || steps.length === 0) return '';
+  const lines = steps.map((s, i) => `Step ${i + 1} [${s.status}]: ${s.label}`);
+  return `\nCurrent test steps:\n${lines.join('\n')}`;
 }
 
 export class ClaudeSession {
-  private conversationHistory: Array<{ role: string; content: string }> = [];
+  private client: Anthropic;
+  private messages: Anthropic.MessageParam[] = [];
+  private snapshots: Snapshot[] = [];
+
+  constructor() {
+    this.client = new Anthropic();
+  }
 
   async send(userMessage: string, context: PageContext): Promise<ClaudeResponse> {
-    const contextBlock = `[Current page: ${context.url}]
-[Accessibility tree: ${context.accessibilityTree}]`;
+    const contentBlocks: Anthropic.ContentBlockParam[] = [];
 
-    const fullMessage = `${contextBlock}\n\nUser: ${userMessage}`;
-
-    this.conversationHistory.push({ role: 'user', content: fullMessage });
-
-    const text = await invokeClaudeCli(fullMessage, SYSTEM_PROMPT);
-
-    try {
-      // Try to extract JSON from the response (may be wrapped in markdown fences)
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : text;
-      const parsed: ClaudeResponse = JSON.parse(jsonStr);
-      this.conversationHistory.push({ role: 'assistant', content: jsonStr });
-
-      return {
-        message: parsed.message,
-        steps: (parsed.steps ?? []).map((s) => ({
-          label: s.label,
-          action: s.action,
-        })),
-      };
-    } catch {
-      return { message: text, steps: [] };
+    // Add screenshot as image block
+    if (context.screenshot && context.screenshot.length > 0) {
+      contentBlocks.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: 'image/png',
+          data: context.screenshot.toString('base64'),
+        },
+      });
     }
+
+    // Build text context
+    const textParts = [
+      `[Current page: ${context.url}]`,
+      `[Accessibility tree: ${context.accessibilityTree}]`,
+      buildStepsSummary(context.currentSteps),
+      `[Snapshots captured: ${this.snapshots.length}]`,
+      '',
+      `User: ${userMessage}`,
+    ];
+
+    contentBlocks.push({
+      type: 'text',
+      text: textParts.filter(Boolean).join('\n'),
+    });
+
+    this.messages.push({ role: 'user', content: contentBlocks });
+
+    const response = await this.client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      system: SYSTEM_PROMPT,
+      messages: this.messages,
+    });
+
+    const textBlock = response.content.find(
+      (b): b is Anthropic.TextBlock => b.type === 'text',
+    );
+    const text = textBlock?.text ?? '';
+
+    // Store assistant response in conversation history
+    this.messages.push({ role: 'assistant', content: response.content });
+
+    return this.parseResponse(text);
+  }
+
+  async requestVisualQA(
+    before: Buffer,
+    after: Buffer,
+    stepLabel: string,
+  ): Promise<ClaudeResponse> {
+    const contentBlocks: Anthropic.ContentBlockParam[] = [
+      {
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: 'image/png',
+          data: before.toString('base64'),
+        },
+      },
+      {
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: 'image/png',
+          data: after.toString('base64'),
+        },
+      },
+      {
+        type: 'text',
+        text: `I just executed this step: "${stepLabel}". The first image is BEFORE and the second is AFTER. What changed visually? Suggest assertions to verify the change, and recommend what to test next. Respond with JSON { "message": "...", "steps": [...] }.`,
+      },
+    ];
+
+    this.messages.push({ role: 'user', content: contentBlocks });
+
+    const response = await this.client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      system: SYSTEM_PROMPT,
+      messages: this.messages,
+    });
+
+    const textBlock = response.content.find(
+      (b): b is Anthropic.TextBlock => b.type === 'text',
+    );
+    const text = textBlock?.text ?? '';
+
+    this.messages.push({ role: 'assistant', content: response.content });
+
+    return this.parseResponse(text);
   }
 
   async processRecording(rawEvents: Array<{ type: string; selector?: string; value?: string }>): Promise<ClaudeResponse> {
@@ -161,11 +221,43 @@ ${JSON.stringify(rawEvents, null, 2)}`;
     return this.send(message, {
       url: '',
       accessibilityTree: '',
-      screenshot: '',
+      screenshot: Buffer.alloc(0),
     });
   }
 
+  addSnapshot(screenshot: Buffer, url: string, stepId: string): void {
+    this.snapshots.push({
+      screenshot,
+      url,
+      stepId,
+      timestamp: Date.now(),
+    });
+  }
+
+  getSnapshots(): Snapshot[] {
+    return [...this.snapshots];
+  }
+
   clearHistory(): void {
-    this.conversationHistory = [];
+    this.messages = [];
+    this.snapshots = [];
+  }
+
+  private parseResponse(text: string): ClaudeResponse {
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+      const parsed: ClaudeResponse = JSON.parse(jsonStr);
+
+      return {
+        message: parsed.message,
+        steps: (parsed.steps ?? []).map((s) => ({
+          label: s.label,
+          action: s.action,
+        })),
+      };
+    } catch {
+      return { message: text, steps: [] };
+    }
   }
 }

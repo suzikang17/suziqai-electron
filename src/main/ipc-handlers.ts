@@ -16,6 +16,10 @@ interface Deps {
   getWindow: () => BrowserWindow | null;
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function registerIpcHandlers(deps: Deps): void {
   const { browserManager, claudeSession, recorder, observer, testExporter, getWindow } = deps;
 
@@ -26,7 +30,7 @@ export function registerIpcHandlers(deps: Deps): void {
     if (win) win.webContents.send(IPC.BROWSER_URL_CHANGED, browserManager.getCurrentUrl());
   });
 
-  // Chat — send message to Claude, get proposed steps back
+  // Chat — send message to Claude with screenshot context
   ipcMain.handle(IPC.CHAT_SEND, async (_event, message: string) => {
     const win = getWindow();
     if (!win) return;
@@ -34,7 +38,7 @@ export function registerIpcHandlers(deps: Deps): void {
     const context = {
       url: browserManager.getCurrentUrl(),
       accessibilityTree: await browserManager.getAccessibilityTree(),
-      screenshot: (await browserManager.screenshot()).toString('base64'),
+      screenshot: await browserManager.screenshot(),
     };
 
     const response = await claudeSession.send(message, context);
@@ -45,7 +49,7 @@ export function registerIpcHandlers(deps: Deps): void {
     }
   });
 
-  // Execute a single step
+  // Execute a single step with before/after visual QA
   ipcMain.handle(IPC.STEP_EXECUTE, async (_event, stepId: string, action: StepAction) => {
     const win = getWindow();
     if (!win) return;
@@ -53,24 +57,76 @@ export function registerIpcHandlers(deps: Deps): void {
     win.webContents.send(IPC.STEP_RESULT, stepId, 'running');
 
     try {
+      // Capture before screenshot
+      const beforeScreenshot = await browserManager.screenshot();
+
+      // Execute the action
       await browserManager.executeAction(action);
+
       win.webContents.send(IPC.STEP_RESULT, stepId, 'passed');
       win.webContents.send(IPC.BROWSER_URL_CHANGED, browserManager.getCurrentUrl());
+
+      // Wait for DOM to settle, then capture after screenshot
+      await delay(500);
+      const afterScreenshot = await browserManager.screenshot();
+
+      // Add to snapshot timeline
+      claudeSession.addSnapshot(afterScreenshot, browserManager.getCurrentUrl(), stepId);
+
+      // Run visual QA asynchronously (don't block step completion)
+      const stepLabel = `${action.type}${action.type === 'navigate' ? ` ${action.url}` : ''}`;
+      claudeSession.requestVisualQA(beforeScreenshot, afterScreenshot, stepLabel).then((qaResponse) => {
+        if (qaResponse.message) {
+          win.webContents.send(IPC.CHAT_RESPONSE, qaResponse.message);
+        }
+        if (qaResponse.steps.length > 0) {
+          win.webContents.send(IPC.STEPS_PROPOSED, qaResponse.steps);
+        }
+      }).catch((err) => {
+        console.error('Visual QA failed:', err);
+      });
     } catch (err) {
       win.webContents.send(IPC.STEP_RESULT, stepId, 'failed', (err as Error).message);
     }
   });
 
-  // Execute all steps sequentially
+  // Execute all steps sequentially with throttled visual QA
   ipcMain.handle(IPC.STEP_EXECUTE_ALL, async (_event, steps: Array<{ id: string; action: StepAction }>) => {
     const win = getWindow();
     if (!win) return;
 
-    for (const step of steps) {
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
       win.webContents.send(IPC.STEP_RESULT, step.id, 'running');
+
       try {
+        const beforeScreenshot = await browserManager.screenshot();
+
         await browserManager.executeAction(step.action);
         win.webContents.send(IPC.STEP_RESULT, step.id, 'passed');
+
+        await delay(500);
+        const afterScreenshot = await browserManager.screenshot();
+        claudeSession.addSnapshot(afterScreenshot, browserManager.getCurrentUrl(), step.id);
+
+        // Visual QA every 3rd step and on the final step
+        const isThirdStep = (i + 1) % 3 === 0;
+        const isFinalStep = i === steps.length - 1;
+
+        if (isThirdStep || isFinalStep) {
+          const stepLabel = `${step.action.type}${step.action.type === 'navigate' ? ` ${(step.action as any).url}` : ''}`;
+          try {
+            const qaResponse = await claudeSession.requestVisualQA(beforeScreenshot, afterScreenshot, stepLabel);
+            if (qaResponse.message) {
+              win.webContents.send(IPC.CHAT_RESPONSE, qaResponse.message);
+            }
+            if (qaResponse.steps.length > 0) {
+              win.webContents.send(IPC.STEPS_PROPOSED, qaResponse.steps);
+            }
+          } catch (err) {
+            console.error('Visual QA failed during Run All:', err);
+          }
+        }
       } catch (err) {
         win.webContents.send(IPC.STEP_RESULT, step.id, 'failed', (err as Error).message);
         break;

@@ -41,6 +41,13 @@ export interface ProjectConfig {
   claudeModel?: string;
 }
 
+export interface Snapshot {
+  screenshot: Buffer;
+  url: string;
+  stepId: string;
+  timestamp: number;
+}
+
 // IPC channel names
 export const IPC = {
   // Browser
@@ -72,4 +79,7 @@ export const IPC = {
   // Export
   EXPORT_TEST: 'export:test',
   EXPORT_RESULT: 'export:result',
+
+  // Visual QA
+  VISUAL_QA_RESULT: 'visual-qa:result',
 } as const;

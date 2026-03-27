@@ -49,10 +49,7 @@ export class BrowserManager {
 
   async getAccessibilityTree(): Promise<string> {
     if (!this.page) throw new Error('Browser not launched');
-    // page.accessibility was removed from Playwright types in 1.46+; cast to any for runtime access
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const snapshot = await (this.page as any).accessibility?.snapshot?.() ?? null;
-    return JSON.stringify(snapshot, null, 2);
+    return await this.page.locator(':root').ariaSnapshot();
   }
 
   getCurrentUrl(): string {

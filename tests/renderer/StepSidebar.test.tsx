@@ -13,17 +13,26 @@ const mockTest: TestCase = {
   ],
 };
 
+const defaultProps = {
+  tests: [mockTest],
+  activeTestId: '1',
+  onSwitchTest: vi.fn(),
+  onCreateTest: vi.fn(),
+  onRenameTest: vi.fn(),
+  onDeleteTest: vi.fn(),
+  onAcceptStep: vi.fn(),
+  onDenyStep: vi.fn(),
+  onResetStep: vi.fn(),
+  onUpdateStep: vi.fn(),
+  onInsertStep: vi.fn(),
+  onInsertPrompt: vi.fn(),
+  onRunAll: vi.fn(),
+  onExport: vi.fn(),
+};
+
 describe('StepSidebar', () => {
   it('renders all steps with correct status indicators', () => {
-    render(
-      <StepSidebar
-        testCase={mockTest}
-        onAcceptStep={vi.fn()}
-        onDenyStep={vi.fn()}
-        onRunAll={vi.fn()}
-        onExport={vi.fn()}
-      />
-    );
+    render(<StepSidebar {...defaultProps} />);
 
     expect(screen.getByText('Navigate to /login')).toBeTruthy();
     expect(screen.getByText('Fill email')).toBeTruthy();
@@ -32,15 +41,7 @@ describe('StepSidebar', () => {
 
   it('calls onRunAll when Run All button is clicked', () => {
     const onRunAll = vi.fn();
-    render(
-      <StepSidebar
-        testCase={mockTest}
-        onAcceptStep={vi.fn()}
-        onDenyStep={vi.fn()}
-        onRunAll={onRunAll}
-        onExport={vi.fn()}
-      />
-    );
+    render(<StepSidebar {...defaultProps} onRunAll={onRunAll} />);
 
     fireEvent.click(screen.getByText('Run All'));
     expect(onRunAll).toHaveBeenCalledOnce();
@@ -48,15 +49,7 @@ describe('StepSidebar', () => {
 
   it('calls onExport when Export button is clicked', () => {
     const onExport = vi.fn();
-    render(
-      <StepSidebar
-        testCase={mockTest}
-        onAcceptStep={vi.fn()}
-        onDenyStep={vi.fn()}
-        onRunAll={vi.fn()}
-        onExport={onExport}
-      />
-    );
+    render(<StepSidebar {...defaultProps} onExport={onExport} />);
 
     fireEvent.click(screen.getByText('Export .spec.ts'));
     expect(onExport).toHaveBeenCalledOnce();
