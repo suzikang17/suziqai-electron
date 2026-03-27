@@ -28,6 +28,9 @@ export function App() {
   const [chatHeight, setChatHeight] = useState(200);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
+  const [isAutopilot, setIsAutopilot] = useState(false);
+  const autopilotRef = useRef(false);
+  useEffect(() => { autopilotRef.current = isAutopilot; }, [isAutopilot]);
   const [showSettings, setShowSettings] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
   const [isAutoLoading, setIsAutoLoading] = useState(true);
@@ -130,6 +133,13 @@ export function App() {
       }));
       setInsertAtIndex(null); // reset after insert
       log(`${(steps as any[]).length} step(s) added`);
+
+      // Autopilot: auto-execute all newly added steps
+      if (autopilotRef.current) {
+        const stepsToRun = (steps as any[]).map((s: any) => ({ id: s.id, action: s.action }));
+        log(`⚡ Autopilot: running ${stepsToRun.length} step(s)...`);
+        window.suziqai.executeAllSteps(stepsToRun);
+      }
     });
 
     window.suziqai.onStepResult((stepId, status, error) => {
@@ -464,6 +474,8 @@ export function App() {
             setIsRecording(!isRecording);
           }}
           onPickToggle={togglePicker}
+          isAutopilot={isAutopilot}
+          onAutopilotToggle={() => setIsAutopilot(!isAutopilot)}
         />
         {/* Browser viewport area — BrowserView is positioned here by main process */}
         <div

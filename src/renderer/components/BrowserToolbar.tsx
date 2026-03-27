@@ -6,10 +6,12 @@ interface BrowserToolbarProps {
   mode: AppMode;
   isRecording: boolean;
   isPicking: boolean;
+  isAutopilot: boolean;
   onNavigate: (url: string) => void;
   onModeChange: (mode: AppMode) => void;
   onRecordToggle: () => void;
   onPickToggle: () => void;
+  onAutopilotToggle: () => void;
 }
 
 export function BrowserToolbar({
@@ -21,6 +23,8 @@ export function BrowserToolbar({
   onModeChange,
   onRecordToggle,
   onPickToggle,
+  isAutopilot,
+  onAutopilotToggle,
 }: BrowserToolbarProps) {
   const [urlInput, setUrlInput] = useState(url);
 
@@ -110,6 +114,24 @@ export function BrowserToolbar({
           }}
         />
         {isRecording ? 'Stop' : 'Record'}
+      </button>
+
+      {/* Autopilot toggle */}
+      <button
+        onClick={onAutopilotToggle}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          background: isAutopilot ? 'var(--accent-green)' : 'var(--bg-tertiary)',
+          color: isAutopilot ? 'white' : 'var(--text-secondary)',
+          borderRadius: 4,
+          padding: '4px 10px',
+          fontSize: 10,
+          fontWeight: 'bold',
+        }}
+      >
+        {isAutopilot ? '⚡ Autopilot ON' : '⚡ Autopilot'}
       </button>
 
       {/* Mode selector */}
