@@ -1,6 +1,6 @@
 import React from 'react';
 import type { TestCase } from '@shared/types';
-import { generateSpec } from '../utils/generateSpec';
+import { generateSpec } from '@shared/utils/generateSpec';
 
 interface CodePreviewProps {
   test: TestCase;

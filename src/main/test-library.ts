@@ -1,7 +1,7 @@
 import { readdir, readFile, writeFile, unlink, mkdir, access } from 'fs/promises';
 import path from 'path';
 import type { TestCase, LibraryEntry } from '../shared/types';
-import { generateSpec } from '../renderer/utils/generateSpec';
+import { generateSpec } from '../shared/utils/generateSpec';
 
 export class TestLibrary {
   constructor(private testOutputDir: string) {}

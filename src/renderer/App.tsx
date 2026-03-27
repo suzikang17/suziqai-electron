@@ -6,7 +6,7 @@ import { ChatPanel } from './components/ChatPanel';
 import { BrowserToolbar } from './components/BrowserToolbar';
 import { CodePreview } from './components/CodePreview';
 import { SelectorPopover } from './components/SelectorPopover';
-import { generateSpec, generateSpecFilename } from './utils/generateSpec';
+import { generateSpec, generateSpecFilename } from '@shared/utils/generateSpec';
 
 export function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);

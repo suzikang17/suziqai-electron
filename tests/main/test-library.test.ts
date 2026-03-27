@@ -51,13 +51,20 @@ describe('TestLibrary', () => {
     });
 
     it('overwrites existing files when fileName is provided', async () => {
-      await library.save(mockTest);
+      const first = await library.save(mockTest);
+      const firstSidecar = JSON.parse(await readFile(path.join(testOutputDir, 'login-flow.suziqai.json'), 'utf-8'));
+      const firstSavedAt = firstSidecar.savedAt;
+      const firstUpdatedAt = firstSidecar.updatedAt;
+
       const updated = { ...mockTest, name: 'Login flow v2' };
       const result = await library.save(updated, 'login-flow');
 
       expect(result.fileName).toBe('login-flow');
       const sidecar = JSON.parse(await readFile(path.join(testOutputDir, 'login-flow.suziqai.json'), 'utf-8'));
       expect(sidecar.name).toBe('Login flow v2');
+      expect(sidecar.savedAt).toBe(firstSavedAt);
+      expect(sidecar.updatedAt).toBeDefined();
+      expect(sidecar.updatedAt).not.toBe(firstUpdatedAt);
     });
 
     it('appends numeric suffix on name collision', async () => {
