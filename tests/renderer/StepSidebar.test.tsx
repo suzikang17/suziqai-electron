@@ -28,6 +28,13 @@ const defaultProps = {
   onInsertPrompt: vi.fn(),
   onRunAll: vi.fn(),
   onExport: vi.fn(),
+  sidebarMode: 'session' as const,
+  onSidebarModeChange: vi.fn(),
+  onSaveTest: vi.fn(),
+  libraryEntries: [],
+  onLoadFromLibrary: vi.fn(),
+  onDeleteFromLibrary: vi.fn(),
+  onRefreshLibrary: vi.fn(),
 };
 
 describe('StepSidebar', () => {
@@ -53,5 +60,59 @@ describe('StepSidebar', () => {
 
     fireEvent.click(screen.getByText('Export .spec.ts'));
     expect(onExport).toHaveBeenCalledOnce();
+  });
+});
+
+describe('Library toggle', () => {
+  const baseProps = {
+    tests: [{ id: '1', name: 'Test 1', steps: [] }],
+    activeTestId: '1',
+    onSwitchTest: vi.fn(),
+    onCreateTest: vi.fn(),
+    onRenameTest: vi.fn(),
+    onDeleteTest: vi.fn(),
+    onAcceptStep: vi.fn(),
+    onDenyStep: vi.fn(),
+    onResetStep: vi.fn(),
+    onUpdateStep: vi.fn(),
+    onInsertStep: vi.fn(),
+    onInsertPrompt: vi.fn(),
+    onRunAll: vi.fn(),
+    onExport: vi.fn(),
+    sidebarMode: 'session' as const,
+    onSidebarModeChange: vi.fn(),
+    onSaveTest: vi.fn(),
+    libraryEntries: [],
+    onLoadFromLibrary: vi.fn(),
+    onDeleteFromLibrary: vi.fn(),
+    onRefreshLibrary: vi.fn(),
+  };
+
+  it('renders Session and Library tabs', () => {
+    render(<StepSidebar {...baseProps} />);
+    expect(screen.getByText('Session')).toBeDefined();
+    expect(screen.getByText('Library')).toBeDefined();
+  });
+
+  it('calls onSidebarModeChange when clicking Library tab', () => {
+    render(<StepSidebar {...baseProps} />);
+    fireEvent.click(screen.getByText('Library'));
+    expect(baseProps.onSidebarModeChange).toHaveBeenCalledWith('library');
+  });
+
+  it('shows library view when sidebarMode is library', () => {
+    render(<StepSidebar {...baseProps} sidebarMode="library" />);
+    expect(screen.getByText(/no saved tests/i)).toBeDefined();
+  });
+
+  it('renders Save button in session mode', () => {
+    render(<StepSidebar {...baseProps} />);
+    expect(screen.getByText('Save')).toBeDefined();
+  });
+
+  it('calls onSaveTest when clicking Save', () => {
+    render(<StepSidebar {...baseProps} />);
+    fireEvent.click(screen.getByText('Save'));
+    expect(baseProps.onSaveTest).toHaveBeenCalled();
   });
 });
