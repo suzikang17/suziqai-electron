@@ -30,7 +30,9 @@ export function App() {
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
   const [isAutopilot, setIsAutopilot] = useState(false);
   const autopilotRef = useRef(false);
-  useEffect(() => { autopilotRef.current = isAutopilot; }, [isAutopilot]);
+  const autopilotRetriesRef = useRef(0);
+  const AUTOPILOT_MAX_RETRIES = 3;
+  useEffect(() => { autopilotRef.current = isAutopilot; if (!isAutopilot) autopilotRetriesRef.current = 0; }, [isAutopilot]);
   const [showSettings, setShowSettings] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
   const [isAutoLoading, setIsAutoLoading] = useState(true);
@@ -159,12 +161,23 @@ export function App() {
           log(msg);
         }
 
-        // Autopilot: on failure, ask AI for diagnosis and alternative approach
+        // Autopilot: on failure, ask AI for diagnosis (with retry limit)
         if (autopilotRef.current && status === 'failed' && step) {
-          const prompt = `Step failed: "${step.label}"\nError: ${error}\n\nLook at the current screenshot and suggest an alternative approach. Either fix the selector/action or propose different steps to accomplish the same goal.`;
-          log('⚡ Autopilot: asking AI to diagnose failure...');
-          setIsChatLoading(true);
-          window.suziqai.sendChat(prompt);
+          autopilotRetriesRef.current++;
+          if (autopilotRetriesRef.current > AUTOPILOT_MAX_RETRIES) {
+            log(`⚡ Autopilot: hit ${AUTOPILOT_MAX_RETRIES} retries — pausing autopilot`);
+            setIsAutopilot(false);
+          } else {
+            const prompt = `Step failed (retry ${autopilotRetriesRef.current}/${AUTOPILOT_MAX_RETRIES}): "${step.label}"\nError: ${error}\n\nLook at the current screenshot and suggest an alternative approach. Either fix the selector/action or propose different steps to accomplish the same goal.`;
+            log(`⚡ Autopilot: diagnosing failure (${autopilotRetriesRef.current}/${AUTOPILOT_MAX_RETRIES})...`);
+            setIsChatLoading(true);
+            window.suziqai.sendChat(prompt);
+          }
+        }
+
+        // Reset retry counter on success
+        if (autopilotRef.current && status === 'passed') {
+          autopilotRetriesRef.current = 0;
         }
 
         return updated;
