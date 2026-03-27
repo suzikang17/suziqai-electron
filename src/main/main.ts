@@ -182,6 +182,18 @@ function createWindow(): void {
     });
     mainWindow!.addBrowserView(browserView);
 
+    // Set initial bounds — will be refined by renderer's ResizeObserver
+    const winBounds = mainWindow!.getContentBounds();
+    const sidebarWidth = 300;
+    const toolbarHeight = 40;
+    const chatHeight = 220;
+    browserView.setBounds({
+      x: sidebarWidth,
+      y: toolbarHeight,
+      width: Math.max(100, winBounds.width - sidebarWidth),
+      height: Math.max(100, winBounds.height - toolbarHeight - chatHeight),
+    });
+
     // Navigate to the base URL
     const url = config.baseUrl.startsWith('http') ? config.baseUrl : `http://${config.baseUrl}`;
     browserView.webContents.loadURL(url);
