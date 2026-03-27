@@ -48,6 +48,15 @@ export interface Snapshot {
   timestamp: number;
 }
 
+export interface LibraryEntry {
+  fileName: string;
+  name: string;
+  stepCount: number;
+  savedAt: string;
+  updatedAt: string;
+  imported: boolean;
+}
+
 // IPC channel names
 export const IPC = {
   // Browser
@@ -82,4 +91,10 @@ export const IPC = {
 
   // Visual QA
   VISUAL_QA_RESULT: 'visual-qa:result',
+
+  // Library
+  LIBRARY_LIST: 'library:list',
+  LIBRARY_SAVE: 'library:save',
+  LIBRARY_LOAD: 'library:load',
+  LIBRARY_DELETE: 'library:delete',
 } as const;

@@ -1,0 +1,26 @@
+// @vitest-environment node
+import { describe, it, expect } from 'vitest';
+import { IPC } from '../../src/shared/types';
+import type { LibraryEntry } from '../../src/shared/types';
+
+describe('Library types', () => {
+  it('exports library IPC channel constants', () => {
+    expect(IPC.LIBRARY_LIST).toBe('library:list');
+    expect(IPC.LIBRARY_SAVE).toBe('library:save');
+    expect(IPC.LIBRARY_LOAD).toBe('library:load');
+    expect(IPC.LIBRARY_DELETE).toBe('library:delete');
+  });
+
+  it('LibraryEntry type is usable', () => {
+    const entry: LibraryEntry = {
+      fileName: 'login-flow',
+      name: 'Login flow',
+      stepCount: 3,
+      savedAt: '2026-03-27T10:00:00Z',
+      updatedAt: '2026-03-27T10:00:00Z',
+      imported: false,
+    };
+    expect(entry.fileName).toBe('login-flow');
+    expect(entry.imported).toBe(false);
+  });
+});
