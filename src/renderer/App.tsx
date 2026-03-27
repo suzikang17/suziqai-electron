@@ -136,11 +136,14 @@ export function App() {
       setInsertAtIndex(null); // reset after insert
       log(`${(steps as any[]).length} step(s) added`);
 
-      // Autopilot: auto-execute all newly added steps
+      // Autopilot: auto-execute newly added steps (skip QA-suggested steps to prevent infinite loops)
       if (autopilotRef.current) {
-        const stepsToRun = (steps as any[]).map((s: any) => ({ id: s.id, action: s.action }));
-        log(`⚡ Autopilot: running ${stepsToRun.length} step(s)...`);
-        window.suziqai.executeAllSteps(stepsToRun);
+        const executableSteps = (steps as any[]).filter((s: any) => !s._fromVisualQA);
+        if (executableSteps.length > 0) {
+          const stepsToRun = executableSteps.map((s: any) => ({ id: s.id, action: s.action }));
+          log(`⚡ Autopilot: running ${stepsToRun.length} step(s)...`);
+          window.suziqai.executeAllSteps(stepsToRun);
+        }
       }
     });
 

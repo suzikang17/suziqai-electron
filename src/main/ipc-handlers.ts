@@ -76,6 +76,7 @@ export function registerIpcHandlers(deps: Deps): void {
       // Run visual QA asynchronously (don't block step completion)
       const stepLabel = `${action.type}${action.type === 'navigate' ? ` ${action.url}` : ''}`;
       claudeSession.requestVisualQA(beforeScreenshot, afterScreenshot, stepLabel).then((qaResponse) => {
+        if (win.isDestroyed()) return;
         if (qaResponse.message) {
           win.webContents.send(IPC.CHAT_RESPONSE, qaResponse.message);
         }

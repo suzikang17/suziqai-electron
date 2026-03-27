@@ -3,6 +3,7 @@ import type { Browser, Page } from 'playwright';
 const CDP_PORT = parseInt(process.env.SUZIQAI_CDP_PORT || '9222', 10);
 
 let browser: Browser | null = null;
+let connectPromise: Promise<Page> | null = null;
 
 async function getChromium() {
   const pw = await import('playwright');
@@ -35,9 +36,19 @@ function findTargetPage(b: Browser): Page | null {
 
 /**
  * Connect Playwright to the Electron app via CDP.
- * Lazily called on first action.
+ * Lazily called on first action. Uses a mutex to prevent concurrent connections.
  */
 export async function connectToElectron(): Promise<Page> {
+  if (connectPromise) return connectPromise;
+  connectPromise = _connectToElectron();
+  try {
+    return await connectPromise;
+  } finally {
+    connectPromise = null;
+  }
+}
+
+async function _connectToElectron(): Promise<Page> {
   // Reuse existing connection if still open
   if (browser && browser.isConnected()) {
     const page = findTargetPage(browser);

@@ -26,9 +26,6 @@ const projectConfig = new ProjectConfigManager();
 
 let ipcRegistered = false;
 function registerAllIpcHandlers(): void {
-  if (ipcRegistered) return;
-  ipcRegistered = true;
-
   // Viewport bounds
   ipcMain.handle('browser:viewport-bounds', (_event, bounds: { x: number; y: number; width: number; height: number }) => {
     if (browserView) {
@@ -151,17 +148,22 @@ function createWindow(): void {
     mainWindow.loadFile(path.join(__dirname, '../../renderer/index.html'));
   }
 
-  // Register IPC handlers
-  registerIpcHandlers({
-    browserManager: null as any, // Not used — BrowserView overrides handle all browser actions
-    claudeSession,
-    recorder,
-    observer,
-    testExporter,
-    getWindow: () => mainWindow,
-  });
+  // Register IPC handlers (only once — survives macOS dock reactivation)
+  if (!ipcRegistered) {
+    ipcRegistered = true;
+
+    registerIpcHandlers({
+      browserManager: null as any, // Not used — BrowserView overrides handle all browser actions
+      claudeSession,
+      recorder,
+      observer,
+      testExporter,
+      getWindow: () => mainWindow,
+    });
+  }
 
   // Project open handler
+  ipcMain.removeHandler(IPC.PROJECT_OPEN);
   ipcMain.handle(IPC.PROJECT_OPEN, async (_event, projectPath: string, baseUrl?: string) => {
     const config = await projectConfig.load(projectPath);
     if (baseUrl) {
@@ -319,6 +321,7 @@ function createWindow(): void {
       // Run visual QA asynchronously
       const stepLabel = `${action.type}${action.type === 'navigate' ? ` ${action.url}` : ''}`;
       claudeSession.requestVisualQA(beforeScreenshot, afterScreenshot, stepLabel).then((qaResponse) => {
+        if (win.isDestroyed()) return;
         if (qaResponse.message) {
           win.webContents.send(IPC.CHAT_RESPONSE, qaResponse.message);
         }
@@ -328,6 +331,7 @@ function createWindow(): void {
             label: s.label,
             action: s.action,
             status: 'pending' as const,
+            _fromVisualQA: true,
           }));
           win.webContents.send(IPC.STEPS_PROPOSED, steps);
         }
@@ -375,6 +379,7 @@ function createWindow(): void {
                 label: s.label,
                 action: s.action,
                 status: 'pending' as const,
+                _fromVisualQA: true,
               }));
               win.webContents.send(IPC.STEPS_PROPOSED, qaSteps);
             }
