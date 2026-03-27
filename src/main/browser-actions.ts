@@ -1,8 +1,13 @@
-import { chromium, type Browser, type Page } from 'playwright';
+import type { Browser, Page } from 'playwright';
 
 const CDP_PORT = parseInt(process.env.SUZIQAI_CDP_PORT || '9222', 10);
 
 let browser: Browser | null = null;
+
+async function getChromium() {
+  const pw = await import('playwright');
+  return pw.chromium;
+}
 
 function findTargetPage(b: Browser): Page | null {
   const allPages: Page[] = [];
@@ -45,6 +50,7 @@ export async function connectToElectron(): Promise<Page> {
     browser = null;
   }
 
+  const chromium = await getChromium();
   browser = await chromium.connectOverCDP('http://127.0.0.1:' + CDP_PORT);
 
   const page = findTargetPage(browser);

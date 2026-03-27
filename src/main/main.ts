@@ -9,7 +9,11 @@ import { TestExporter } from './test-exporter';
 import { ProjectConfigManager } from './project-config';
 import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
-import { executeActionOnView } from './browser-actions';
+// Lazy-loaded to avoid importing playwright at startup
+async function executeActionOnView(view: any, action: any): Promise<void> {
+  const { executeActionOnView: exec } = await import('./browser-actions');
+  return exec(view, action);
+}
 
 let mainWindow: BrowserWindow | null = null;
 let browserView: BrowserView | null = null;
