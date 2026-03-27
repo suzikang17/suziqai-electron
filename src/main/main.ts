@@ -2,7 +2,6 @@ import { app, BrowserWindow, BrowserView, ipcMain, dialog } from 'electron';
 import path from 'path';
 import { readdir } from 'fs/promises';
 import os from 'os';
-import { BrowserManager } from './browser-manager';
 import { ClaudeSession } from './claude-session';
 import { Recorder } from './recorder';
 import { Observer } from './observer';
@@ -15,7 +14,6 @@ import { executeActionOnView } from './browser-actions';
 let mainWindow: BrowserWindow | null = null;
 let browserView: BrowserView | null = null;
 
-const browserManager = new BrowserManager();
 const claudeSession = new ClaudeSession();
 const recorder = new Recorder();
 const observer = new Observer();
@@ -151,7 +149,7 @@ function createWindow(): void {
 
   // Register IPC handlers
   registerIpcHandlers({
-    browserManager,
+    browserManager: null as any, // Not used — BrowserView overrides handle all browser actions
     claudeSession,
     recorder,
     observer,
