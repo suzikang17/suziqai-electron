@@ -12,7 +12,7 @@ export class BrowserManager {
 
   async launch(browserType: BrowserType): Promise<void> {
     const launcher = launchers[browserType];
-    this.browser = await launcher.launch({ headless: false });
+    this.browser = await launcher.launch({ headless: true });
     this.context = await this.browser.newContext();
     this.page = await this.context.newPage();
   }
