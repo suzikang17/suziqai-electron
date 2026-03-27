@@ -122,7 +122,11 @@ export async function executeActionOnView(_view: any, action: any): Promise<void
     }
 
     case 'screenshot':
-      await p.screenshot();
+      // Use BrowserView's capturePage instead of Playwright's page.screenshot
+      // because the Playwright CDP connection has 0-width viewport
+      if (_view?.webContents?.capturePage) {
+        await _view.webContents.capturePage();
+      }
       break;
   }
 }

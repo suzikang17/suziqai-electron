@@ -219,38 +219,49 @@ function createWindow(): void {
     }
   });
 
-  // Override chat handler to use BrowserView context
+  // Helper: capture screenshot from BrowserView as Buffer
+  async function captureBrowserViewScreenshot(): Promise<Buffer> {
+    if (!browserView) return Buffer.alloc(0);
+    try {
+      const image = await browserView.webContents.capturePage();
+      return image.toPNG();
+    } catch {
+      return Buffer.alloc(0);
+    }
+  }
+
+  // Helper: get accessibility tree from BrowserView
+  async function getAccessibilityContext(): Promise<string> {
+    if (!browserView) return '{}';
+    try {
+      const { connectToElectron } = await import('./browser-actions');
+      const page = await connectToElectron();
+      const ariaSnapshot = await page.locator('body').ariaSnapshot();
+      return ariaSnapshot.substring(0, 8000);
+    } catch {
+      try {
+        const title = await browserView.webContents.executeJavaScript('document.title');
+        const bodyText = await browserView.webContents.executeJavaScript(
+          'document.body.innerText.substring(0, 3000)'
+        );
+        return JSON.stringify({ title, bodyText });
+      } catch {
+        return '{}';
+      }
+    }
+  }
+
+  // Override chat handler to use BrowserView context with screenshot
   ipcMain.removeHandler(IPC.CHAT_SEND);
   ipcMain.handle(IPC.CHAT_SEND, async (_event, message: string) => {
     const win = mainWindow;
     if (!win) return;
 
-    let context = {
-      url: '',
-      accessibilityTree: '{}',
-      screenshot: '',
+    const context = {
+      url: browserView ? browserView.webContents.getURL() : '',
+      accessibilityTree: await getAccessibilityContext(),
+      screenshot: await captureBrowserViewScreenshot(),
     };
-
-    if (browserView) {
-      context.url = browserView.webContents.getURL();
-      try {
-        // Use Playwright's page to get a rich accessibility snapshot
-        const { connectToElectron } = await import('./browser-actions');
-        const page = await connectToElectron();
-        // Get aria snapshot for rich semantic context
-        const ariaSnapshot = await page.locator('body').ariaSnapshot();
-        context.accessibilityTree = ariaSnapshot.substring(0, 8000);
-      } catch {
-        // Fallback to basic text
-        try {
-          const title = await browserView.webContents.executeJavaScript('document.title');
-          const bodyText = await browserView.webContents.executeJavaScript(
-            'document.body.innerText.substring(0, 3000)'
-          );
-          context.accessibilityTree = JSON.stringify({ title, bodyText });
-        } catch {}
-      }
-    }
 
     try {
       const response = await claudeSession.send(message, context);
@@ -270,7 +281,7 @@ function createWindow(): void {
     }
   });
 
-  // Override step execution to use BrowserView
+  // Override step execution to use BrowserView with visual QA
   ipcMain.removeHandler(IPC.STEP_EXECUTE);
   ipcMain.handle(IPC.STEP_EXECUTE, async (_event, stepId: string, action: any) => {
     const win = mainWindow;
@@ -279,9 +290,36 @@ function createWindow(): void {
     win.webContents.send(IPC.STEP_RESULT, stepId, 'running');
 
     try {
+      const beforeScreenshot = await captureBrowserViewScreenshot();
+
       await executeActionOnView(browserView, action);
       win.webContents.send(IPC.STEP_RESULT, stepId, 'passed');
       win.webContents.send(IPC.BROWSER_URL_CHANGED, browserView.webContents.getURL());
+
+      // Wait for DOM to settle, capture after screenshot
+      await new Promise(r => setTimeout(r, 500));
+      const afterScreenshot = await captureBrowserViewScreenshot();
+
+      claudeSession.addSnapshot(afterScreenshot, browserView.webContents.getURL(), stepId);
+
+      // Run visual QA asynchronously
+      const stepLabel = `${action.type}${action.type === 'navigate' ? ` ${action.url}` : ''}`;
+      claudeSession.requestVisualQA(beforeScreenshot, afterScreenshot, stepLabel).then((qaResponse) => {
+        if (qaResponse.message) {
+          win.webContents.send(IPC.CHAT_RESPONSE, qaResponse.message);
+        }
+        if (qaResponse.steps.length > 0) {
+          const steps = qaResponse.steps.map((s: any, i: number) => ({
+            id: `qa-${Date.now()}-${i}`,
+            label: s.label,
+            action: s.action,
+            status: 'pending' as const,
+          }));
+          win.webContents.send(IPC.STEPS_PROPOSED, steps);
+        }
+      }).catch((err) => {
+        console.error('Visual QA failed:', err);
+      });
     } catch (err) {
       win.webContents.send(IPC.STEP_RESULT, stepId, 'failed', (err as Error).message);
     }
@@ -292,11 +330,44 @@ function createWindow(): void {
     const win = mainWindow;
     if (!win || !browserView) return;
 
-    for (const step of steps) {
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
       win.webContents.send(IPC.STEP_RESULT, step.id, 'running');
+
       try {
+        const beforeScreenshot = await captureBrowserViewScreenshot();
+
         await executeActionOnView(browserView, step.action);
         win.webContents.send(IPC.STEP_RESULT, step.id, 'passed');
+
+        await new Promise(r => setTimeout(r, 500));
+        const afterScreenshot = await captureBrowserViewScreenshot();
+        claudeSession.addSnapshot(afterScreenshot, browserView.webContents.getURL(), step.id);
+
+        // Visual QA every 3rd step and on the final step
+        const isThirdStep = (i + 1) % 3 === 0;
+        const isFinalStep = i === steps.length - 1;
+
+        if (isThirdStep || isFinalStep) {
+          const stepLabel = `${step.action.type}${step.action.type === 'navigate' ? ` ${step.action.url}` : ''}`;
+          try {
+            const qaResponse = await claudeSession.requestVisualQA(beforeScreenshot, afterScreenshot, stepLabel);
+            if (qaResponse.message) {
+              win.webContents.send(IPC.CHAT_RESPONSE, qaResponse.message);
+            }
+            if (qaResponse.steps.length > 0) {
+              const qaSteps = qaResponse.steps.map((s: any, j: number) => ({
+                id: `qa-${Date.now()}-${j}`,
+                label: s.label,
+                action: s.action,
+                status: 'pending' as const,
+              }));
+              win.webContents.send(IPC.STEPS_PROPOSED, qaSteps);
+            }
+          } catch (err) {
+            console.error('Visual QA failed during Run All:', err);
+          }
+        }
       } catch (err) {
         win.webContents.send(IPC.STEP_RESULT, step.id, 'failed', (err as Error).message);
         break;
