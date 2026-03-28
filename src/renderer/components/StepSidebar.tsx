@@ -89,7 +89,9 @@ export function StepSidebar({
 }: StepSidebarProps) {
   const activeTest = tests.find(t => t.id === activeTestId) || tests[0];
   const [composerAt, setComposerAt] = useState<number | null>(null);
+  // Start with all groups collapsed when there are many steps
   const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
+  const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
 
   // Group steps: each action + following assertions form a group
   const stepGroups: Array<{ actionIndex: number; indices: number[] }> = [];
@@ -109,6 +111,14 @@ export function StepSidebar({
     });
     if (currentGroup) stepGroups.push(currentGroup);
   }
+
+  // Auto-collapse all groups when step count is high
+  React.useEffect(() => {
+    if (activeTest && activeTest.steps.length > 10 && stepGroups.length > 0 && !hasAutoCollapsed) {
+      setCollapsedGroups(new Set(stepGroups.map(g => g.actionIndex)));
+      setHasAutoCollapsed(true);
+    }
+  }, [activeTest?.steps.length, stepGroups.length]);
 
   const toggleGroup = (actionIndex: number) => {
     setCollapsedGroups(prev => {
@@ -262,6 +272,34 @@ export function StepSidebar({
             </div>
           </div>
           <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+
+          {/* Collapse/Expand all toggle */}
+          {stepGroups.some(g => g.indices.length > 1) && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+              <button
+                onClick={() => {
+                  const allCollapsed = stepGroups.every(g => g.indices.length <= 1 || collapsedGroups.has(g.actionIndex));
+                  if (allCollapsed) {
+                    setCollapsedGroups(new Set());
+                  } else {
+                    setCollapsedGroups(new Set(stepGroups.map(g => g.actionIndex)));
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  color: 'var(--accent-blue, #0969da)',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                }}
+              >
+                {stepGroups.every(g => g.indices.length <= 1 || collapsedGroups.has(g.actionIndex))
+                  ? 'Expand All'
+                  : 'Collapse All'}
+              </button>
+            </div>
+          )}
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* Insert at top */}
