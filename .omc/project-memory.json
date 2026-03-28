@@ -116,8 +116,8 @@
   "hotPaths": [
     {
       "path": "src/renderer/components/StepSidebar.tsx",
-      "accessCount": 217,
-      "lastAccessed": 1774722241203,
+      "accessCount": 232,
+      "lastAccessed": 1774722702571,
       "type": "file"
     },
     {
@@ -128,14 +128,14 @@
     },
     {
       "path": "src/renderer/components/StepItem.tsx",
-      "accessCount": 100,
-      "lastAccessed": 1774722274101,
+      "accessCount": 103,
+      "lastAccessed": 1774722411178,
       "type": "file"
     },
     {
       "path": "src/main/main.ts",
-      "accessCount": 74,
-      "lastAccessed": 1774721922659,
+      "accessCount": 97,
+      "lastAccessed": 1774722876161,
       "type": "file"
     },
     {
@@ -176,8 +176,8 @@
     },
     {
       "path": "src/preload/preload.ts",
-      "accessCount": 18,
-      "lastAccessed": 1774721898376,
+      "accessCount": 20,
+      "lastAccessed": 1774722347476,
       "type": "file"
     },
     {
@@ -193,16 +193,16 @@
       "type": "file"
     },
     {
+      "path": "src",
+      "accessCount": 12,
+      "lastAccessed": 1774722718856,
+      "type": "directory"
+    },
+    {
       "path": "tests/main/test-library.test.ts",
       "accessCount": 11,
       "lastAccessed": 1774720356426,
       "type": "file"
-    },
-    {
-      "path": "src",
-      "accessCount": 11,
-      "lastAccessed": 1774721295248,
-      "type": "directory"
     },
     {
       "path": "src/renderer/types.ts",
@@ -235,16 +235,16 @@
       "type": "file"
     },
     {
+      "path": "src/main",
+      "accessCount": 6,
+      "lastAccessed": 1774722889643,
+      "type": "directory"
+    },
+    {
       "path": "tests/main/claude-session.test.ts",
       "accessCount": 5,
       "lastAccessed": 1774645826493,
       "type": "file"
-    },
-    {
-      "path": "src/main",
-      "accessCount": 5,
-      "lastAccessed": 1774646839622,
-      "type": "directory"
     },
     {
       "path": "src/renderer/utils/generateSpec.ts",
@@ -271,16 +271,16 @@
       "type": "file"
     },
     {
+      "path": "src/renderer",
+      "accessCount": 4,
+      "lastAccessed": 1774722628872,
+      "type": "directory"
+    },
+    {
       "path": "tests/renderer/LibraryView.test.tsx",
       "accessCount": 3,
       "lastAccessed": 1774714035693,
       "type": "file"
-    },
-    {
-      "path": "src/renderer",
-      "accessCount": 3,
-      "lastAccessed": 1774717458006,
-      "type": "directory"
     },
     {
       "path": "tests",

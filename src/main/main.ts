@@ -10,11 +10,7 @@ import { ProjectConfigManager } from './project-config';
 import { TestLibrary } from './test-library';
 import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
-// Lazy-loaded to avoid importing playwright at startup
-async function executeActionOnView(view: any, action: any, timeout?: number): Promise<void> {
-  const { executeActionOnView: exec } = await import('./browser-actions');
-  return exec(view, action, timeout);
-}
+import { executeActionOnView, disconnectPlaywright, connectToElectron } from './browser-actions';
 
 let mainWindow: BrowserWindow | null = null;
 let browserView: BrowserView | null = null;
@@ -333,7 +329,6 @@ function createWindow(): void {
   async function getAccessibilityContext(): Promise<string> {
     if (!browserView) return '{}';
     try {
-      const { connectToElectron } = await import('./browser-actions');
       const page = await connectToElectron();
       const ariaSnapshot = await page.locator('body').ariaSnapshot();
       return ariaSnapshot.substring(0, 8000);
@@ -499,7 +494,6 @@ function createWindow(): void {
   });
 
   mainWindow.on('closed', async () => {
-    const { disconnectPlaywright } = await import('./browser-actions');
     await disconnectPlaywright();
     mainWindow = null;
   });

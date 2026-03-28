@@ -8,14 +8,25 @@ import type { TestSuite, StepAction, HookType, DeviceConfig, PlaywrightConfig } 
 import type { LibraryEntry } from '@shared/types';
 
 const POPULAR_DEVICES = [
-  'iPhone 15 Pro',
-  'iPhone 14',
-  'iPad Pro 11',
-  'Pixel 7',
-  'Galaxy S24',
+  // Desktop
   'Desktop Chrome',
   'Desktop Safari',
   'Desktop Firefox',
+  'Desktop Edge',
+  'Desktop Chrome HiDPI',
+  // Tablets
+  'iPad Pro 11',
+  'iPad (gen 7)',
+  'iPad Mini',
+  'Galaxy Tab S4',
+  // Phones
+  'iPhone 15 Pro',
+  'iPhone 15 Pro Max',
+  'iPhone 14',
+  'iPhone SE',
+  'Pixel 7',
+  'Galaxy S24',
+  'Galaxy S9+',
 ];
 
 interface StepSidebarProps {
@@ -180,6 +191,16 @@ export function StepSidebar({
     if (!activeSuite) return;
     if (currentDevices.some(d => d.name === name)) return;
     onUpdateSuiteDevices(activeSuite.id, [...currentDevices, { name }]);
+    // Also add as a project in playwright config
+    if (playwrightConfig && onPlaywrightConfigChange) {
+      const existingProjects = playwrightConfig.projects || [];
+      if (!existingProjects.some(p => p.name === name)) {
+        onPlaywrightConfigChange({
+          ...playwrightConfig,
+          projects: [...existingProjects, { name, device: name }],
+        });
+      }
+    }
     setDeviceDropdownOpen(false);
     setDeviceSearch('');
   };
@@ -187,6 +208,13 @@ export function StepSidebar({
   const removeDevice = (name: string) => {
     if (!activeSuite) return;
     onUpdateSuiteDevices(activeSuite.id, currentDevices.filter(d => d.name !== name));
+    // Also remove from playwright config projects
+    if (playwrightConfig && onPlaywrightConfigChange) {
+      onPlaywrightConfigChange({
+        ...playwrightConfig,
+        projects: (playwrightConfig.projects || []).filter(p => p.name !== name),
+      });
+    }
   };
 
   const filteredDevices = POPULAR_DEVICES.filter(
@@ -327,7 +355,7 @@ export function StepSidebar({
 
       {sidebarMode === 'session' ? (
         <>
-          {/* Device viewport picker */}
+          {/* Device viewport picker — shows projects from playwright config */}
           {(() => {
             const DEVICE_VIEWPORTS: Record<string, { width: number; height: number }> = {
               'iPhone 15 Pro': { width: 393, height: 659 },
@@ -339,46 +367,45 @@ export function StepSidebar({
               'Desktop Safari': { width: 1280, height: 720 },
               'Desktop Firefox': { width: 1280, height: 720 },
             };
-            const suiteDevices = activeSuite?.devices || [];
-            const activeViewport = previewDevice !== 'default'
-              ? (suiteDevices.find(d => d.name === previewDevice)?.viewport || DEVICE_VIEWPORTS[previewDevice])
+            const configProjects = playwrightConfig?.projects || [];
+            const activeProject = configProjects.find(p => p.name === previewDevice);
+            const activeViewport = activeProject
+              ? (activeProject.viewport || (activeProject.device ? DEVICE_VIEWPORTS[activeProject.device] : null))
               : null;
             return (
               <div style={{ marginBottom: 8, flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Device</span>
                 </div>
-                <select
-                  value={previewDevice}
-                  onChange={(e) => onPreviewDeviceChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'var(--bg-tertiary)',
-                    color: 'var(--text-secondary)',
-                    borderRadius: 4,
-                    padding: '4px 6px',
-                    fontSize: 11,
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  <option value="default">Default (full space)</option>
-                  {POPULAR_DEVICES.map(name => {
-                    const vp = DEVICE_VIEWPORTS[name];
-                    return (
-                      <option key={name} value={name}>
-                        {name}{vp ? ` (${vp.width}\u00d7${vp.height})` : ''}
-                      </option>
-                    );
-                  })}
-                  {suiteDevices.filter(d => !POPULAR_DEVICES.includes(d.name)).map(d => {
-                    const vp = d.viewport;
-                    return (
-                      <option key={d.name} value={d.name}>
-                        {d.name}{vp ? ` (${vp.width}\u00d7${vp.height})` : ''}
-                      </option>
-                    );
-                  })}
-                </select>
+                {configProjects.length > 0 ? (
+                  <select
+                    value={previewDevice}
+                    onChange={(e) => onPreviewDeviceChange(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-secondary)',
+                      borderRadius: 4,
+                      padding: '4px 6px',
+                      fontSize: 11,
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    <option value="default">Default (full space)</option>
+                    {configProjects.map(project => {
+                      const vp = project.viewport || (project.device ? DEVICE_VIEWPORTS[project.device] : null);
+                      return (
+                        <option key={project.name} value={project.name}>
+                          {project.name}{vp ? ` (${vp.width}\u00d7${vp.height})` : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                ) : (
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '4px 8px' }}>
+                    No devices configured. Add projects in the Library tab.
+                  </div>
+                )}
                 {activeViewport && (
                   <span style={{ fontSize: 9, color: 'var(--text-muted)', display: 'block', marginTop: 2, textAlign: 'center' }}>
                     {activeViewport.width} \u00d7 {activeViewport.height}

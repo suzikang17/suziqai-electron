@@ -77,7 +77,7 @@ export function defaultPlaywrightConfig(baseURL: string, testDir: string): Playw
   return {
     baseURL,
     testDir,
-    projects: [],
+    projects: [{ name: 'Desktop Chrome', device: 'Desktop Chrome' }],
     timeout: 30000,
     expectTimeout: 5000,
     retries: 0,

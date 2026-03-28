@@ -8,7 +8,7 @@ describe('generatePlaywrightConfig', () => {
     const config = defaultPlaywrightConfig('http://localhost:3000', './tests');
     const output = generatePlaywrightConfig(config);
 
-    expect(output).toContain("import { defineConfig } from '@playwright/test';");
+    expect(output).toContain("import { defineConfig, devices } from '@playwright/test';");
     expect(output).toContain("testDir: './tests'");
     expect(output).toContain('timeout: 30000');
     expect(output).toContain('timeout: 5000');
@@ -20,8 +20,9 @@ describe('generatePlaywrightConfig', () => {
     expect(output).toContain("screenshot: 'only-on-failure'");
     expect(output).toContain("video: 'off'");
     expect(output).toContain("trace: 'off'");
-    // No projects key when empty
-    expect(output).not.toContain('projects:');
+    // Default includes Desktop Chrome project
+    expect(output).toContain('projects:');
+    expect(output).toContain("name: 'Desktop Chrome'");
   });
 
   it('generates config with device-based projects', () => {
@@ -137,7 +138,7 @@ describe('defaultPlaywrightConfig', () => {
     const config = defaultPlaywrightConfig('http://localhost:4000', './e2e');
     expect(config.baseURL).toBe('http://localhost:4000');
     expect(config.testDir).toBe('./e2e');
-    expect(config.projects).toEqual([]);
+    expect(config.projects).toEqual([{ name: 'Desktop Chrome', device: 'Desktop Chrome' }]);
     expect(config.timeout).toBe(30000);
     expect(config.expectTimeout).toBe(5000);
     expect(config.retries).toBe(0);
