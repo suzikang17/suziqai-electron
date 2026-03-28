@@ -371,8 +371,9 @@ export function StepSidebar({
                     }}
                   />
                 ) : (
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {activeSuite.fileName}.spec.ts
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+                    <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 0 }}>File</span>
+                    <span style={{ fontFamily: 'var(--font-mono, monospace)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeSuite.fileName}.spec.ts</span>
                   </span>
                 )}
               </div>
