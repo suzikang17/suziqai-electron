@@ -24,6 +24,19 @@ export interface TestCase {
   steps: Step[];
 }
 
+export interface TestBlock {
+  id: string;
+  name: string;
+  steps: Step[];
+}
+
+export interface TestSuite {
+  id: string;
+  name: string;
+  beforeEach: Step[];
+  tests: TestBlock[];
+}
+
 export type AppMode = 'command' | 'record' | 'observe';
 
 export interface ChatMessage {
