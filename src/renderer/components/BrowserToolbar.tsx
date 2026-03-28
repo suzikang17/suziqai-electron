@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { AppMode } from '@shared/types';
 
 interface BrowserToolbarProps {
@@ -8,6 +9,8 @@ interface BrowserToolbarProps {
   isPicking: boolean;
   isAutopilot: boolean;
   onNavigate: (url: string) => void;
+  onGoBack: () => void;
+  onGoForward: () => void;
   onModeChange: (mode: AppMode) => void;
   onRecordToggle: () => void;
   onPickToggle: () => void;
@@ -20,6 +23,8 @@ export function BrowserToolbar({
   isRecording,
   isPicking,
   onNavigate,
+  onGoBack,
+  onGoForward,
   onModeChange,
   onRecordToggle,
   onPickToggle,
@@ -48,11 +53,22 @@ export function BrowserToolbar({
         borderBottom: '1px solid var(--border)',
       }}
     >
-      {/* Traffic lights placeholder */}
-      <div style={{ display: 'flex', gap: 4 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-red)' }} />
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-yellow)' }} />
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-green)' }} />
+      {/* Back / Forward */}
+      <div style={{ display: 'flex', gap: 2 }}>
+        <button
+          onClick={onGoBack}
+          style={{ background: 'none', padding: '2px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}
+          title="Back"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <button
+          onClick={onGoForward}
+          style={{ background: 'none', padding: '2px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}
+          title="Forward"
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
 
       {/* URL bar */}

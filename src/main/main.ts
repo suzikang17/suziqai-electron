@@ -241,6 +241,31 @@ function createWindow(): void {
     }
   });
 
+  // Browser back/forward
+  ipcMain.removeHandler('browser:go-back');
+  ipcMain.handle('browser:go-back', async () => {
+    if (browserView && browserView.webContents.canGoBack()) {
+      browserView.webContents.goBack();
+      setTimeout(() => {
+        if (mainWindow && browserView) {
+          mainWindow.webContents.send(IPC.BROWSER_URL_CHANGED, browserView.webContents.getURL());
+        }
+      }, 500);
+    }
+  });
+
+  ipcMain.removeHandler('browser:go-forward');
+  ipcMain.handle('browser:go-forward', async () => {
+    if (browserView && browserView.webContents.canGoForward()) {
+      browserView.webContents.goForward();
+      setTimeout(() => {
+        if (mainWindow && browserView) {
+          mainWindow.webContents.send(IPC.BROWSER_URL_CHANGED, browserView.webContents.getURL());
+        }
+      }, 500);
+    }
+  });
+
   // Helper: capture screenshot from BrowserView as Buffer
   async function captureBrowserViewScreenshot(): Promise<Buffer> {
     if (!browserView) return Buffer.alloc(0);

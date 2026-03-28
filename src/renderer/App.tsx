@@ -675,6 +675,8 @@ export function App() {
           isRecording={isRecording}
           isPicking={isPicking}
           onNavigate={(url: string) => window.suziqai.navigate(url)}
+          onGoBack={() => window.suziqai.goBack()}
+          onGoForward={() => window.suziqai.goForward()}
           onModeChange={(newMode: AppMode) => {
             setMode(newMode);
             window.suziqai.changeMode(newMode);

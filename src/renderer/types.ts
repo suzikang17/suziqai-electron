@@ -13,6 +13,8 @@ export interface SuziQaiAPI {
   onRecordEvent: (callback: (event: unknown) => void) => void;
   onObserveSuggestions: (callback: (suggestions: string) => void) => void;
   navigate: (url: string) => Promise<void>;
+  goBack: () => Promise<void>;
+  goForward: () => Promise<void>;
   onUrlChanged: (callback: (url: string) => void) => void;
   openProject: (path: string) => Promise<void>;
   onProjectConfig: (callback: (config: ProjectConfig) => void) => void;
