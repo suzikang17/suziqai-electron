@@ -506,19 +506,19 @@ export function StepSidebar({
           <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
 
           {/* Run All + Autopilot */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexShrink: 0 }}>
             <label
               style={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 5,
+                gap: 4,
                 background: isAutopilot ? 'var(--accent-green)' : 'var(--bg-tertiary)',
                 color: isAutopilot ? '#ffffff' : 'var(--text-secondary)',
-                borderRadius: 6,
-                padding: '6px 0',
-                fontSize: 12,
+                borderRadius: 4,
+                padding: '4px 0',
+                fontSize: 10,
                 fontWeight: 600,
                 border: isAutopilot ? '1px solid var(--accent-green)' : '1px solid var(--border)',
                 cursor: 'pointer',
@@ -531,7 +531,7 @@ export function StepSidebar({
                 onChange={onAutopilotToggle}
                 style={{ display: 'none' }}
               />
-              <Zap size={13} fill={isAutopilot ? 'white' : 'none'} />
+              <Zap size={11} fill={isAutopilot ? 'white' : 'none'} />
               Autopilot
             </label>
             <button
@@ -541,17 +541,17 @@ export function StepSidebar({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 5,
+                gap: 4,
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-secondary)',
-                borderRadius: 6,
-                padding: '6px 0',
-                fontSize: 12,
+                borderRadius: 4,
+                padding: '4px 0',
+                fontSize: 10,
                 fontWeight: 600,
                 border: '1px solid var(--border)',
               }}
             >
-              <PlayCircle size={13} />
+              <PlayCircle size={11} />
               Run All
             </button>
           </div>
