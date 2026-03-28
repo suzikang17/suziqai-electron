@@ -266,8 +266,12 @@ export function StepSidebar({
 
       {sidebarMode === 'session' ? (
         <>
-          {/* File name at the top */}
+          {/* File section */}
           {activeSuite && (
+            <div style={{ marginBottom: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>File</span>
+              </div>
             <div
               onDoubleClick={(e) => {
                 e.stopPropagation();
@@ -316,6 +320,7 @@ export function StepSidebar({
                   {activeSuite.fileName}.spec.ts
                 </span>
               )}
+            </div>
             </div>
           )}
 
