@@ -269,6 +269,7 @@ export function StepSidebar({
           {/* Active suite header */}
           {activeSuite && (
             <div style={{ marginBottom: 8 }}>
+              {/* Suite name row */}
               <div
                 onDoubleClick={(e) => {
                   e.stopPropagation();
@@ -283,6 +284,7 @@ export function StepSidebar({
                   borderRadius: 3,
                   background: 'var(--bg-tertiary)',
                   borderLeft: '2px solid var(--accent-green)',
+                  marginBottom: 2,
                 }}
               >
                 {renamingSuiteId === activeSuite.id ? (
@@ -322,8 +324,20 @@ export function StepSidebar({
                   {activeSuite.tests.length} test{activeSuite.tests.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              {/* fileName display — double-click to edit */}
-              <div style={{ padding: '2px 8px 4px' }}>
+              {/* File name row */}
+              <div
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setRenameFileNameValue(activeSuite.fileName || '');
+                  setRenamingFileNameId(activeSuite.id);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '2px 8px',
+                  borderRadius: 3,
+                }}
+              >
                 {renamingFileNameId === activeSuite.id ? (
                   <input
                     autoFocus
@@ -340,29 +354,23 @@ export function StepSidebar({
                       }
                       if (e.key === 'Escape') setRenamingFileNameId(null);
                     }}
+                    onClick={(e) => e.stopPropagation()}
                     style={{
+                      flex: 1,
                       fontSize: 10,
                       background: 'var(--bg-primary)',
                       color: 'var(--text-muted)',
                       border: '1px solid var(--border)',
                       borderRadius: 3,
                       padding: '1px 4px',
-                      fontFamily: 'var(--font-mono, monospace)',
-                      width: '100%',
                       outline: 'none',
+                      fontFamily: 'var(--font-mono, monospace)',
                     }}
                   />
                 ) : (
-                  <div
-                    onDoubleClick={() => {
-                      setRenameFileNameValue(activeSuite.fileName || '');
-                      setRenamingFileNameId(activeSuite.id);
-                    }}
-                    style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', cursor: 'default' }}
-                    title="Double-click to rename file"
-                  >
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {activeSuite.fileName}.spec.ts
-                  </div>
+                  </span>
                 )}
               </div>
             </div>
