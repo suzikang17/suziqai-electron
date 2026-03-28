@@ -150,9 +150,7 @@ export function StepSidebar({
             }}
             onCancel={() => setComposerAt(null)}
           />
-        ) : (
-          <InsertButton onClick={() => setComposerAt(0)} />
-        )}
+        ) : null}
         {stepGroups.map((group, groupIdx) => {
           const actionStep = activeBlock.steps[group.actionIndex];
           const assertionIndices = group.indices.slice(1);
@@ -221,9 +219,7 @@ export function StepSidebar({
                   }}
                   onCancel={() => setComposerAt(null)}
                 />
-              ) : (
-                <InsertButton onClick={() => setComposerAt(group.indices[group.indices.length - 1] + 1)} />
-              )}
+              ) : null}
             </React.Fragment>
           );
         })}
@@ -480,9 +476,7 @@ export function StepSidebar({
                       }}
                       onCancel={() => setBeforeEachComposerOpen(false)}
                     />
-                  ) : (
-                    <InsertButton onClick={() => setBeforeEachComposerOpen(true)} />
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>
