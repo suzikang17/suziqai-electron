@@ -60,6 +60,30 @@ export function App() {
   const autopilotRetriesRef = useRef(0);
   const AUTOPILOT_MAX_RETRIES = 3;
   useEffect(() => { autopilotRef.current = isAutopilot; if (!isAutopilot) autopilotRetriesRef.current = 0; }, [isAutopilot]);
+
+  const [isDirty, setIsDirty] = useState(false);
+  const lastSavedRef = useRef<string>('');
+
+  // Auto-save spec file when suite changes (debounced 1s)
+  useEffect(() => {
+    if (!projectPath || !currentSuite) return;
+    const suiteJson = JSON.stringify(currentSuite);
+    if (suiteJson === lastSavedRef.current) return; // no change
+    if (!isDirty) return;
+
+    const timeout = setTimeout(async () => {
+      try {
+        const hasProjects = playwrightConfig?.projects?.length > 0;
+        await window.suziqai.saveToLibrary(currentSuite, undefined, hasProjects);
+        lastSavedRef.current = suiteJson;
+        setIsDirty(false);
+      } catch (err) {
+        console.error('Auto-save failed:', err);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [currentSuite, isDirty, projectPath]);
   const [showSettings, setShowSettings] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
   const [isAutoLoading, setIsAutoLoading] = useState(true);
@@ -606,6 +630,7 @@ export function App() {
           onDeleteSuite={deleteSuite}
           onDeleteBlock={deleteBlock}
           onAddHookStep={(hookType: any, step: { label: string; action: any }) => {
+            setIsDirty(true);
             updateCurrentSuite(s => ({
               ...s,
               [hookType]: [...(s[hookType as keyof typeof s] as any[] || []), {
@@ -617,6 +642,7 @@ export function App() {
             }));
           }}
           onRemoveHookStep={(hookType: any, stepId: string) => {
+            setIsDirty(true);
             updateCurrentSuite(s => ({
               ...s,
               [hookType]: ((s[hookType as keyof typeof s] as any[]) || []).filter((st: any) => st.id !== stepId),
@@ -649,6 +675,7 @@ export function App() {
             }
           }}
           onDenyStep={(stepId: string) => {
+            setIsDirty(true);
             updateCurrentBlock(b => ({
               ...b,
               steps: b.steps.filter(s => s.id !== stepId),
@@ -663,6 +690,7 @@ export function App() {
             }));
           }}
           onUpdateStep={(stepId: string, action: any, label: string, timeout?: number) => {
+            setIsDirty(true);
             updateCurrentBlock(b => ({
               ...b,
               steps: b.steps.map(s =>
@@ -671,6 +699,7 @@ export function App() {
             }));
           }}
           onInsertStep={(index: number, step: { label: string; action: any }) => {
+            setIsDirty(true);
             updateCurrentBlock(b => {
               const newSteps = [...b.steps];
               newSteps.splice(index, 0, {
@@ -706,6 +735,7 @@ export function App() {
             window.suziqai.executeAllSteps(stepsToRun);
           }}
           onMoveStep={(stepIndex: number, direction: 'up' | 'down') => {
+            setIsDirty(true);
             updateCurrentBlock(b => {
               const steps = [...b.steps];
               const swapIndex = direction === 'up' ? stepIndex - 1 : stepIndex + 1;
