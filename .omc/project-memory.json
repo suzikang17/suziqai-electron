@@ -116,14 +116,20 @@
   "hotPaths": [
     {
       "path": "src/renderer/components/StepSidebar.tsx",
-      "accessCount": 73,
-      "lastAccessed": 1774717586549,
+      "accessCount": 117,
+      "lastAccessed": 1774718577539,
       "type": "file"
     },
     {
       "path": "src/renderer/App.tsx",
-      "accessCount": 54,
-      "lastAccessed": 1774717327864,
+      "accessCount": 64,
+      "lastAccessed": 1774718586416,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/StepItem.tsx",
+      "accessCount": 56,
+      "lastAccessed": 1774718635628,
       "type": "file"
     },
     {
@@ -133,15 +139,21 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/components/StepItem.tsx",
-      "accessCount": 33,
-      "lastAccessed": 1774717451337,
+      "path": "src/shared/types.ts",
+      "accessCount": 23,
+      "lastAccessed": 1774718406304,
       "type": "file"
     },
     {
-      "path": "src/shared/types.ts",
-      "accessCount": 20,
-      "lastAccessed": 1774717181740,
+      "path": "tests/renderer/StepSidebar.test.tsx",
+      "accessCount": 22,
+      "lastAccessed": 1774718596393,
+      "type": "file"
+    },
+    {
+      "path": "src/main/test-library.ts",
+      "accessCount": 18,
+      "lastAccessed": 1774718450706,
       "type": "file"
     },
     {
@@ -151,22 +163,10 @@
       "type": "file"
     },
     {
-      "path": "tests/renderer/StepSidebar.test.tsx",
-      "accessCount": 16,
-      "lastAccessed": 1774717618943,
-      "type": "file"
-    },
-    {
       "path": "",
-      "accessCount": 15,
-      "lastAccessed": 1774717188091,
+      "accessCount": 16,
+      "lastAccessed": 1774718523057,
       "type": "directory"
-    },
-    {
-      "path": "src/main/test-library.ts",
-      "accessCount": 13,
-      "lastAccessed": 1774717102481,
-      "type": "file"
     },
     {
       "path": "src/main/browser-actions.ts",
@@ -176,15 +176,21 @@
     },
     {
       "path": "tests/main/test-library.test.ts",
-      "accessCount": 8,
-      "lastAccessed": 1774717116940,
+      "accessCount": 9,
+      "lastAccessed": 1774718420662,
       "type": "file"
     },
     {
       "path": "src",
-      "accessCount": 7,
-      "lastAccessed": 1774717196020,
+      "accessCount": 8,
+      "lastAccessed": 1774718379875,
       "type": "directory"
+    },
+    {
+      "path": "src/shared/utils/generateSpec.ts",
+      "accessCount": 8,
+      "lastAccessed": 1774718429168,
+      "type": "file"
     },
     {
       "path": "docs/superpowers/plans/2026-03-25-suziqai-implementation.md",
@@ -208,6 +214,12 @@
       "path": "src/renderer/types.ts",
       "accessCount": 6,
       "lastAccessed": 1774717207476,
+      "type": "file"
+    },
+    {
+      "path": "tests/shared/types.test.ts",
+      "accessCount": 6,
+      "lastAccessed": 1774718506781,
       "type": "file"
     },
     {
@@ -235,12 +247,6 @@
       "type": "file"
     },
     {
-      "path": "src/shared/utils/generateSpec.ts",
-      "accessCount": 5,
-      "lastAccessed": 1774716998036,
-      "type": "file"
-    },
-    {
       "path": "package.json",
       "accessCount": 4,
       "lastAccessed": 1774646355364,
@@ -256,12 +262,6 @@
       "path": "src/preload/preload.ts",
       "accessCount": 4,
       "lastAccessed": 1774647297895,
-      "type": "file"
-    },
-    {
-      "path": "tests/shared/types.test.ts",
-      "accessCount": 4,
-      "lastAccessed": 1774716830880,
       "type": "file"
     },
     {
@@ -311,6 +311,12 @@
       "accessCount": 2,
       "lastAccessed": 1774647149669,
       "type": "file"
+    },
+    {
+      "path": "tests",
+      "accessCount": 2,
+      "lastAccessed": 1774718600449,
+      "type": "directory"
     },
     {
       "path": "docs/superpowers/specs/2026-03-25-suziqai-design.md",
@@ -400,12 +406,6 @@
       "path": "src/shared",
       "accessCount": 1,
       "lastAccessed": 1774647444352,
-      "type": "directory"
-    },
-    {
-      "path": "tests",
-      "accessCount": 1,
-      "lastAccessed": 1774713972603,
       "type": "directory"
     },
     {

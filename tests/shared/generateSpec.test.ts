@@ -6,7 +6,7 @@ import type { TestSuite } from '../../src/shared/types';
 describe('generateSpec', () => {
   it('generates a spec with describe, beforeEach, and multiple tests', () => {
     const suite: TestSuite = {
-      id: 'suite-1', name: 'Login Feature',
+      id: 'suite-1', name: 'Login Feature', fileName: 'login-feature',
       beforeEach: [
         { id: 's0', label: 'Navigate', action: { type: 'navigate', url: '/login' }, status: 'passed' },
       ],
@@ -35,7 +35,7 @@ describe('generateSpec', () => {
 
   it('omits beforeEach block when empty', () => {
     const suite: TestSuite = {
-      id: 'suite-1', name: 'Simple', beforeEach: [],
+      id: 'suite-1', name: 'Simple', fileName: 'simple', beforeEach: [],
       tests: [{ id: 'b1', name: 'only test', steps: [
         { id: 's1', label: 'Navigate', action: { type: 'navigate', url: '/' }, status: 'passed' },
       ]}],
@@ -48,7 +48,7 @@ describe('generateSpec', () => {
 
   it('skips failed steps', () => {
     const suite: TestSuite = {
-      id: 'suite-1', name: 'Test', beforeEach: [],
+      id: 'suite-1', name: 'Test', fileName: 'test', beforeEach: [],
       tests: [{ id: 'b1', name: 'test block', steps: [
         { id: 's1', label: 'Good', action: { type: 'navigate', url: '/' }, status: 'passed' },
         { id: 's2', label: 'Bad', action: { type: 'click', selector: 'missing' }, status: 'failed' },
@@ -62,7 +62,7 @@ describe('generateSpec', () => {
 
 describe('generateSpecFilename', () => {
   it('generates a slug from suite name', () => {
-    const suite: TestSuite = { id: '1', name: 'Login Feature', beforeEach: [], tests: [] };
+    const suite: TestSuite = { id: '1', name: 'Login Feature', fileName: 'login-feature', beforeEach: [], tests: [] };
     expect(generateSpecFilename(suite)).toBe('login-feature.spec.ts');
   });
 });

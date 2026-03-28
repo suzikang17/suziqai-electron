@@ -13,7 +13,7 @@ export function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);
   const [mode, setMode] = useState<AppMode>('command');
   const defaultBlock: TestBlock = { id: 'block-1', name: 'Untitled Test', steps: [] };
-  const defaultSuite: TestSuite = { id: 'suite-1', name: 'Untitled Suite', beforeEach: [], tests: [defaultBlock] };
+  const defaultSuite: TestSuite = { id: 'suite-1', name: 'Untitled Suite', fileName: 'untitled-suite', beforeEach: [], tests: [defaultBlock] };
   const [suites, setSuites] = useState<TestSuite[]>([defaultSuite]);
   const [activeSuiteId, setActiveSuiteId] = useState<string>('suite-1');
   const [activeBlockId, setActiveBlockId] = useState<string>('block-1');
@@ -86,6 +86,7 @@ export function App() {
     const newSuite: TestSuite = {
       id: suiteId,
       name: 'Untitled Suite',
+      fileName: 'untitled-suite',
       beforeEach: [],
       tests: [{ id: blockId, name: 'Untitled Test', steps: [] }],
     };
@@ -108,6 +109,10 @@ export function App() {
     setSuites(prev => prev.map(s => s.id === suiteId ? { ...s, name } : s));
   };
 
+  const renameSuiteFileName = (suiteId: string, fileName: string) => {
+    setSuites(prev => prev.map(s => s.id === suiteId ? { ...s, fileName } : s));
+  };
+
   const renameBlock = (blockId: string, name: string) => {
     setSuites(prev => prev.map(s => s.id !== activeSuiteId ? s : {
       ...s,
@@ -121,7 +126,7 @@ export function App() {
       if (filtered.length === 0) {
         const blockId = `block-${Date.now()}`;
         const newSuiteId = `suite-${Date.now()}`;
-        const newSuite: TestSuite = { id: newSuiteId, name: 'Untitled Suite', beforeEach: [], tests: [{ id: blockId, name: 'Untitled Test', steps: [] }] };
+        const newSuite: TestSuite = { id: newSuiteId, name: 'Untitled Suite', fileName: 'untitled-suite', beforeEach: [], tests: [{ id: blockId, name: 'Untitled Test', steps: [] }] };
         if (activeSuiteId === suiteId) {
           setActiveSuiteId(newSuiteId);
           setActiveBlockId(blockId);
@@ -529,6 +534,7 @@ export function App() {
           onCreateSuite={createNewSuite}
           onCreateBlock={createNewBlock}
           onRenameSuite={renameSuite}
+          onRenameSuiteFileName={renameSuiteFileName}
           onRenameBlock={renameBlock}
           onDeleteSuite={deleteSuite}
           onDeleteBlock={deleteBlock}
@@ -613,14 +619,13 @@ export function App() {
             log(`▶▶ Act & Assert: running ${stepsToRun.length} step(s)`);
             window.suziqai.executeAllSteps(stepsToRun);
           }}
-          onReorderStep={(fromStepIds: string[], beforeStepId: string) => {
+          onMoveStep={(stepIndex: number, direction: 'up' | 'down') => {
             updateCurrentBlock(b => {
-              const remaining = b.steps.filter(s => !fromStepIds.includes(s.id));
-              const movedSteps = b.steps.filter(s => fromStepIds.includes(s.id));
-              const insertAt = remaining.findIndex(s => s.id === beforeStepId);
-              if (insertAt === -1) return b;
-              remaining.splice(insertAt, 0, ...movedSteps);
-              return { ...b, steps: remaining };
+              const steps = [...b.steps];
+              const swapIndex = direction === 'up' ? stepIndex - 1 : stepIndex + 1;
+              if (swapIndex < 0 || swapIndex >= steps.length) return b;
+              [steps[stepIndex], steps[swapIndex]] = [steps[swapIndex], steps[stepIndex]];
+              return { ...b, steps };
             });
           }}
           onRunAll={() => {

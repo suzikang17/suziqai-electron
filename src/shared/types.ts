@@ -33,6 +33,7 @@ export interface TestBlock {
 export interface TestSuite {
   id: string;
   name: string;
+  fileName: string;
   beforeEach: Step[];
   tests: TestBlock[];
 }

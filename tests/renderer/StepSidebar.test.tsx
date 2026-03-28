@@ -6,6 +6,7 @@ import type { TestSuite } from '../../src/shared/types';
 const mockSuite: TestSuite = {
   id: 'suite-1',
   name: 'Login Suite',
+  fileName: 'login-suite',
   beforeEach: [
     { id: 'be1', label: 'Navigate to /login', action: { type: 'navigate', url: '/login' }, status: 'pending' },
   ],
@@ -45,7 +46,7 @@ const defaultProps = {
   onRunAll: vi.fn(),
   onRunActAndAssert: vi.fn(),
   onRunGroup: vi.fn(),
-  onReorderStep: vi.fn(),
+  onMoveStep: vi.fn(),
   onExport: vi.fn(),
   sidebarMode: 'session' as const,
   onSidebarModeChange: vi.fn(),
@@ -134,7 +135,7 @@ describe('Library toggle', () => {
     onRunAll: vi.fn(),
     onRunActAndAssert: vi.fn(),
     onRunGroup: vi.fn(),
-    onReorderStep: vi.fn(),
+    onMoveStep: vi.fn(),
     onExport: vi.fn(),
     sidebarMode: 'session' as const,
     onSidebarModeChange: vi.fn(),

@@ -9,7 +9,7 @@ export class TestLibrary {
   async save(suite: TestSuite, fileName?: string): Promise<{ fileName: string; path: string }> {
     await mkdir(this.testOutputDir, { recursive: true });
 
-    const resolvedName = fileName || await this.resolveFileName(suite);
+    const resolvedName = fileName || await this.resolveFileName(suite, suite.fileName);
     const specPath = path.join(this.testOutputDir, `${resolvedName}.spec.ts`);
     const sidecarPath = path.join(this.testOutputDir, `${resolvedName}.suziqai.json`);
 
@@ -30,6 +30,7 @@ export class TestLibrary {
     const sidecar = {
       id: suite.id,
       name: suite.name,
+      fileName: resolvedName,
       beforeEach: suite.beforeEach,
       tests: suite.tests,
       savedAt,
@@ -91,6 +92,7 @@ export class TestLibrary {
     return {
       id: data.id,
       name: data.name,
+      fileName: data.fileName || fileName,
       beforeEach: data.beforeEach || [],
       tests: data.tests || [],
     };
@@ -104,8 +106,8 @@ export class TestLibrary {
     await unlink(sidecarPath).catch(() => {});
   }
 
-  private async resolveFileName(suite: TestSuite): Promise<string> {
-    const base = this.slugify(suite.name);
+  private async resolveFileName(suite: TestSuite, preferredBase?: string): Promise<string> {
+    const base = preferredBase || this.slugify(suite.name);
     let candidate = base;
     let counter = 2;
 

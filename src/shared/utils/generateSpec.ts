@@ -96,6 +96,5 @@ export function generateSpec(suite: TestSuite): string {
 }
 
 export function generateSpecFilename(suite: TestSuite): string {
-  const slug = suite.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled';
-  return `${slug}.spec.ts`;
+  return `${suite.fileName || 'untitled'}.spec.ts`;
 }
