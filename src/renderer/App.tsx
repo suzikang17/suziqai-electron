@@ -36,6 +36,26 @@ export function App() {
   const [playwrightConfig, setPlaywrightConfig] = useState<PlaywrightConfig>(() =>
     defaultPlaywrightConfig('http://localhost:3000', './tests')
   );
+  const [previewDevice, setPreviewDevice] = useState<string>('default');
+
+  const DEVICE_VIEWPORTS: Record<string, { width: number; height: number }> = {
+    'iPhone 15 Pro': { width: 393, height: 659 },
+    'iPhone 14': { width: 390, height: 664 },
+    'iPad Pro 11': { width: 834, height: 1194 },
+    'Pixel 7': { width: 412, height: 839 },
+    'Galaxy S24': { width: 360, height: 780 },
+    'Desktop Chrome': { width: 1280, height: 720 },
+    'Desktop Safari': { width: 1280, height: 720 },
+    'Desktop Firefox': { width: 1280, height: 720 },
+  };
+
+  const getDeviceViewport = (device: string): { width: number; height: number } | null => {
+    // Check suite's custom device configs first
+    const suiteDevice = currentSuite?.devices?.find(d => d.name === device);
+    if (suiteDevice?.viewport) return suiteDevice.viewport;
+    return DEVICE_VIEWPORTS[device] || null;
+  };
+
   const autopilotRef = useRef(false);
   const autopilotRetriesRef = useRef(0);
   const AUTOPILOT_MAX_RETRIES = 3;
@@ -338,6 +358,24 @@ export function App() {
 
     const updateBounds = () => {
       const rect = el.getBoundingClientRect();
+
+      if (previewDevice !== 'default') {
+        const deviceViewport = getDeviceViewport(previewDevice);
+        if (deviceViewport) {
+          const scale = Math.min(
+            rect.width / deviceViewport.width,
+            rect.height / deviceViewport.height,
+            1
+          );
+          const w = Math.round(deviceViewport.width * scale);
+          const h = Math.round(deviceViewport.height * scale);
+          const x = rect.x + Math.round((rect.width - w) / 2);
+          const y = rect.y + Math.round((rect.height - h) / 2);
+          window.suziqai.setViewportBounds({ x, y, width: w, height: h });
+          return;
+        }
+      }
+
       window.suziqai.setViewportBounds({
         x: rect.x,
         y: rect.y,
@@ -351,7 +389,7 @@ export function App() {
     updateBounds();
 
     return () => observer.disconnect();
-  }, [projectPath]);
+  }, [projectPath, previewDevice]);
 
   // Load saved session when project opens
   useEffect(() => {
@@ -557,6 +595,7 @@ export function App() {
             setActiveSuiteId(suiteId);
             const suite = suites.find(s => s.id === suiteId);
             if (suite) setActiveBlockId(suite.tests[0]?.id || '');
+            setPreviewDevice('default');
           }}
           onSwitchBlock={setActiveBlockId}
           onCreateSuite={createNewSuite}
@@ -702,6 +741,8 @@ export function App() {
           playwrightConfig={playwrightConfig}
           onPlaywrightConfigChange={setPlaywrightConfig}
           onSavePlaywrightConfig={savePlaywrightConfig}
+          previewDevice={previewDevice}
+          onPreviewDeviceChange={setPreviewDevice}
         />
       </div>
 

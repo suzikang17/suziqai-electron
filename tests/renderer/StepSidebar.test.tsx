@@ -63,6 +63,8 @@ const defaultProps = {
   onDeleteFromLibrary: vi.fn(),
   onRefreshLibrary: vi.fn(),
   onUpdateSuiteDevices: vi.fn(),
+  previewDevice: 'default',
+  onPreviewDeviceChange: vi.fn(),
 };
 
 describe('StepSidebar', () => {

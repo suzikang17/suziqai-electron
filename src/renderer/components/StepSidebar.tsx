@@ -57,6 +57,8 @@ interface StepSidebarProps {
   playwrightConfig?: PlaywrightConfig;
   onPlaywrightConfigChange?: (config: PlaywrightConfig) => void;
   onSavePlaywrightConfig?: () => void;
+  previewDevice: string;
+  onPreviewDeviceChange: (device: string) => void;
 }
 
 export function StepSidebar({
@@ -98,6 +100,8 @@ export function StepSidebar({
   playwrightConfig,
   onPlaywrightConfigChange,
   onSavePlaywrightConfig,
+  previewDevice,
+  onPreviewDeviceChange,
 }: StepSidebarProps) {
   const activeSuite = suites.find(s => s.id === activeSuiteId) || suites[0];
   const activeBlock = activeSuite?.tests.find(b => b.id === activeBlockId) || activeSuite?.tests[0];
@@ -321,6 +325,64 @@ export function StepSidebar({
 
       {sidebarMode === 'session' ? (
         <>
+          {/* Device viewport picker */}
+          {(() => {
+            const DEVICE_VIEWPORTS: Record<string, { width: number; height: number }> = {
+              'iPhone 15 Pro': { width: 393, height: 659 },
+              'iPhone 14': { width: 390, height: 664 },
+              'iPad Pro 11': { width: 834, height: 1194 },
+              'Pixel 7': { width: 412, height: 839 },
+              'Galaxy S24': { width: 360, height: 780 },
+              'Desktop Chrome': { width: 1280, height: 720 },
+              'Desktop Safari': { width: 1280, height: 720 },
+              'Desktop Firefox': { width: 1280, height: 720 },
+            };
+            const suiteDevices = activeSuite?.devices || [];
+            const activeViewport = previewDevice !== 'default'
+              ? (suiteDevices.find(d => d.name === previewDevice)?.viewport || DEVICE_VIEWPORTS[previewDevice])
+              : null;
+            return (
+              <div style={{ marginBottom: 8, flexShrink: 0 }}>
+                <select
+                  value={previewDevice}
+                  onChange={(e) => onPreviewDeviceChange(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'var(--bg-tertiary)',
+                    color: 'var(--text-secondary)',
+                    borderRadius: 4,
+                    padding: '4px 6px',
+                    fontSize: 11,
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <option value="default">Default (full space)</option>
+                  {POPULAR_DEVICES.map(name => {
+                    const vp = DEVICE_VIEWPORTS[name];
+                    return (
+                      <option key={name} value={name}>
+                        {name}{vp ? ` (${vp.width}\u00d7${vp.height})` : ''}
+                      </option>
+                    );
+                  })}
+                  {suiteDevices.filter(d => !POPULAR_DEVICES.includes(d.name)).map(d => {
+                    const vp = d.viewport;
+                    return (
+                      <option key={d.name} value={d.name}>
+                        {d.name}{vp ? ` (${vp.width}\u00d7${vp.height})` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                {activeViewport && (
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)', display: 'block', marginTop: 2, textAlign: 'center' }}>
+                    {activeViewport.width} \u00d7 {activeViewport.height}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Test block list */}
           <div style={{ marginBottom: 8, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
