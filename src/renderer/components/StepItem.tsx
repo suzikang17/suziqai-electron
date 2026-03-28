@@ -468,6 +468,11 @@ function formatAction(action: Step['action']): string {
     case 'fill': return `fill('${action.selector}', '${action.value}')`;
     case 'assert': {
       const sel = action.selector ? `(${action.selector})` : '';
+      if (action.assertionType === 'visible') return `expect${sel}.toBeVisible()`;
+      if (action.assertionType === 'hidden') return `expect${sel}.toBeHidden()`;
+      if (action.assertionType === 'text') return `expect${sel}.toContainText('${action.expected}')`;
+      if (action.assertionType === 'url') return `expect(page).toHaveURL('${action.expected}')`;
+      if (action.assertionType === 'value') return `expect${sel}.toHaveValue('${action.expected}')`;
       return `expect${sel}.${action.assertionType}('${action.expected}')`;
     }
     case 'screenshot': return 'screenshot()';
