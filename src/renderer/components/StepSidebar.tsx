@@ -393,7 +393,7 @@ export function StepSidebar({
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexShrink: 0 }}>
             <button
               onClick={onRunAll}
               style={{
