@@ -170,7 +170,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
   };
 
   const showSelector = editType !== 'screenshot' && !(editType === 'assert' && editAssertType === 'url');
-  const assertNeedsExpected = editAssertType === 'text' || editAssertType === 'url' || editAssertType === 'value';
+  const assertNeedsExpected = editAssertType === 'text' || editAssertType === 'url' || editAssertType === 'value' || editAssertType === 'count';
   const showValue = editType === 'fill' || (editType === 'assert' && assertNeedsExpected);
 
   if (editing) {
@@ -255,11 +255,27 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
                   onChange={(e) => setEditAssertType(e.target.value as any)}
                   style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}
                 >
-                  <option value="visible">Visible</option>
-                  <option value="hidden">Hidden</option>
-                  <option value="text">Text Contains</option>
-                  <option value="url">URL Matches</option>
-                  <option value="value">Input Value</option>
+                  <optgroup label="Visibility">
+                    <option value="visible">Visible</option>
+                    <option value="hidden">Hidden</option>
+                  </optgroup>
+                  <optgroup label="Content">
+                    <option value="text">Text Contains</option>
+                    <option value="value">Input Value</option>
+                    <option value="empty">Empty</option>
+                    <option value="count">Element Count</option>
+                  </optgroup>
+                  <optgroup label="State">
+                    <option value="enabled">Enabled</option>
+                    <option value="disabled">Disabled</option>
+                    <option value="checked">Checked</option>
+                    <option value="unchecked">Unchecked</option>
+                    <option value="focused">Focused</option>
+                    <option value="editable">Editable</option>
+                  </optgroup>
+                  <optgroup label="Page">
+                    <option value="url">URL Matches</option>
+                  </optgroup>
                 </select>
               </div>
             )}
@@ -469,12 +485,22 @@ function formatAction(action: Step['action']): string {
     case 'fill': return `fill('${action.selector}', '${action.value}')`;
     case 'assert': {
       const sel = action.selector ? `(${action.selector})` : '';
-      if (action.assertionType === 'visible') return `expect${sel}.toBeVisible()`;
-      if (action.assertionType === 'hidden') return `expect${sel}.toBeHidden()`;
-      if (action.assertionType === 'text') return `expect${sel}.toContainText('${action.expected}')`;
-      if (action.assertionType === 'url') return `expect(page).toHaveURL('${action.expected}')`;
-      if (action.assertionType === 'value') return `expect${sel}.toHaveValue('${action.expected}')`;
-      return `expect${sel}.${action.assertionType}('${action.expected}')`;
+      switch (action.assertionType) {
+        case 'visible': return `expect${sel}.toBeVisible()`;
+        case 'hidden': return `expect${sel}.toBeHidden()`;
+        case 'enabled': return `expect${sel}.toBeEnabled()`;
+        case 'disabled': return `expect${sel}.toBeDisabled()`;
+        case 'checked': return `expect${sel}.toBeChecked()`;
+        case 'unchecked': return `expect${sel}.not.toBeChecked()`;
+        case 'focused': return `expect${sel}.toBeFocused()`;
+        case 'editable': return `expect${sel}.toBeEditable()`;
+        case 'empty': return `expect${sel}.toBeEmpty()`;
+        case 'text': return `expect${sel}.toContainText('${action.expected}')`;
+        case 'url': return `expect(page).toHaveURL('${action.expected}')`;
+        case 'value': return `expect${sel}.toHaveValue('${action.expected}')`;
+        case 'count': return `expect${sel}.toHaveCount(${action.expected})`;
+        default: return `expect${sel}.${action.assertionType}()`;
+      }
     }
     case 'screenshot': return 'screenshot()';
     case 'waitFor': return `waitFor('${action.selector}')`;

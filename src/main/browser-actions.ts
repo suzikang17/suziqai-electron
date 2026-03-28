@@ -154,6 +154,50 @@ export async function executeActionOnView(_view: any, action: any, timeout: numb
         if (val !== action.expected) {
           throw new Error('Value assertion failed: expected "' + action.expected + '", got "' + val + '"');
         }
+      } else if (action.assertionType === 'enabled') {
+        const locator = resolveLocator(p, action.selector || '');
+        if (!await locator.isEnabled({ timeout })) {
+          throw new Error('Element is not enabled: ' + action.selector);
+        }
+      } else if (action.assertionType === 'disabled') {
+        const locator = resolveLocator(p, action.selector || '');
+        if (!await locator.isDisabled({ timeout })) {
+          throw new Error('Element is not disabled: ' + action.selector);
+        }
+      } else if (action.assertionType === 'checked') {
+        const locator = resolveLocator(p, action.selector || '');
+        if (!await locator.isChecked({ timeout })) {
+          throw new Error('Element is not checked: ' + action.selector);
+        }
+      } else if (action.assertionType === 'unchecked') {
+        const locator = resolveLocator(p, action.selector || '');
+        if (await locator.isChecked({ timeout })) {
+          throw new Error('Element is checked (expected unchecked): ' + action.selector);
+        }
+      } else if (action.assertionType === 'count') {
+        const locator = resolveLocator(p, action.selector || '');
+        const count = await locator.count();
+        const expected = parseInt(action.expected);
+        if (count !== expected) {
+          throw new Error('Count assertion failed: expected ' + expected + ', got ' + count);
+        }
+      } else if (action.assertionType === 'focused') {
+        const locator = resolveLocator(p, action.selector || '');
+        const isFocused = await locator.evaluate(el => document.activeElement === el);
+        if (!isFocused) {
+          throw new Error('Element is not focused: ' + action.selector);
+        }
+      } else if (action.assertionType === 'editable') {
+        const locator = resolveLocator(p, action.selector || '');
+        if (!await locator.isEditable({ timeout })) {
+          throw new Error('Element is not editable: ' + action.selector);
+        }
+      } else if (action.assertionType === 'empty') {
+        const locator = resolveLocator(p, action.selector || '');
+        const text = await locator.textContent();
+        if (text && text.trim().length > 0) {
+          throw new Error('Element is not empty, contains: "' + text.trim().substring(0, 50) + '"');
+        }
       }
       break;
 

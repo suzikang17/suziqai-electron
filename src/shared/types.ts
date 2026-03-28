@@ -8,7 +8,7 @@ export type StepAction =
   | { type: 'screenshot' }
   | { type: 'waitFor'; selector: string };
 
-export type AssertionType = 'url' | 'visible' | 'text' | 'hidden' | 'value';
+export type AssertionType = 'url' | 'visible' | 'text' | 'hidden' | 'value' | 'enabled' | 'disabled' | 'checked' | 'unchecked' | 'count' | 'focused' | 'editable' | 'empty';
 
 export interface Step {
   id: string;
