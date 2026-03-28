@@ -2,8 +2,19 @@ import React, { useState } from 'react';
 import { StepItem } from './StepItem';
 import { StepComposer } from './StepComposer';
 import { LibraryView } from './LibraryView';
-import type { TestSuite, StepAction, HookType } from '@shared/types';
+import type { TestSuite, StepAction, HookType, DeviceConfig } from '@shared/types';
 import type { LibraryEntry } from '@shared/types';
+
+const POPULAR_DEVICES = [
+  'iPhone 15 Pro',
+  'iPhone 14',
+  'iPad Pro 11',
+  'Pixel 7',
+  'Galaxy S24',
+  'Desktop Chrome',
+  'Desktop Safari',
+  'Desktop Firefox',
+];
 
 interface StepSidebarProps {
   suites: TestSuite[];
@@ -31,6 +42,8 @@ interface StepSidebarProps {
   onRunGroup: (stepIds: string[]) => void;
   onMoveStep: (stepIndex: number, direction: 'up' | 'down') => void;
   onExport: () => void;
+  isAutopilot: boolean;
+  onAutopilotToggle: () => void;
   sidebarMode: 'session' | 'library';
   onSidebarModeChange: (mode: 'session' | 'library') => void;
   onSaveTest: () => void;
@@ -38,6 +51,7 @@ interface StepSidebarProps {
   onLoadFromLibrary: (fileName: string) => void;
   onDeleteFromLibrary: (fileName: string) => void;
   onRefreshLibrary: () => void;
+  onUpdateSuiteDevices: (suiteId: string, devices: DeviceConfig[]) => void;
 }
 
 export function StepSidebar({
@@ -66,6 +80,8 @@ export function StepSidebar({
   onRunGroup,
   onMoveStep,
   onExport,
+  isAutopilot,
+  onAutopilotToggle,
   sidebarMode,
   onSidebarModeChange,
   onSaveTest,
@@ -73,6 +89,7 @@ export function StepSidebar({
   onLoadFromLibrary,
   onDeleteFromLibrary,
   onRefreshLibrary,
+  onUpdateSuiteDevices,
 }: StepSidebarProps) {
   const activeSuite = suites.find(s => s.id === activeSuiteId) || suites[0];
   const activeBlock = activeSuite?.tests.find(b => b.id === activeBlockId) || activeSuite?.tests[0];
@@ -82,6 +99,8 @@ export function StepSidebar({
   const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
   const [expandedHooks, setExpandedHooks] = useState<Set<HookType>>(new Set());
   const [hookComposerOpen, setHookComposerOpen] = useState<HookType | null>(null);
+  const [deviceDropdownOpen, setDeviceDropdownOpen] = useState(false);
+  const [deviceSearch, setDeviceSearch] = useState('');
 
   const toggleHook = (hook: HookType) => {
     setExpandedHooks(prev => {
@@ -142,6 +161,25 @@ export function StepSidebar({
   const [renameValue, setRenameValue] = useState('');
   const [renamingFileNameId, setRenamingFileNameId] = useState<string | null>(null);
   const [renameFileNameValue, setRenameFileNameValue] = useState('');
+
+  const currentDevices = activeSuite?.devices || [];
+
+  const addDevice = (name: string) => {
+    if (!activeSuite) return;
+    if (currentDevices.some(d => d.name === name)) return;
+    onUpdateSuiteDevices(activeSuite.id, [...currentDevices, { name }]);
+    setDeviceDropdownOpen(false);
+    setDeviceSearch('');
+  };
+
+  const removeDevice = (name: string) => {
+    if (!activeSuite) return;
+    onUpdateSuiteDevices(activeSuite.id, currentDevices.filter(d => d.name !== name));
+  };
+
+  const filteredDevices = POPULAR_DEVICES.filter(
+    d => d.toLowerCase().includes(deviceSearch.toLowerCase()) && !currentDevices.some(cd => cd.name === d)
+  );
 
   // Render step groups for the active block (reused inside block accordion)
   const renderStepGroups = () => {
@@ -598,6 +636,119 @@ export function StepSidebar({
               </div>
             </div>
           )}
+          {/* Devices section */}
+          {activeSuite && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Devices</span>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => { setDeviceDropdownOpen(v => !v); setDeviceSearch(''); }}
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--accent-green)',
+                      borderRadius: 3,
+                      padding: '2px 8px',
+                      fontSize: 11,
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    +
+                  </button>
+                  {deviceDropdownOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      zIndex: 100,
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      width: 200,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      marginTop: 4,
+                    }}>
+                      <input
+                        autoFocus
+                        value={deviceSearch}
+                        onChange={e => setDeviceSearch(e.target.value)}
+                        placeholder="Search devices..."
+                        style={{
+                          width: '100%',
+                          padding: '6px 8px',
+                          fontSize: 11,
+                          background: 'var(--bg-secondary)',
+                          color: 'var(--text-primary)',
+                          border: 'none',
+                          borderBottom: '1px solid var(--border)',
+                          outline: 'none',
+                          boxSizing: 'border-box' as const,
+                          borderRadius: '6px 6px 0 0',
+                        }}
+                      />
+                      <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                        {filteredDevices.length === 0 ? (
+                          <div style={{ padding: '6px 8px', fontSize: 11, color: 'var(--text-muted)' }}>No devices found</div>
+                        ) : (
+                          filteredDevices.map(name => (
+                            <button
+                              key={name}
+                              onClick={() => addDevice(name)}
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                textAlign: 'left',
+                                padding: '5px 10px',
+                                fontSize: 11,
+                                color: 'var(--text-secondary)',
+                                background: 'none',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {name}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {currentDevices.length === 0 ? (
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', padding: '2px 0' }}>
+                  No devices — tests run once without device wrapping.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {currentDevices.map(device => (
+                    <div
+                      key={device.name}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '2px 6px',
+                        background: 'var(--bg-tertiary)',
+                        borderRadius: 10,
+                        fontSize: 10,
+                        color: 'var(--text-secondary)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      <span>{device.name}</span>
+                      <button
+                        onClick={() => removeDevice(device.name)}
+                        style={{ background: 'none', color: 'var(--text-muted)', fontSize: 10, padding: 0, lineHeight: 1, cursor: 'pointer' }}
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
 
           {/* Suite management */}

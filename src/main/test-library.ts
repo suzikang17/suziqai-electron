@@ -33,6 +33,7 @@ export class TestLibrary {
       fileName: resolvedName,
       beforeEach: suite.beforeEach,
       tests: suite.tests,
+      devices: suite.devices,
       savedAt,
       updatedAt: new Date().toISOString(),
     };
@@ -93,8 +94,12 @@ export class TestLibrary {
       id: data.id,
       name: data.name,
       fileName: data.fileName || fileName,
+      beforeAll: data.beforeAll || [],
       beforeEach: data.beforeEach || [],
+      afterEach: data.afterEach || [],
+      afterAll: data.afterAll || [],
       tests: data.tests || [],
+      devices: data.devices || [],
     };
   }
 

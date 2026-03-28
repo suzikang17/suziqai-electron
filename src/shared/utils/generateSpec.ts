@@ -1,4 +1,4 @@
-import type { TestSuite, StepAction } from '@shared/types';
+import type { TestSuite, StepAction, DeviceConfig } from '@shared/types';
 
 function actionToPlaywright(action: StepAction): string {
   switch (action.type) {
@@ -59,23 +59,26 @@ function selectorToPlaywright(selector: string): string {
   return `page.locator('${selector.replace(/'/g, "\\'")}')`;
 }
 
-export function generateSpec(suite: TestSuite): string {
-  const indent = '    ';
-  const suiteName = suite.name.replace(/'/g, "\\'");
+function generateDeviceUse(device: DeviceConfig, innerIndent: string): string {
+  if (device.name === 'Custom' && device.viewport) {
+    return `${innerIndent}test.use({ viewport: { width: ${device.viewport.width}, height: ${device.viewport.height} } });\n`;
+  }
+  return `${innerIndent}test.use({ ...devices['${device.name}'] });\n`;
+}
 
-  let code = `import { test, expect } from '@playwright/test';\n\n`;
-
-  code += `test.describe('${suiteName}', () => {\n`;
+function generateTestsBlock(suite: TestSuite, indent: string): string {
+  let code = '';
+  const innerIndent = indent + '    ';
 
   // beforeEach block (only if there are steps)
   if (suite.beforeEach.length > 0) {
     const beforeSteps = suite.beforeEach
       .filter(s => s.status !== 'failed')
-      .map(s => `${indent}${actionToPlaywright(s.action)}`)
+      .map(s => `${innerIndent}${actionToPlaywright(s.action)}`)
       .join('\n');
-    code += `  test.beforeEach(async ({ page }) => {\n`;
-    code += beforeSteps || `${indent}// No steps yet`;
-    code += `\n  });\n\n`;
+    code += `${indent}test.beforeEach(async ({ page }) => {\n`;
+    code += beforeSteps || `${innerIndent}// No steps yet`;
+    code += `\n${indent}});\n\n`;
   }
 
   // individual test blocks
@@ -83,11 +86,40 @@ export function generateSpec(suite: TestSuite): string {
     const blockName = block.name.replace(/'/g, "\\'");
     const steps = block.steps
       .filter(s => s.status !== 'failed')
-      .map(s => `${indent}${actionToPlaywright(s.action)}`)
+      .map(s => `${innerIndent}${actionToPlaywright(s.action)}`)
       .join('\n');
-    code += `  test('${blockName}', async ({ page }) => {\n`;
-    code += steps || `${indent}// No steps yet`;
-    code += `\n  });\n`;
+    code += `${indent}test('${blockName}', async ({ page }) => {\n`;
+    code += steps || `${innerIndent}// No steps yet`;
+    code += `\n${indent}});\n`;
+  }
+
+  return code;
+}
+
+export function generateSpec(suite: TestSuite): string {
+  const suiteName = suite.name.replace(/'/g, "\\'");
+  const hasDevices = suite.devices && suite.devices.length > 0;
+
+  const importLine = hasDevices
+    ? `import { test, expect, devices } from '@playwright/test';\n\n`
+    : `import { test, expect } from '@playwright/test';\n\n`;
+
+  let code = importLine;
+  code += `test.describe('${suiteName}', () => {\n`;
+
+  if (hasDevices) {
+    for (const device of suite.devices) {
+      const deviceName = device.name.replace(/'/g, "\\'");
+      code += `  test.describe('${deviceName}', () => {\n`;
+      code += generateDeviceUse(device, '    ');
+      code += `\n`;
+      code += generateTestsBlock(suite, '    ');
+      code += `  });\n\n`;
+    }
+    // Remove trailing newline before closing brace
+    code = code.trimEnd() + '\n';
+  } else {
+    code += generateTestsBlock(suite, '  ');
   }
 
   code += `});\n`;

@@ -14,9 +14,13 @@ describe('TestLibrary', () => {
   const mockSuite: TestSuite = {
     id: 'suite-1',
     name: 'Login flow',
+    fileName: 'login-flow',
+    beforeAll: [],
     beforeEach: [
       { id: 's0', label: 'Navigate to /login', action: { type: 'navigate', url: '/login' }, status: 'passed' },
     ],
+    afterEach: [],
+    afterAll: [],
     tests: [{
       id: 'block-1',
       name: 'valid login',
@@ -24,6 +28,7 @@ describe('TestLibrary', () => {
         { id: 's1', label: 'Click sign in', action: { type: 'click', selector: "getByRole('button', { name: 'Sign In' })" }, status: 'passed' },
       ],
     }],
+    devices: [],
   };
 
   beforeEach(async () => {

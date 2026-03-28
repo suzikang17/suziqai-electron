@@ -33,12 +33,15 @@ describe('TestSuite types', () => {
 
   it('TestSuite type is usable', () => {
     const suite: TestSuite = {
-      id: 'suite-1', name: 'Login Feature', fileName: 'login-feature', beforeEach: [],
+      id: 'suite-1', name: 'Login Feature', fileName: 'login-feature',
+      beforeAll: [], beforeEach: [], afterEach: [], afterAll: [],
       tests: [{ id: 'block-1', name: 'valid login', steps: [] }],
+      devices: [],
     };
     expect(suite.name).toBe('Login Feature');
     expect(suite.fileName).toBe('login-feature');
     expect(suite.tests).toHaveLength(1);
     expect(suite.beforeEach).toEqual([]);
+    expect(suite.devices).toEqual([]);
   });
 });

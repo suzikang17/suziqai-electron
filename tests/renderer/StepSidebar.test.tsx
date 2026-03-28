@@ -60,6 +60,7 @@ const defaultProps = {
   onLoadFromLibrary: vi.fn(),
   onDeleteFromLibrary: vi.fn(),
   onRefreshLibrary: vi.fn(),
+  onUpdateSuiteDevices: vi.fn(),
 };
 
 describe('StepSidebar', () => {
@@ -149,6 +150,8 @@ describe('Library toggle', () => {
     onLoadFromLibrary: vi.fn(),
     onDeleteFromLibrary: vi.fn(),
     onRefreshLibrary: vi.fn(),
+    onRenameSuiteFileName: vi.fn(),
+    onUpdateSuiteDevices: vi.fn(),
   };
 
   it('renders Session and Library tabs', () => {

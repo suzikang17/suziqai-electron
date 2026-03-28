@@ -7,9 +7,9 @@ describe('generateSpec', () => {
   it('generates a spec with describe, beforeEach, and multiple tests', () => {
     const suite: TestSuite = {
       id: 'suite-1', name: 'Login Feature', fileName: 'login-feature',
-      beforeEach: [
+      beforeAll: [], beforeEach: [
         { id: 's0', label: 'Navigate', action: { type: 'navigate', url: '/login' }, status: 'passed' },
-      ],
+      ], afterEach: [], afterAll: [],
       tests: [
         { id: 'b1', name: 'valid login', steps: [
           { id: 's1', label: 'Fill email', action: { type: 'fill', selector: "getByLabel('Email')", value: 'test@test.com' }, status: 'passed' },
@@ -21,6 +21,7 @@ describe('generateSpec', () => {
           { id: 's5', label: 'Assert error', action: { type: 'assert', assertionType: 'visible', expected: '', selector: "getByText('Invalid')" }, status: 'passed' },
         ]},
       ],
+      devices: [],
     };
     const code = generateSpec(suite);
     expect(code).toContain("import { test, expect } from '@playwright/test'");
@@ -35,10 +36,12 @@ describe('generateSpec', () => {
 
   it('omits beforeEach block when empty', () => {
     const suite: TestSuite = {
-      id: 'suite-1', name: 'Simple', fileName: 'simple', beforeEach: [],
+      id: 'suite-1', name: 'Simple', fileName: 'simple',
+      beforeAll: [], beforeEach: [], afterEach: [], afterAll: [],
       tests: [{ id: 'b1', name: 'only test', steps: [
         { id: 's1', label: 'Navigate', action: { type: 'navigate', url: '/' }, status: 'passed' },
       ]}],
+      devices: [],
     };
     const code = generateSpec(suite);
     expect(code).not.toContain('beforeEach');
@@ -48,21 +51,51 @@ describe('generateSpec', () => {
 
   it('skips failed steps', () => {
     const suite: TestSuite = {
-      id: 'suite-1', name: 'Test', fileName: 'test', beforeEach: [],
+      id: 'suite-1', name: 'Test', fileName: 'test',
+      beforeAll: [], beforeEach: [], afterEach: [], afterAll: [],
       tests: [{ id: 'b1', name: 'test block', steps: [
         { id: 's1', label: 'Good', action: { type: 'navigate', url: '/' }, status: 'passed' },
         { id: 's2', label: 'Bad', action: { type: 'click', selector: 'missing' }, status: 'failed' },
       ]}],
+      devices: [],
     };
     const code = generateSpec(suite);
     expect(code).toContain("await page.goto('/')");
     expect(code).not.toContain('missing');
   });
+
+  it('wraps tests in device-specific describe blocks', () => {
+    const suite: TestSuite = {
+      id: 'suite-1', name: 'Responsive', fileName: 'responsive',
+      beforeAll: [], afterEach: [], afterAll: [],
+      beforeEach: [
+        { id: 's0', label: 'Navigate', action: { type: 'navigate', url: '/' }, status: 'passed' },
+      ],
+      devices: [
+        { name: 'iPhone 14' },
+        { name: 'Custom', viewport: { width: 1280, height: 720 } },
+      ],
+      tests: [{ id: 'b1', name: 'renders correctly', steps: [
+        { id: 's1', label: 'Assert visible', action: { type: 'assert', assertionType: 'visible', expected: '', selector: 'h1' }, status: 'passed' },
+      ]}],
+    };
+    const code = generateSpec(suite);
+    expect(code).toContain("import { test, expect, devices } from '@playwright/test'");
+    expect(code).toContain("test.describe('iPhone 14'");
+    expect(code).toContain("test.use({ ...devices['iPhone 14'] })");
+    expect(code).toContain("test.describe('Custom'");
+    expect(code).toContain("test.use({ viewport: { width: 1280, height: 720 } })");
+  });
 });
 
 describe('generateSpecFilename', () => {
   it('generates a slug from suite name', () => {
-    const suite: TestSuite = { id: '1', name: 'Login Feature', fileName: 'login-feature', beforeEach: [], tests: [] };
+    const suite: TestSuite = {
+      id: '1', name: 'Login Feature', fileName: 'login-feature',
+      beforeAll: [], beforeEach: [], afterEach: [], afterAll: [],
+      tests: [],
+      devices: [],
+    };
     expect(generateSpecFilename(suite)).toBe('login-feature.spec.ts');
   });
 });

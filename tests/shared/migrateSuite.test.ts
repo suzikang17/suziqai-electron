@@ -19,16 +19,21 @@ describe('migrateToSuite', () => {
     expect(suite.tests).toHaveLength(1);
     expect(suite.tests[0].name).toBe('Login flow');
     expect(suite.tests[0].steps).toHaveLength(2);
+    expect(suite.devices).toEqual([]);
   });
 
   it('passes through a TestSuite unchanged', () => {
     const suite: TestSuite = {
-      id: 'suite-1', name: 'My Suite', beforeEach: [],
+      id: 'suite-1', name: 'My Suite',
+      fileName: 'my-suite',
+      beforeAll: [], beforeEach: [], afterEach: [], afterAll: [],
       tests: [{ id: 'b1', name: 'test 1', steps: [] }],
+      devices: [],
     };
     const result = migrateToSuite(suite as any);
     expect(result.id).toBe('suite-1');
     expect(result.tests).toHaveLength(1);
+    expect(result.devices).toEqual([]);
   });
 
   it('detects old format by presence of steps array', () => {
@@ -36,5 +41,6 @@ describe('migrateToSuite', () => {
     const result = migrateToSuite(oldFormat as any);
     expect(result.tests).toBeDefined();
     expect(result.beforeEach).toBeDefined();
+    expect(result.devices).toEqual([]);
   });
 });
