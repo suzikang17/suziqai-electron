@@ -1,20 +1,20 @@
 import { readdir, readFile, writeFile, unlink, mkdir, access } from 'fs/promises';
 import path from 'path';
-import type { TestCase, LibraryEntry } from '../shared/types';
+import type { TestSuite, LibraryEntry } from '../shared/types';
 import { generateSpec } from '../shared/utils/generateSpec';
 
 export class TestLibrary {
   constructor(private testOutputDir: string) {}
 
-  async save(test: TestCase, fileName?: string): Promise<{ fileName: string; path: string }> {
+  async save(suite: TestSuite, fileName?: string): Promise<{ fileName: string; path: string }> {
     await mkdir(this.testOutputDir, { recursive: true });
 
-    const resolvedName = fileName || await this.resolveFileName(test);
+    const resolvedName = fileName || await this.resolveFileName(suite);
     const specPath = path.join(this.testOutputDir, `${resolvedName}.spec.ts`);
     const sidecarPath = path.join(this.testOutputDir, `${resolvedName}.suziqai.json`);
 
     // Generate spec file
-    const specContent = generateSpec(test);
+    const specContent = generateSpec(suite);
     await writeFile(specPath, specContent, 'utf-8');
 
     // Read existing sidecar for savedAt, or use now
@@ -28,9 +28,10 @@ export class TestLibrary {
 
     // Write sidecar
     const sidecar = {
-      id: test.id,
-      name: test.name,
-      steps: test.steps,
+      id: suite.id,
+      name: suite.name,
+      beforeEach: suite.beforeEach,
+      tests: suite.tests,
       savedAt,
       updatedAt: new Date().toISOString(),
     };
@@ -57,10 +58,14 @@ export class TestLibrary {
       try {
         await access(sidecarPath);
         const sidecar = JSON.parse(await readFile(sidecarPath, 'utf-8'));
+        const beforeEachCount = Array.isArray(sidecar.beforeEach) ? sidecar.beforeEach.length : 0;
+        const testStepCount = Array.isArray(sidecar.tests)
+          ? sidecar.tests.reduce((sum: number, t: any) => sum + (Array.isArray(t.steps) ? t.steps.length : 0), 0)
+          : 0;
         entries.push({
           fileName,
           name: sidecar.name || fileName,
-          stepCount: Array.isArray(sidecar.steps) ? sidecar.steps.length : 0,
+          stepCount: beforeEachCount + testStepCount,
           savedAt: sidecar.savedAt || '',
           updatedAt: sidecar.updatedAt || '',
           imported: false,
@@ -80,13 +85,14 @@ export class TestLibrary {
     return entries;
   }
 
-  async load(fileName: string): Promise<TestCase> {
+  async load(fileName: string): Promise<TestSuite> {
     const sidecarPath = path.join(this.testOutputDir, `${fileName}.suziqai.json`);
     const data = JSON.parse(await readFile(sidecarPath, 'utf-8'));
     return {
       id: data.id,
       name: data.name,
-      steps: data.steps,
+      beforeEach: data.beforeEach || [],
+      tests: data.tests || [],
     };
   }
 
@@ -98,8 +104,8 @@ export class TestLibrary {
     await unlink(sidecarPath).catch(() => {});
   }
 
-  private async resolveFileName(test: TestCase): Promise<string> {
-    const base = this.slugify(test.name);
+  private async resolveFileName(suite: TestSuite): Promise<string> {
+    const base = this.slugify(suite.name);
     let candidate = base;
     let counter = 2;
 

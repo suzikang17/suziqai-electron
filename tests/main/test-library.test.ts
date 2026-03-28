@@ -4,20 +4,26 @@ import { mkdtemp, rm, readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { TestLibrary } from '../../src/main/test-library';
-import type { TestCase } from '../../src/shared/types';
+import type { TestSuite } from '../../src/shared/types';
 
 describe('TestLibrary', () => {
   let tmpDir: string;
   let testOutputDir: string;
   let library: TestLibrary;
 
-  const mockTest: TestCase = {
-    id: 'test-1',
+  const mockSuite: TestSuite = {
+    id: 'suite-1',
     name: 'Login flow',
-    steps: [
-      { id: 's1', label: 'Navigate to /login', action: { type: 'navigate', url: '/login' }, status: 'passed' },
-      { id: 's2', label: 'Click sign in', action: { type: 'click', selector: "getByRole('button', { name: 'Sign In' })" }, status: 'passed' },
+    beforeEach: [
+      { id: 's0', label: 'Navigate to /login', action: { type: 'navigate', url: '/login' }, status: 'passed' },
     ],
+    tests: [{
+      id: 'block-1',
+      name: 'valid login',
+      steps: [
+        { id: 's1', label: 'Click sign in', action: { type: 'click', selector: "getByRole('button', { name: 'Sign In' })" }, status: 'passed' },
+      ],
+    }],
   };
 
   beforeEach(async () => {
@@ -33,7 +39,7 @@ describe('TestLibrary', () => {
 
   describe('save', () => {
     it('writes a .spec.ts and .suziqai.json file', async () => {
-      const result = await library.save(mockTest);
+      const result = await library.save(mockSuite);
 
       expect(result.fileName).toBe('login-flow');
       expect(result.path).toBe(path.join(testOutputDir, 'login-flow.spec.ts'));
@@ -43,20 +49,22 @@ describe('TestLibrary', () => {
       expect(specContent).toContain('Login flow');
 
       const sidecarContent = JSON.parse(await readFile(path.join(testOutputDir, 'login-flow.suziqai.json'), 'utf-8'));
-      expect(sidecarContent.id).toBe('test-1');
+      expect(sidecarContent.id).toBe('suite-1');
       expect(sidecarContent.name).toBe('Login flow');
-      expect(sidecarContent.steps).toHaveLength(2);
+      expect(sidecarContent.tests).toHaveLength(1);
+      expect(sidecarContent.beforeEach).toHaveLength(1);
       expect(sidecarContent.savedAt).toBeDefined();
       expect(sidecarContent.updatedAt).toBeDefined();
     });
 
     it('overwrites existing files when fileName is provided', async () => {
-      const first = await library.save(mockTest);
+      const first = await library.save(mockSuite);
       const firstSidecar = JSON.parse(await readFile(path.join(testOutputDir, 'login-flow.suziqai.json'), 'utf-8'));
       const firstSavedAt = firstSidecar.savedAt;
       const firstUpdatedAt = firstSidecar.updatedAt;
 
-      const updated = { ...mockTest, name: 'Login flow v2' };
+      await new Promise(resolve => setTimeout(resolve, 5));
+      const updated = { ...mockSuite, name: 'Login flow v2' };
       const result = await library.save(updated, 'login-flow');
 
       expect(result.fileName).toBe('login-flow');
@@ -68,8 +76,8 @@ describe('TestLibrary', () => {
     });
 
     it('appends numeric suffix on name collision', async () => {
-      await library.save(mockTest);
-      const duplicate = { ...mockTest, id: 'test-2' };
+      await library.save(mockSuite);
+      const duplicate = { ...mockSuite, id: 'suite-2' };
       const result = await library.save(duplicate);
 
       expect(result.fileName).toBe('login-flow-2');
@@ -83,7 +91,7 @@ describe('TestLibrary', () => {
     });
 
     it('lists saved tests with sidecar metadata', async () => {
-      await library.save(mockTest);
+      await library.save(mockSuite);
       const entries = await library.list();
 
       expect(entries).toHaveLength(1);
@@ -105,12 +113,13 @@ describe('TestLibrary', () => {
 
   describe('load', () => {
     it('loads a test from its sidecar file', async () => {
-      await library.save(mockTest);
+      await library.save(mockSuite);
       const loaded = await library.load('login-flow');
 
-      expect(loaded.id).toBe('test-1');
+      expect(loaded.id).toBe('suite-1');
       expect(loaded.name).toBe('Login flow');
-      expect(loaded.steps).toHaveLength(2);
+      expect(loaded.tests).toHaveLength(1);
+      expect(loaded.beforeEach).toHaveLength(1);
     });
 
     it('throws when sidecar does not exist', async () => {
@@ -120,7 +129,7 @@ describe('TestLibrary', () => {
 
   describe('delete', () => {
     it('removes both .spec.ts and .suziqai.json files', async () => {
-      await library.save(mockTest);
+      await library.save(mockSuite);
       await library.delete('login-flow');
 
       const entries = await library.list();
