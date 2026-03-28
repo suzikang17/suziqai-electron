@@ -96,31 +96,6 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, dra
       onMouseLeave={() => setHovered(false)}
       style={{ position: 'relative' }}
     >
-      {/* Hover toolbar */}
-      {hovered && !isAssertion && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          padding: '1px 4px',
-          background: 'var(--bg-tertiary)',
-          borderRadius: '3px 3px 0 0',
-          marginLeft: draggable ? 18 : 0,
-          marginBottom: -1,
-        }}>
-          {step.status === 'pending' && (
-            <button onClick={onAccept} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>▶ Run</button>
-          )}
-          {(step.status === 'passed' || step.status === 'failed') && (
-            <button onClick={onAccept} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>▶ Re-run</button>
-          )}
-          {onUpdate && (
-            <button onClick={startEdit} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }}>Edit</button>
-          )}
-          <button onClick={onDeny} style={{ ...tinyBtn, color: 'var(--accent-red)' }}>Delete</button>
-        </div>
-      )}
-
       {/* Step row */}
       <div
         draggable={draggable}
@@ -148,16 +123,19 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, dra
         <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1, lineHeight: 1.3 }}>
           {step.label}
         </span>
-        {/* Inline actions for assertions (no toolbar) */}
-        {isAssertion && hovered && (
+        {/* Hover actions — right side */}
+        {hovered && (
           <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
             {step.status === 'pending' && (
-              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>Run</button>
+              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>▶</button>
             )}
             {(step.status === 'passed' || step.status === 'failed') && (
-              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>Re-run</button>
+              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>▶</button>
             )}
-            <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--text-muted)' }}>×</button>
+            {onUpdate && !isAssertion && (
+              <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }}>✎</button>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--accent-red)' }}>×</button>
           </div>
         )}
       </div>
