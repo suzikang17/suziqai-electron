@@ -434,16 +434,25 @@ export function StepSidebar({
             {/* Test blocks */}
             {activeSuite?.tests.map((block) => {
               const isActive = block.id === activeBlockId;
-              const isBlockCollapsed = collapsedBlocks.has(block.id) || !isActive;
+              const isExpanded = isActive && !collapsedBlocks.has(block.id);
 
               return (
                 <div key={block.id} style={{ marginBottom: 4 }}>
                   {/* Block header */}
                   <div
                     onClick={() => {
-                      onSwitchBlock(block.id);
-                      if (collapsedBlocks.has(block.id)) {
+                      if (isActive) {
+                        // Already active — just toggle collapse
                         toggleBlockCollapse(block.id);
+                      } else {
+                        // Switch to this block and expand it
+                        onSwitchBlock(block.id);
+                        // Make sure it's not in the collapsed set
+                        setCollapsedBlocks(prev => {
+                          const next = new Set(prev);
+                          next.delete(block.id);
+                          return next;
+                        });
                       }
                     }}
                     onDoubleClick={(e) => {
@@ -463,11 +472,8 @@ export function StepSidebar({
                       marginBottom: 2,
                     }}
                   >
-                    <span
-                      onClick={(e) => { e.stopPropagation(); if (isActive) toggleBlockCollapse(block.id); else { onSwitchBlock(block.id); } }}
-                      style={{ fontSize: 10, color: 'var(--accent-green)' }}
-                    >
-                      {isBlockCollapsed ? '\u25B8' : '\u25BE'}
+                    <span style={{ fontSize: 10, color: 'var(--accent-green)' }}>
+                      {isExpanded ? '\u25BE' : '\u25B8'}
                     </span>
                     {renamingBlockId === block.id ? (
                       <input
@@ -513,35 +519,8 @@ export function StepSidebar({
                   </div>
 
                   {/* Block steps (only rendered if this is the active, expanded block) */}
-                  {isActive && !isBlockCollapsed && (
+                  {isExpanded && (
                     <div style={{ paddingLeft: 10 }}>
-                      {/* Collapse/Expand all toggle */}
-                      {stepGroups.some(g => g.indices.length > 1) && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                          <button
-                            onClick={() => {
-                              const allCollapsed = stepGroups.every(g => g.indices.length <= 1 || collapsedGroups.has(g.actionIndex));
-                              if (allCollapsed) {
-                                setCollapsedGroups(new Set());
-                              } else {
-                                setCollapsedGroups(new Set(stepGroups.map(g => g.actionIndex)));
-                              }
-                            }}
-                            style={{
-                              background: 'none',
-                              color: 'var(--accent-blue, #0969da)',
-                              fontSize: 10,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              padding: '2px 6px',
-                            }}
-                          >
-                            {stepGroups.every(g => g.indices.length <= 1 || collapsedGroups.has(g.actionIndex))
-                              ? 'Expand All'
-                              : 'Collapse All'}
-                          </button>
-                        </div>
-                      )}
                       {renderStepGroups()}
                     </div>
                   )}
