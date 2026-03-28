@@ -136,7 +136,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           alignItems: 'baseline',
           gap: 6,
           padding: '3px 0',
-          paddingLeft: isAssertion ? 16 : 0,
+          paddingLeft: isAssertion ? 24 : 0,
           cursor: 'pointer',
           opacity: step.status === 'pending' ? 0.7 : 1,
           borderTop: isDragOver ? '2px solid var(--accent-blue, #0969da)' : '2px solid transparent',
@@ -152,12 +152,6 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
             onClick={(e) => e.stopPropagation()}
             style={{ color: 'var(--text-muted)', fontSize: 10, cursor: 'grab', flexShrink: 0, userSelect: 'none' }}
           >⠿</span>
-        )}
-        {/* Expand indicator for groups */}
-        {childCount != null && childCount > 0 && (
-          <span style={{ color: 'var(--text-muted)', fontSize: 9, flexShrink: 0, width: 10, textAlign: 'center' }}>
-            {(isExpanded !== undefined ? isExpanded : expanded) ? '▾' : '▸'}
-          </span>
         )}
         <span style={{ color, fontSize: 11, flexShrink: 0 }}>{icon}</span>
         <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1, lineHeight: 1.3 }}>
@@ -177,7 +171,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           color: 'var(--text-muted)',
           fontFamily: 'var(--font-mono)',
           padding: '2px 0 4px',
-          paddingLeft: isAssertion ? 34 : draggable ? 36 : 18,
+          paddingLeft: isAssertion ? 42 : draggable ? 36 : 18,
         }}>
           {formatAction(step.action)}
         </div>
