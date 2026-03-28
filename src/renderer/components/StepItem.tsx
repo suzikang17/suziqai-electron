@@ -43,53 +43,183 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
   const [editSelector, setEditSelector] = useState('');
   const [editValue, setEditValue] = useState('');
   const [editLabel, setEditLabel] = useState('');
+  const [editType, setEditType] = useState(step.action.type);
+  const [editAssertType, setEditAssertType] = useState(step.action.type === 'assert' ? step.action.assertionType : 'visible');
   const isAssertion = step.action.type === 'assert' || step.action.type === 'waitFor';
 
   const startEdit = () => {
     const action = step.action;
     setEditLabel(step.label);
+    setEditType(action.type);
     if ('selector' in action) setEditSelector(action.selector);
     else if (action.type === 'navigate') setEditSelector(action.url);
     else setEditSelector('');
     if ('value' in action) setEditValue(action.value);
-    else if (action.type === 'assert') setEditValue(action.expected);
+    else if (action.type === 'assert') { setEditValue(action.expected); setEditAssertType(action.assertionType); }
     else setEditValue('');
     setEditing(true);
   };
 
   const saveEdit = () => {
     if (!onUpdate) return;
-    const action = { ...step.action } as any;
-    if ('selector' in action) action.selector = editSelector;
-    else if (action.type === 'navigate') action.url = editSelector;
-    if ('value' in action) action.value = editValue;
-    else if (action.type === 'assert') action.expected = editValue;
+    let action: any;
+    switch (editType) {
+      case 'navigate': action = { type: 'navigate', url: editSelector }; break;
+      case 'click': action = { type: 'click', selector: editSelector }; break;
+      case 'fill': action = { type: 'fill', selector: editSelector, value: editValue }; break;
+      case 'assert': action = { type: 'assert', assertionType: editAssertType, expected: editValue, selector: editSelector || undefined }; break;
+      case 'waitFor': action = { type: 'waitFor', selector: editSelector }; break;
+      case 'screenshot': action = { type: 'screenshot' }; break;
+      default: action = step.action;
+    }
     onUpdate(action, editLabel);
     setEditing(false);
   };
 
+  const fieldStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'var(--bg-primary)',
+    color: 'var(--text-primary)',
+    borderRadius: 4,
+    padding: '5px 8px',
+    fontSize: 11,
+    fontFamily: 'var(--font-mono)',
+    border: '1px solid var(--border)',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 9,
+    color: 'var(--text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  };
+
+  const showSelector = editType !== 'screenshot';
+  const showValue = editType === 'fill' || editType === 'assert';
+
   if (editing) {
     return (
-      <div style={{ padding: '4px 0 4px 20px' }}>
-        <input
-          value={editLabel}
-          onChange={(e) => setEditLabel(e.target.value)}
-          style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 3, padding: '3px 6px', fontSize: 11, fontFamily: 'var(--font-mono)', border: '1px solid var(--border)', marginBottom: 3 }}
-          autoFocus
-          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
-        />
-        {(step.action.type === 'fill' || step.action.type === 'assert' || step.action.type === 'navigate') && (
+      <div style={{
+        padding: 10,
+        background: 'var(--bg-tertiary)',
+        borderRadius: 6,
+        border: '1px solid var(--border)',
+        margin: '2px 0',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+      }}>
+        {/* Label */}
+        <div>
+          <div style={labelStyle}>Description</div>
           <input
-            value={editSelector}
-            onChange={(e) => setEditSelector(e.target.value)}
-            placeholder={step.action.type === 'navigate' ? 'URL...' : 'Selector...'}
-            style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 3, padding: '3px 6px', fontSize: 11, fontFamily: 'var(--font-mono)', border: '1px solid var(--border)', marginBottom: 3 }}
-            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+            value={editLabel}
+            onChange={(e) => setEditLabel(e.target.value)}
+            style={fieldStyle}
+            autoFocus
+            onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }}
           />
+        </div>
+
+        {/* Type selector */}
+        <div>
+          <div style={labelStyle}>Type</div>
+          <select
+            value={editType}
+            onChange={(e) => setEditType(e.target.value as any)}
+            style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}
+          >
+            <optgroup label="Actions">
+              <option value="navigate">Navigate</option>
+              <option value="click">Click</option>
+              <option value="fill">Fill</option>
+              <option value="screenshot">Screenshot</option>
+              <option value="waitFor">Wait For</option>
+            </optgroup>
+            <optgroup label="Assertions">
+              <option value="assert">Assert</option>
+            </optgroup>
+          </select>
+        </div>
+
+        {/* Assert type */}
+        {editType === 'assert' && (
+          <div>
+            <div style={labelStyle}>Assertion Type</div>
+            <select
+              value={editAssertType}
+              onChange={(e) => setEditAssertType(e.target.value as any)}
+              style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}
+            >
+              <option value="visible">Visible</option>
+              <option value="hidden">Hidden</option>
+              <option value="text">Text Contains</option>
+              <option value="url">URL Matches</option>
+              <option value="value">Input Value</option>
+            </select>
+          </div>
         )}
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={saveEdit} style={{ background: 'var(--accent-green)', color: '#fff', borderRadius: 3, padding: '1px 6px', fontSize: 9, fontWeight: 'bold' }}>Save</button>
-          <button onClick={() => setEditing(false)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', borderRadius: 3, padding: '1px 6px', fontSize: 9 }}>Cancel</button>
+
+        {/* Selector / URL */}
+        {showSelector && (
+          <div>
+            <div style={labelStyle}>{editType === 'navigate' ? 'URL' : 'Selector'}</div>
+            <input
+              value={editSelector}
+              onChange={(e) => setEditSelector(e.target.value)}
+              placeholder={editType === 'navigate' ? 'https://...' : "getByRole('button', { name: '...' })"}
+              style={fieldStyle}
+              onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }}
+            />
+          </div>
+        )}
+
+        {/* Value / Expected */}
+        {showValue && (
+          <div>
+            <div style={labelStyle}>{editType === 'fill' ? 'Value' : 'Expected'}</div>
+            <input
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              placeholder={editType === 'fill' ? 'Text to type...' : 'Expected value...'}
+              style={fieldStyle}
+              onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }}
+            />
+          </div>
+        )}
+
+        {/* Preview */}
+        <div style={{
+          background: 'var(--bg-primary)',
+          borderRadius: 4,
+          padding: '4px 8px',
+          fontSize: 10,
+          fontFamily: 'var(--font-mono)',
+          color: 'var(--text-muted)',
+        }}>
+          {editType === 'navigate' && `page.goto('${editSelector}')`}
+          {editType === 'click' && `page.${editSelector || 'locator(...)'}.click()`}
+          {editType === 'fill' && `page.${editSelector || 'locator(...)'}.fill('${editValue}')`}
+          {editType === 'assert' && `expect(page.${editSelector || 'locator(...)'}).to${editAssertType === 'visible' ? 'BeVisible' : editAssertType === 'hidden' ? 'BeHidden' : `Have${editAssertType === 'text' ? 'Text' : editAssertType === 'url' ? 'URL' : 'Value'}('${editValue}')`}()`}
+          {editType === 'waitFor' && `page.${editSelector || 'locator(...)'}.waitFor()`}
+          {editType === 'screenshot' && `page.screenshot()`}
+        </div>
+
+        {/* Buttons */}
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => setEditing(false)}
+            style={{ background: 'var(--bg-primary)', color: 'var(--text-muted)', borderRadius: 4, padding: '4px 12px', fontSize: 10, border: '1px solid var(--border)' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={saveEdit}
+            style={{ background: 'var(--accent-green)', color: '#fff', borderRadius: 4, padding: '4px 12px', fontSize: 10, fontWeight: 'bold' }}
+          >
+            Save
+          </button>
         </div>
       </div>
     );
