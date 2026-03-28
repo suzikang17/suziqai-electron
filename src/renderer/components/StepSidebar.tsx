@@ -507,21 +507,6 @@ export function StepSidebar({
           {/* Run All + Autopilot */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexShrink: 0 }}>
             <button
-              onClick={onRunAll}
-              style={{
-                flex: 1,
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-secondary)',
-                borderRadius: 6,
-                padding: '7px 0',
-                fontSize: 12,
-                fontWeight: 'bold',
-                border: '1px solid var(--border)',
-              }}
-            >
-              Run All
-            </button>
-            <button
               onClick={onAutopilotToggle}
               style={{
                 flex: 1,
@@ -535,6 +520,21 @@ export function StepSidebar({
               }}
             >
               {isAutopilot ? '⚡ ON' : '⚡ Autopilot'}
+            </button>
+            <button
+              onClick={onRunAll}
+              style={{
+                flex: 1,
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-secondary)',
+                borderRadius: 6,
+                padding: '7px 0',
+                fontSize: 12,
+                fontWeight: 'bold',
+                border: '1px solid var(--border)',
+              }}
+            >
+              Run All
             </button>
           </div>
 
