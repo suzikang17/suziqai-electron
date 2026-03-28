@@ -5,37 +5,6 @@ import { LibraryView } from './LibraryView';
 import type { TestSuite, StepAction } from '@shared/types';
 import type { LibraryEntry } from '@shared/types';
 
-function InsertButton({ onClick }: { onClick: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: hovered ? 24 : 8,
-        cursor: 'pointer',
-        transition: 'height 0.15s ease',
-        opacity: hovered ? 1 : 0,
-      }}
-    >
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        fontSize: 10,
-        color: 'var(--accent-blue, var(--accent-green))',
-        fontWeight: 500,
-      }}>
-        <span>+ insert step here</span>
-      </div>
-    </div>
-  );
-}
-
 interface StepSidebarProps {
   suites: TestSuite[];
   activeSuiteId: string;
@@ -368,182 +337,162 @@ export function StepSidebar({
               </div>
             </div>
           )}
-          <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
-
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {/* beforeEach section */}
-            {activeSuite && (
-              <div style={{ marginBottom: 6 }}>
+          {/* Test block list */}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tests</span>
+              <button
+                onClick={onCreateBlock}
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--accent-green)',
+                  borderRadius: 3,
+                  padding: '2px 8px',
+                  fontSize: 11,
+                  fontWeight: 'bold',
+                }}
+              >
+                + New Test
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 120, overflowY: 'auto' }}>
+              {activeSuite?.tests.map(block => (
                 <div
-                  onClick={() => setBeforeEachExpanded(!beforeEachExpanded)}
+                  key={block.id}
+                  onClick={() => onSwitchBlock(block.id)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setRenameValue(block.name);
+                    setRenamingBlockId(block.id);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 6,
+                    justifyContent: 'space-between',
                     padding: '4px 8px',
-                    cursor: 'pointer',
-                    borderLeft: '2px solid var(--accent-blue, #0969da)',
                     borderRadius: 3,
-                    background: 'var(--bg-tertiary)',
-                    marginBottom: 2,
+                    background: block.id === activeBlockId ? 'var(--bg-tertiary)' : 'transparent',
+                    cursor: 'pointer',
+                    borderLeft: block.id === activeBlockId ? '2px solid var(--accent-green)' : '2px solid transparent',
                   }}
                 >
-                  <span style={{ fontSize: 10, color: 'var(--accent-blue, #0969da)' }}>
-                    {beforeEachExpanded ? '\u25BE' : '\u25B8'}
-                  </span>
-                  <span style={{ fontSize: 10, color: 'var(--accent-blue, #0969da)' }}>
-                    {'\u21BB'}
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-blue, #0969da)', flex: 1 }}>
-                    beforeEach ({activeSuite.beforeEach.length} step{activeSuite.beforeEach.length !== 1 ? 's' : ''})
-                  </span>
-                </div>
-                {beforeEachExpanded && (
-                  <div style={{ paddingLeft: 10 }}>
-                    {activeSuite.beforeEach.map((step, idx) => (
-                      <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', fontSize: 11 }}>
-                        <span style={{ color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {step.label}
-                        </span>
-                        <button
-                          onClick={() => onRemoveBeforeEachStep(step.id)}
-                          style={{ background: 'none', color: 'var(--text-muted)', fontSize: 11, padding: '0 2px' }}
-                        >
-                          x
-                        </button>
-                      </div>
-                    ))}
-                    {beforeEachComposerOpen ? (
-                      <StepComposer
-                        onSubmit={(result) => {
-                          if (!('prompt' in result)) {
-                            onAddBeforeEachStep(result);
-                          }
-                          setBeforeEachComposerOpen(false);
-                        }}
-                        onCancel={() => setBeforeEachComposerOpen(false)}
-                      />
-                    ) : (
-                      <InsertButton onClick={() => setBeforeEachComposerOpen(true)} />
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Test blocks */}
-            {activeSuite?.tests.map((block) => {
-              const isActive = block.id === activeBlockId;
-              const isExpanded = isActive && !collapsedBlocks.has(block.id);
-
-              return (
-                <div key={block.id} style={{ marginBottom: 4 }}>
-                  {/* Block header */}
-                  <div
-                    onClick={() => {
-                      if (isActive) {
-                        // Already active — just toggle collapse
-                        toggleBlockCollapse(block.id);
-                      } else {
-                        // Switch to this block and expand it
-                        onSwitchBlock(block.id);
-                        // Make sure it's not in the collapsed set
-                        setCollapsedBlocks(prev => {
-                          const next = new Set(prev);
-                          next.delete(block.id);
-                          return next;
-                        });
-                      }
-                    }}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      setRenameValue(block.name);
-                      setRenamingBlockId(block.id);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '4px 8px',
-                      cursor: 'pointer',
-                      borderLeft: isActive ? '2px solid var(--accent-green)' : '2px solid transparent',
-                      borderRadius: 3,
-                      background: isActive ? 'var(--bg-tertiary)' : 'transparent',
-                      marginBottom: 2,
-                    }}
-                  >
-                    <span style={{ fontSize: 10, color: 'var(--accent-green)' }}>
-                      {isExpanded ? '\u25BE' : '\u25B8'}
-                    </span>
-                    {renamingBlockId === block.id ? (
-                      <input
-                        autoFocus
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onBlur={() => {
+                  {renamingBlockId === block.id ? (
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={() => {
+                        if (renameValue.trim()) onRenameBlock(block.id, renameValue.trim());
+                        setRenamingBlockId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
                           if (renameValue.trim()) onRenameBlock(block.id, renameValue.trim());
                           setRenamingBlockId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            if (renameValue.trim()) onRenameBlock(block.id, renameValue.trim());
-                            setRenamingBlockId(null);
-                          }
-                          if (e.key === 'Escape') setRenamingBlockId(null);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          flex: 1,
-                          fontSize: 11,
-                          background: 'var(--bg-primary)',
-                          color: 'var(--text-primary)',
-                          border: '1px solid var(--accent-green)',
-                          borderRadius: 3,
-                          padding: '2px 6px',
-                          outline: 'none',
-                        }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: 11, fontWeight: 600, color: isActive ? 'var(--accent-green)' : 'var(--text-secondary)', flex: 1 }}>
-                        test: {block.name} ({block.steps.length} step{block.steps.length !== 1 ? 's' : ''})
+                        }
+                        if (e.key === 'Escape') setRenamingBlockId(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        flex: 1,
+                        fontSize: 11,
+                        background: 'var(--bg-primary)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--accent-green)',
+                        borderRadius: 3,
+                        padding: '2px 6px',
+                        outline: 'none',
+                      }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 11, color: block.id === activeBlockId ? 'var(--text-primary)' : 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {block.name}
+                    </span>
+                  )}
+                  <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
+                    {block.steps.length} step{block.steps.length !== 1 ? 's' : ''}
+                  </span>
+                  {activeSuite.tests.length > 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDeleteBlock(block.id); }}
+                      style={{ background: 'none', color: 'var(--text-muted)', fontSize: 11, marginLeft: 4, padding: '0 2px' }}
+                    >
+                      x
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* beforeEach section */}
+          {activeSuite && (
+            <div style={{ marginBottom: 6 }}>
+              <div
+                onClick={() => setBeforeEachExpanded(!beforeEachExpanded)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 8px',
+                  cursor: 'pointer',
+                  borderLeft: '2px solid var(--accent-blue, #0969da)',
+                  borderRadius: 3,
+                  background: 'var(--bg-tertiary)',
+                  marginBottom: 2,
+                }}
+              >
+                <span style={{ fontSize: 10, color: 'var(--accent-blue, #0969da)' }}>
+                  {beforeEachExpanded ? '\u25BE' : '\u25B8'}
+                </span>
+                <span style={{ fontSize: 10, color: 'var(--accent-blue, #0969da)' }}>
+                  {'\u21BB'}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-blue, #0969da)', flex: 1 }}>
+                  beforeEach
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
+                  {activeSuite.beforeEach.length} step{activeSuite.beforeEach.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {beforeEachExpanded && (
+                <div style={{ paddingLeft: 10 }}>
+                  {activeSuite.beforeEach.map((step) => (
+                    <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', fontSize: 11 }}>
+                      <span style={{ color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {step.label}
                       </span>
-                    )}
-                    {activeSuite.tests.length > 1 && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); onDeleteBlock(block.id); }}
+                        onClick={() => onRemoveBeforeEachStep(step.id)}
                         style={{ background: 'none', color: 'var(--text-muted)', fontSize: 11, padding: '0 2px' }}
                       >
                         x
                       </button>
-                    )}
-                  </div>
-
-                  {/* Block steps (only rendered if this is the active, expanded block) */}
-                  {isExpanded && (
-                    <div style={{ paddingLeft: 10 }}>
-                      {renderStepGroups()}
                     </div>
+                  ))}
+                  {beforeEachComposerOpen ? (
+                    <StepComposer
+                      onSubmit={(result) => {
+                        if (!('prompt' in result)) {
+                          onAddBeforeEachStep(result);
+                        }
+                        setBeforeEachComposerOpen(false);
+                      }}
+                      onCancel={() => setBeforeEachComposerOpen(false)}
+                    />
+                  ) : (
+                    <InsertButton onClick={() => setBeforeEachComposerOpen(true)} />
                   )}
                 </div>
-              );
-            })}
+              )}
+            </div>
+          )}
 
-            {/* + New Test button */}
-            <button
-              onClick={onCreateBlock}
-              style={{
-                background: 'var(--bg-tertiary)',
-                color: 'var(--accent-green)',
-                borderRadius: 3,
-                padding: '4px 8px',
-                fontSize: 11,
-                fontWeight: 'bold',
-                marginTop: 4,
-                textAlign: 'left',
-              }}
-            >
-              + New Test
-            </button>
+          <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+
+          {/* Step list for active block */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {renderStepGroups()}
           </div>
 
           <div style={{ display: 'flex', gap: 6, marginTop: 10, flexShrink: 0 }}>

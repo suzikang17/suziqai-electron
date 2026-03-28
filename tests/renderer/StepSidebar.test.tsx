@@ -89,7 +89,7 @@ describe('StepSidebar', () => {
 
   it('renders test block sections', () => {
     render(<StepSidebar {...defaultProps} />);
-    expect(screen.getByText(/test: Login Test/)).toBeTruthy();
+    expect(screen.getByText('Login Test')).toBeTruthy();
     expect(screen.getByText(/3 steps/)).toBeTruthy();
   });
 
