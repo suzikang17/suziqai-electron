@@ -49,13 +49,7 @@ export async function connectToElectron(): Promise<Page> {
 }
 
 async function _connectToElectron(): Promise<Page> {
-  // Reuse existing connection if still open
-  if (browser && browser.isConnected()) {
-    const page = findTargetPage(browser);
-    if (page) return page;
-  }
-
-  // Close stale connection
+  // Always reconnect to get the latest page state
   if (browser) {
     await browser.close().catch(() => {});
     browser = null;

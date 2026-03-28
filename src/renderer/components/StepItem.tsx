@@ -33,11 +33,10 @@ interface StepItemProps {
 
 const tinyBtn: React.CSSProperties = {
   background: 'none',
-  fontSize: 12,
-  padding: '0 5px',
+  padding: '0 3px',
   cursor: 'pointer',
-  fontWeight: 600,
-  lineHeight: '20px',
+  display: 'flex',
+  alignItems: 'center',
 };
 
 export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onMoveUp, onMoveDown, onToggle, isExpanded, childCount }: StepItemProps) {
@@ -343,29 +342,30 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
       {hovered && (
         <div style={{
           position: 'absolute',
-          top: -2,
+          top: 0,
           right: 0,
           display: 'flex',
-          gap: 1,
+          alignItems: 'center',
+          gap: 0,
           background: 'var(--bg-tertiary)',
           borderRadius: 3,
-          padding: '1px 2px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+          padding: '2px 2px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           zIndex: 1,
         }}>
           {onMoveUp && (
-            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} style={tinyBtn} title="Move up"><ChevronUp size={14} color="var(--text-muted)" /></button>
+            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} style={tinyBtn} title="Move up"><ChevronUp size={12} color="var(--text-muted)" /></button>
           )}
           {onMoveDown && (
-            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} style={tinyBtn} title="Move down"><ChevronDown size={14} color="var(--text-muted)" /></button>
+            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} style={tinyBtn} title="Move down"><ChevronDown size={12} color="var(--text-muted)" /></button>
           )}
           {onAddBelow && (
-            <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} style={tinyBtn} title="Add below"><Plus size={14} color="var(--text-secondary)" /></button>
+            <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} style={tinyBtn} title="Add below"><Plus size={12} color="var(--text-secondary)" /></button>
           )}
           {onUpdate && (
-            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={tinyBtn} title="Edit"><Pencil size={13} color="var(--accent-blue, #0969da)" /></button>
+            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={tinyBtn} title="Edit"><Pencil size={11} color="var(--accent-blue, #0969da)" /></button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={tinyBtn} title="Delete"><Trash2 size={13} color="var(--accent-red)" /></button>
+          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={tinyBtn} title="Delete"><Trash2 size={11} color="var(--accent-red)" /></button>
         </div>
       )}
 
