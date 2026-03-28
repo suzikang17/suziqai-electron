@@ -504,29 +504,8 @@ export function StepSidebar({
 
           <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
 
-          {/* Step list for active block */}
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {renderStepGroups()}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10, flexShrink: 0 }}>
-            <button
-              onClick={onAutopilotToggle}
-              style={{
-                width: '100%',
-                background: isAutopilot ? 'var(--accent-green)' : 'var(--bg-tertiary)',
-                color: isAutopilot ? '#ffffff' : 'var(--text-secondary)',
-                borderRadius: 6,
-                padding: '8px 0',
-                fontSize: 12,
-                fontWeight: 'bold',
-                letterSpacing: 0.3,
-                border: isAutopilot ? 'none' : '1px solid var(--border)',
-              }}
-            >
-              {isAutopilot ? '⚡ Autopilot ON' : '⚡ Autopilot'}
-            </button>
-            <div style={{ display: 'flex', gap: 6 }}>
+          {/* Run All + Autopilot */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexShrink: 0 }}>
             <button
               onClick={onRunAll}
               style={{
@@ -534,15 +513,37 @@ export function StepSidebar({
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-secondary)',
                 borderRadius: 6,
-                padding: '8px 0',
-                fontSize: 11,
+                padding: '7px 0',
+                fontSize: 12,
                 fontWeight: 'bold',
-                letterSpacing: 0.3,
                 border: '1px solid var(--border)',
               }}
             >
               Run All
             </button>
+            <button
+              onClick={onAutopilotToggle}
+              style={{
+                flex: 1,
+                background: isAutopilot ? 'var(--accent-green)' : 'var(--bg-tertiary)',
+                color: isAutopilot ? '#ffffff' : 'var(--text-secondary)',
+                borderRadius: 6,
+                padding: '7px 0',
+                fontSize: 12,
+                fontWeight: 'bold',
+                border: isAutopilot ? 'none' : '1px solid var(--border)',
+              }}
+            >
+              {isAutopilot ? '⚡ ON' : '⚡ Autopilot'}
+            </button>
+          </div>
+
+          {/* Step list for active block */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {renderStepGroups()}
+          </div>
+
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexShrink: 0 }}>
             <button
               onClick={onSaveTest}
               style={{
@@ -558,7 +559,6 @@ export function StepSidebar({
             >
               Save to Library
             </button>
-            </div>
           </div>
         </>
       ) : (
