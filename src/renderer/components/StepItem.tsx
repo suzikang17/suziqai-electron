@@ -169,8 +169,9 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
     marginBottom: 2,
   };
 
-  const showSelector = editType !== 'screenshot';
-  const showValue = editType === 'fill' || editType === 'assert';
+  const showSelector = editType !== 'screenshot' && !(editType === 'assert' && editAssertType === 'url');
+  const assertNeedsExpected = editAssertType === 'text' || editAssertType === 'url' || editAssertType === 'value';
+  const showValue = editType === 'fill' || (editType === 'assert' && assertNeedsExpected);
 
   if (editing) {
     return (
