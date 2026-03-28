@@ -38,8 +38,8 @@ contextBridge.exposeInMainWorld('suziqai', {
   executeAllSteps: (steps?: any[]) => ipcRenderer.invoke(IPC.STEP_EXECUTE_ALL, steps),
   onStepsProposed: (callback: (steps: unknown[]) => void) =>
     ipcRenderer.on(IPC.STEPS_PROPOSED, (_event, steps) => callback(steps)),
-  onStepResult: (callback: (stepId: string, status: string, error?: string) => void) =>
-    ipcRenderer.on(IPC.STEP_RESULT, (_event, stepId, status, error) => callback(stepId, status, error)),
+  onStepResult: (callback: (stepId: string, status: string, error?: string, screenshotPath?: string) => void) =>
+    ipcRenderer.on(IPC.STEP_RESULT, (_event, stepId, status, error, screenshotPath) => callback(stepId, status, error, screenshotPath)),
 
   // Mode
   changeMode: (mode: string) => ipcRenderer.invoke(IPC.MODE_CHANGE, mode),

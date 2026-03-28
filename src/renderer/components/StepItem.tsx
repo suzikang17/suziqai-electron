@@ -429,6 +429,29 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
         </div>
       )}
 
+      {/* Screenshot preview */}
+      {step.screenshotPath && (expanded || !onToggle) && (
+        <div style={{ paddingLeft: isAssertion ? 42 : 18, paddingBottom: 4 }}>
+          <img
+            src={`file://${step.screenshotPath}`}
+            alt="Step screenshot"
+            style={{
+              maxWidth: '100%',
+              borderRadius: 4,
+              border: '1px solid var(--border)',
+              cursor: 'pointer',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(`file://${step.screenshotPath}`, '_blank');
+            }}
+          />
+          <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
+            {step.screenshotPath.split('/').pop()}
+          </div>
+        </div>
+      )}
+
       {step.error && (
         <div style={{ color: 'var(--accent-red)', fontSize: 10, paddingLeft: isAssertion ? 42 : 18, marginTop: -2, marginBottom: 2 }}>
           {step.error}

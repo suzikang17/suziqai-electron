@@ -252,14 +252,14 @@ export function App() {
       }
     });
 
-    window.suziqai.onStepResult((stepId, status, error) => {
+    window.suziqai.onStepResult((stepId, status, error, screenshotPath) => {
       setSuites(prev => {
         const updated = prev.map(s => s.id !== activeSuiteId ? s : {
           ...s,
           tests: s.tests.map(b => b.id !== activeBlockId ? b : {
             ...b,
             steps: b.steps.map(st =>
-              st.id === stepId ? { ...st, status: status as any, error } : st
+              st.id === stepId ? { ...st, status: status as any, error, ...(screenshotPath ? { screenshotPath } : {}) } : st
             ),
           }),
         });

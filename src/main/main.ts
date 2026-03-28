@@ -346,6 +346,24 @@ function createWindow(): void {
     try {
       const beforeScreenshot = await captureBrowserViewScreenshot();
 
+      // Screenshot steps: save to disk and return path
+      if (action.type === 'screenshot') {
+        const screenshot = await captureBrowserViewScreenshot();
+        if (screenshot.length > 0 && projectConfig.getProjectPath()) {
+          const fs = await import('fs/promises');
+          const config = projectConfig.getConfig();
+          const screenshotsDir = path.join(projectConfig.getProjectPath(), config.testOutputDir || 'tests', 'screenshots');
+          await fs.mkdir(screenshotsDir, { recursive: true });
+          const fileName = `${stepId}-${Date.now()}.png`;
+          const filePath = path.join(screenshotsDir, fileName);
+          await fs.writeFile(filePath, screenshot);
+          win.webContents.send(IPC.STEP_RESULT, stepId, 'passed', undefined, filePath);
+        } else {
+          win.webContents.send(IPC.STEP_RESULT, stepId, 'passed');
+        }
+        return;
+      }
+
       await executeActionOnView(browserView, action, timeout);
       win.webContents.send(IPC.STEP_RESULT, stepId, 'passed');
       win.webContents.send(IPC.BROWSER_URL_CHANGED, browserView.webContents.getURL());

@@ -17,6 +17,7 @@ export interface Step {
   status: StepStatus;
   error?: string;
   timeout?: number; // ms, default 5000
+  screenshotPath?: string; // path to saved screenshot (for screenshot steps)
 }
 
 export interface TestCase {
