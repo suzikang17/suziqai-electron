@@ -18,6 +18,7 @@ async function executeActionOnView(view: any, action: any): Promise<void> {
 
 let mainWindow: BrowserWindow | null = null;
 let browserView: BrowserView | null = null;
+let autopilotEnabled = false;
 
 const claudeSession = new ClaudeSession();
 const recorder = new Recorder();
@@ -266,6 +267,12 @@ function createWindow(): void {
     }
   });
 
+  // Autopilot toggle
+  ipcMain.removeHandler('autopilot:toggle');
+  ipcMain.handle('autopilot:toggle', (_event, enabled: boolean) => {
+    autopilotEnabled = enabled;
+  });
+
   // Helper: capture screenshot from BrowserView as Buffer
   async function captureBrowserViewScreenshot(): Promise<Buffer> {
     if (!browserView) return Buffer.alloc(0);
@@ -349,7 +356,8 @@ function createWindow(): void {
 
       claudeSession.addSnapshot(afterScreenshot, browserView.webContents.getURL(), stepId);
 
-      // Run visual QA asynchronously
+      // Run visual QA only when autopilot is enabled
+      if (autopilotEnabled) {
       const stepLabel = `${action.type}${action.type === 'navigate' ? ` ${action.url}` : ''}`;
       claudeSession.requestVisualQA(beforeScreenshot, afterScreenshot, stepLabel).then((qaResponse) => {
         if (win.isDestroyed()) return;
@@ -369,6 +377,7 @@ function createWindow(): void {
       }).catch((err) => {
         console.error('Visual QA failed:', err);
       });
+      } // end autopilot check
     } catch (err) {
       win.webContents.send(IPC.STEP_RESULT, stepId, 'failed', (err as Error).message);
     }
@@ -393,11 +402,11 @@ function createWindow(): void {
         const afterScreenshot = await captureBrowserViewScreenshot();
         claudeSession.addSnapshot(afterScreenshot, browserView.webContents.getURL(), step.id);
 
-        // Visual QA every 3rd step and on the final step
+        // Visual QA every 3rd step and on the final step (only when autopilot is on)
         const isThirdStep = (i + 1) % 3 === 0;
         const isFinalStep = i === steps.length - 1;
 
-        if (isThirdStep || isFinalStep) {
+        if (autopilotEnabled && (isThirdStep || isFinalStep)) {
           const stepLabel = `${step.action.type}${step.action.type === 'navigate' ? ` ${step.action.url}` : ''}`;
           try {
             const qaResponse = await claudeSession.requestVisualQA(beforeScreenshot, afterScreenshot, stepLabel);

@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('suziqai', {
   navigate: (url: string) => ipcRenderer.invoke(IPC.BROWSER_NAVIGATE, url),
   goBack: () => ipcRenderer.invoke('browser:go-back'),
   goForward: () => ipcRenderer.invoke('browser:go-forward'),
+  setAutopilot: (enabled: boolean) => ipcRenderer.invoke('autopilot:toggle', enabled),
   onUrlChanged: (callback: (url: string) => void) =>
     ipcRenderer.on(IPC.BROWSER_URL_CHANGED, (_event, url) => callback(url)),
 

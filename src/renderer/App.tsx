@@ -279,6 +279,7 @@ export function App() {
           if (autopilotRetriesRef.current > AUTOPILOT_MAX_RETRIES) {
             log(`⚡ Autopilot: hit ${AUTOPILOT_MAX_RETRIES} retries — pausing autopilot`);
             setIsAutopilot(false);
+            window.suziqai.setAutopilot(false);
           } else {
             const prompt = `Step failed (retry ${autopilotRetriesRef.current}/${AUTOPILOT_MAX_RETRIES}): "${step.label}"\nError: ${error}\n\nLook at the current screenshot and suggest an alternative approach. Either fix the selector/action or propose different steps to accomplish the same goal.`;
             log(`⚡ Autopilot: diagnosing failure (${autopilotRetriesRef.current}/${AUTOPILOT_MAX_RETRIES})...`);
@@ -691,7 +692,7 @@ export function App() {
           }}
           onPickToggle={togglePicker}
           isAutopilot={isAutopilot}
-          onAutopilotToggle={() => setIsAutopilot(!isAutopilot)}
+          onAutopilotToggle={() => { const next = !isAutopilot; setIsAutopilot(next); window.suziqai.setAutopilot(next); }}
         />
         {/* Browser viewport area — BrowserView is positioned here by main process */}
         <div
