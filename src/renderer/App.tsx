@@ -508,6 +508,13 @@ export function App() {
             log(`▶▶ Act & Assert: ${actions.length} action(s), then ${assertions.length} assertion(s)`);
             window.suziqai.executeAllSteps(ordered);
           }}
+          onRunGroup={(stepIds: string[]) => {
+            const stepsToRun = currentTest.steps
+              .filter(s => stepIds.includes(s.id))
+              .map(s => ({ id: s.id, action: s.action }));
+            log(`▶▶ Act & Assert: running ${stepsToRun.length} step(s)`);
+            window.suziqai.executeAllSteps(stepsToRun);
+          }}
           onRunAll={() => {
             const pendingSteps = currentTest.steps
               .filter(s => s.status === 'pending' || s.status === 'passed')
