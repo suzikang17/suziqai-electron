@@ -13,7 +13,7 @@ export function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);
   const [mode, setMode] = useState<AppMode>('command');
   const defaultBlock: TestBlock = { id: 'block-1', name: 'Untitled Test', steps: [] };
-  const defaultSuite: TestSuite = { id: 'suite-1', name: 'Untitled Suite', fileName: 'untitled-suite', beforeEach: [], tests: [defaultBlock] };
+  const defaultSuite: TestSuite = { id: 'suite-1', name: 'Untitled Suite', fileName: 'untitled-suite', beforeAll: [], beforeEach: [], afterEach: [], afterAll: [], tests: [defaultBlock], devices: [] };
   const [suites, setSuites] = useState<TestSuite[]>([defaultSuite]);
   const [activeSuiteId, setActiveSuiteId] = useState<string>('suite-1');
   const [activeBlockId, setActiveBlockId] = useState<string>('block-1');
@@ -87,8 +87,12 @@ export function App() {
       id: suiteId,
       name: 'Untitled Suite',
       fileName: 'untitled-suite',
+      beforeAll: [],
       beforeEach: [],
+      afterEach: [],
+      afterAll: [],
       tests: [{ id: blockId, name: 'Untitled Test', steps: [] }],
+      devices: [],
     };
     setSuites(prev => [...prev, newSuite]);
     setActiveSuiteId(suiteId);
@@ -158,6 +162,10 @@ export function App() {
   const refreshLibrary = async () => {
     const entries = await window.suziqai.listLibrary();
     setLibraryEntries(entries);
+  };
+
+  const updateSuiteDevices = (suiteId: string, devices: import('@shared/types').DeviceConfig[]) => {
+    setSuites(prev => prev.map(s => s.id === suiteId ? { ...s, devices } : s));
   };
 
   const saveTest = async () => {
@@ -540,10 +548,10 @@ export function App() {
           onRenameBlock={renameBlock}
           onDeleteSuite={deleteSuite}
           onDeleteBlock={deleteBlock}
-          onAddBeforeEachStep={(step: { label: string; action: any }) => {
+          onAddHookStep={(hookType: any, step: { label: string; action: any }) => {
             updateCurrentSuite(s => ({
               ...s,
-              beforeEach: [...s.beforeEach, {
+              [hookType]: [...(s[hookType as keyof typeof s] as any[] || []), {
                 id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                 label: step.label,
                 action: step.action,
@@ -551,10 +559,10 @@ export function App() {
               }],
             }));
           }}
-          onRemoveBeforeEachStep={(stepId: string) => {
+          onRemoveHookStep={(hookType: any, stepId: string) => {
             updateCurrentSuite(s => ({
               ...s,
-              beforeEach: s.beforeEach.filter(st => st.id !== stepId),
+              [hookType]: ((s[hookType as keyof typeof s] as any[]) || []).filter((st: any) => st.id !== stepId),
             }));
           }}
           onAcceptStep={(stepId: string) => {
@@ -670,6 +678,7 @@ export function App() {
           onLoadFromLibrary={loadFromLibrary}
           onDeleteFromLibrary={deleteFromLibrary}
           onRefreshLibrary={refreshLibrary}
+          onUpdateSuiteDevices={updateSuiteDevices}
         />
       </div>
 

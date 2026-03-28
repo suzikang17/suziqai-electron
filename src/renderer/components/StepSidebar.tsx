@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StepItem } from './StepItem';
 import { StepComposer } from './StepComposer';
 import { LibraryView } from './LibraryView';
-import type { TestSuite, StepAction } from '@shared/types';
+import type { TestSuite, StepAction, HookType } from '@shared/types';
 import type { LibraryEntry } from '@shared/types';
 
 interface StepSidebarProps {
@@ -18,8 +18,8 @@ interface StepSidebarProps {
   onRenameBlock: (blockId: string, name: string) => void;
   onDeleteSuite: (suiteId: string) => void;
   onDeleteBlock: (blockId: string) => void;
-  onAddBeforeEachStep: (step: { label: string; action: StepAction }) => void;
-  onRemoveBeforeEachStep: (stepId: string) => void;
+  onAddHookStep: (hookType: HookType, step: { label: string; action: StepAction }) => void;
+  onRemoveHookStep: (hookType: HookType, stepId: string) => void;
   onAcceptStep: (stepId: string) => void;
   onDenyStep: (stepId: string) => void;
   onResetStep: (stepId: string) => void;
@@ -53,8 +53,8 @@ export function StepSidebar({
   onRenameBlock,
   onDeleteSuite,
   onDeleteBlock,
-  onAddBeforeEachStep,
-  onRemoveBeforeEachStep,
+  onAddHookStep,
+  onRemoveHookStep,
   onAcceptStep,
   onDenyStep,
   onResetStep,
@@ -78,10 +78,19 @@ export function StepSidebar({
   const activeBlock = activeSuite?.tests.find(b => b.id === activeBlockId) || activeSuite?.tests[0];
 
   const [composerAt, setComposerAt] = useState<number | null>(null);
-  const [beforeEachComposerOpen, setBeforeEachComposerOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
   const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
-  const [beforeEachExpanded, setBeforeEachExpanded] = useState(false);
+  const [expandedHooks, setExpandedHooks] = useState<Set<HookType>>(new Set());
+  const [hookComposerOpen, setHookComposerOpen] = useState<HookType | null>(null);
+
+  const toggleHook = (hook: HookType) => {
+    setExpandedHooks(prev => {
+      const next = new Set(prev);
+      if (next.has(hook)) next.delete(hook);
+      else next.add(hook);
+      return next;
+    });
+  };
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
 
   // Group steps: each action + following assertions form a group
@@ -360,55 +369,70 @@ export function StepSidebar({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hooks</span>
               </div>
-              <div
-                onClick={() => setBeforeEachExpanded(!beforeEachExpanded)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '4px 8px',
-                  borderRadius: 3,
-                  cursor: 'pointer',
-                  borderLeft: '2px solid var(--accent-blue, #0969da)',
-                  background: beforeEachExpanded ? 'var(--bg-tertiary)' : 'transparent',
-                }}
-              >
-                <span style={{ fontSize: 11, color: 'var(--accent-blue, #0969da)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>{'\u21BB'}</span>
-                  <span>beforeEach</span>
-                </span>
-                <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
-                  {activeSuite.beforeEach.length} step{activeSuite.beforeEach.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              {beforeEachExpanded && (
-                <div style={{ paddingLeft: 10, marginTop: 2 }}>
-                  {activeSuite.beforeEach.map((step) => (
-                    <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', fontSize: 11 }}>
-                      <span style={{ color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {step.label}
-                      </span>
-                      <button
-                        onClick={() => onRemoveBeforeEachStep(step.id)}
-                        style={{ background: 'none', color: 'var(--text-muted)', fontSize: 11, padding: '0 2px' }}
-                      >
-                        x
-                      </button>
-                    </div>
-                  ))}
-                  {beforeEachComposerOpen ? (
-                    <StepComposer
-                      onSubmit={(result) => {
-                        if (!('prompt' in result)) {
-                          onAddBeforeEachStep(result);
-                        }
-                        setBeforeEachComposerOpen(false);
+              {(['beforeAll', 'beforeEach', 'afterEach', 'afterAll'] as HookType[]).map(hookType => {
+                const steps = activeSuite[hookType];
+                const isExpanded = expandedHooks.has(hookType);
+                return (
+                  <div key={hookType}>
+                    <div
+                      onClick={() => toggleHook(hookType)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '4px 8px',
+                        borderRadius: 3,
+                        cursor: 'pointer',
+                        borderLeft: `2px solid ${steps.length > 0 ? 'var(--accent-blue, #0969da)' : 'var(--border)'}`,
+                        background: isExpanded ? 'var(--bg-tertiary)' : 'transparent',
+                        marginBottom: 2,
                       }}
-                      onCancel={() => setBeforeEachComposerOpen(false)}
-                    />
-                  ) : null}
-                </div>
-              )}
+                    >
+                      <span style={{ fontSize: 11, color: steps.length > 0 ? 'var(--accent-blue, #0969da)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>{hookType}</span>
+                      </span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
+                        {steps.length > 0 ? `${steps.length} step${steps.length !== 1 ? 's' : ''}` : ''}
+                      </span>
+                    </div>
+                    {isExpanded && (
+                      <div style={{ paddingLeft: 10, marginTop: 2, marginBottom: 4 }}>
+                        {steps.map((step) => (
+                          <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', fontSize: 11 }}>
+                            <span style={{ color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {step.label}
+                            </span>
+                            <button
+                              onClick={() => onRemoveHookStep(hookType, step.id)}
+                              style={{ background: 'none', color: 'var(--text-muted)', fontSize: 11, padding: '0 2px' }}
+                            >
+                              x
+                            </button>
+                          </div>
+                        ))}
+                        {hookComposerOpen === hookType ? (
+                          <StepComposer
+                            onSubmit={(result) => {
+                              if (!('prompt' in result)) {
+                                onAddHookStep(hookType, result);
+                              }
+                              setHookComposerOpen(null);
+                            }}
+                            onCancel={() => setHookComposerOpen(null)}
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setHookComposerOpen(hookType)}
+                            style={{ background: 'none', color: 'var(--accent-blue, #0969da)', fontSize: 10, padding: '2px 0', cursor: 'pointer' }}
+                          >
+                            + Add step
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

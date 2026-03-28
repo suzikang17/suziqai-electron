@@ -32,12 +32,23 @@ export interface TestBlock {
   steps: Step[];
 }
 
+export type HookType = 'beforeAll' | 'beforeEach' | 'afterEach' | 'afterAll';
+
+export interface DeviceConfig {
+  name: string;           // Playwright device name (e.g., "iPhone 14") or "Custom"
+  viewport?: { width: number; height: number };  // custom viewport override
+}
+
 export interface TestSuite {
   id: string;
   name: string;
   fileName: string;
+  beforeAll: Step[];
   beforeEach: Step[];
+  afterEach: Step[];
+  afterAll: Step[];
   tests: TestBlock[];
+  devices: DeviceConfig[];  // empty = no device-specific wrapping
 }
 
 export type AppMode = 'command' | 'record' | 'observe';

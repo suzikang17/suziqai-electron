@@ -7,9 +7,12 @@ const mockSuite: TestSuite = {
   id: 'suite-1',
   name: 'Login Suite',
   fileName: 'login-suite',
+  beforeAll: [],
   beforeEach: [
     { id: 'be1', label: 'Navigate to /login', action: { type: 'navigate', url: '/login' }, status: 'pending' },
   ],
+  afterEach: [],
+  afterAll: [],
   tests: [
     {
       id: 'block-1',
@@ -21,6 +24,7 @@ const mockSuite: TestSuite = {
       ],
     },
   ],
+  devices: [],
 };
 
 const defaultProps = {
@@ -32,11 +36,12 @@ const defaultProps = {
   onCreateSuite: vi.fn(),
   onCreateBlock: vi.fn(),
   onRenameSuite: vi.fn(),
+  onRenameSuiteFileName: vi.fn(),
   onRenameBlock: vi.fn(),
   onDeleteSuite: vi.fn(),
   onDeleteBlock: vi.fn(),
-  onAddBeforeEachStep: vi.fn(),
-  onRemoveBeforeEachStep: vi.fn(),
+  onAddHookStep: vi.fn(),
+  onRemoveHookStep: vi.fn(),
   onAcceptStep: vi.fn(),
   onDenyStep: vi.fn(),
   onResetStep: vi.fn(),
@@ -113,7 +118,7 @@ describe('StepSidebar', () => {
 
 describe('Library toggle', () => {
   const baseProps = {
-    suites: [{ id: 'suite-1', name: 'Suite 1', beforeEach: [], tests: [{ id: 'block-1', name: 'Test 1', steps: [] }] }],
+    suites: [{ id: 'suite-1', name: 'Suite 1', fileName: 'suite-1', beforeAll: [], beforeEach: [], afterEach: [], afterAll: [], tests: [{ id: 'block-1', name: 'Test 1', steps: [] }], devices: [] }],
     activeSuiteId: 'suite-1',
     activeBlockId: 'block-1',
     onSwitchSuite: vi.fn(),
