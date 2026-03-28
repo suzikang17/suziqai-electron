@@ -332,31 +332,19 @@ export function StepSidebar({
               return (
                 <React.Fragment key={actionStep.id}>
                   {/* Action */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <div style={{ flex: 1 }}>
-                      <StepItem
-                        step={actionStep}
-                        index={group.actionIndex}
-                        onAccept={() => onAcceptStep(actionStep.id)}
-                        onDeny={() => onDenyStep(actionStep.id)}
-                        onReset={() => onResetStep(actionStep.id)}
-                        onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
-                        draggable
-                        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromIndex(group.actionIndex); }}
-                        onDragOver={(e) => { e.preventDefault(); setDragOverIndex(group.actionIndex); }}
-                        onDrop={(e) => { e.preventDefault(); if (dragFromIndex !== null && dragFromIndex !== group.actionIndex) onReorderStep(dragFromIndex, group.actionIndex); setDragFromIndex(null); setDragOverIndex(null); }}
-                        isDragOver={dragOverIndex === group.actionIndex}
-                      />
-                    </div>
-                    {hasAssertions && (
-                      <button
-                        onClick={() => onRunGroup(groupStepIds)}
-                        style={{ background: 'none', color: 'var(--accent-green)', fontSize: 9, fontWeight: 'bold', flexShrink: 0, padding: '0 2px' }}
-                      >
-                        Run
-                      </button>
-                    )}
-                  </div>
+                  <StepItem
+                    step={actionStep}
+                    index={group.actionIndex}
+                    onAccept={() => onAcceptStep(actionStep.id)}
+                    onDeny={() => onDenyStep(actionStep.id)}
+                    onReset={() => onResetStep(actionStep.id)}
+                    onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromIndex(group.actionIndex); }}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverIndex(group.actionIndex); }}
+                    onDrop={(e) => { e.preventDefault(); if (dragFromIndex !== null && dragFromIndex !== group.actionIndex) onReorderStep(dragFromIndex, group.actionIndex); setDragFromIndex(null); setDragOverIndex(null); }}
+                    isDragOver={dragOverIndex === group.actionIndex}
+                  />
 
                   {/* Assertion toggle */}
                   {hasAssertions && (

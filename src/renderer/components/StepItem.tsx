@@ -96,6 +96,28 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, dra
       onMouseLeave={() => setHovered(false)}
       style={{ position: 'relative' }}
     >
+      {/* Hover toolbar — above right */}
+      {hovered && (
+        <div style={{
+          position: 'absolute',
+          top: -2,
+          right: 0,
+          display: 'flex',
+          gap: 1,
+          background: 'var(--bg-tertiary)',
+          borderRadius: 3,
+          padding: '1px 2px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+          zIndex: 1,
+        }}>
+          <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>▶</button>
+          {onUpdate && (
+            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }}>✎</button>
+          )}
+          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--accent-red)' }}>×</button>
+        </div>
+      )}
+
       {/* Step row */}
       <div
         draggable={draggable}
@@ -123,21 +145,6 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, dra
         <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1, lineHeight: 1.3 }}>
           {step.label}
         </span>
-        {/* Hover actions — right side */}
-        {hovered && (
-          <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-            {step.status === 'pending' && (
-              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>▶</button>
-            )}
-            {(step.status === 'passed' || step.status === 'failed') && (
-              <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ ...tinyBtn, color: 'var(--accent-green)' }}>▶</button>
-            )}
-            {onUpdate && !isAssertion && (
-              <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }}>✎</button>
-            )}
-            <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--accent-red)' }}>×</button>
-          </div>
-        )}
       </div>
 
       {step.error && (
