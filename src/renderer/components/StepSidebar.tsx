@@ -301,7 +301,7 @@ export function StepSidebar({
             </div>
           )}
 
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
             {/* Insert at top */}
             {composerAt === 0 ? (
               <StepComposer
@@ -327,84 +327,63 @@ export function StepSidebar({
 
               return (
                 <React.Fragment key={actionStep.id}>
-                  <div style={{
-                    background: 'var(--bg-primary)',
-                    borderRadius: 6,
-                    overflow: 'hidden',
-                    marginBottom: 2,
-                  }}>
-                    {/* Action step */}
-                    <StepItem
-                      step={actionStep}
-                      index={group.actionIndex}
-                      onAccept={() => onAcceptStep(actionStep.id)}
-                      onDeny={() => onDenyStep(actionStep.id)}
-                      onReset={() => onResetStep(actionStep.id)}
-                      onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
-                    />
-
-                    {/* Assertion toggle bar + Act & Assert button */}
+                  {/* Action */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <div style={{ flex: 1 }}>
+                      <StepItem
+                        step={actionStep}
+                        index={group.actionIndex}
+                        onAccept={() => onAcceptStep(actionStep.id)}
+                        onDeny={() => onDenyStep(actionStep.id)}
+                        onReset={() => onResetStep(actionStep.id)}
+                        onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
+                      />
+                    </div>
                     {hasAssertions && (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '4px 8px',
-                        background: 'var(--bg-tertiary)',
-                        borderTop: '1px solid var(--border)',
-                      }}>
-                        <button
-                          onClick={() => toggleGroup(group.actionIndex)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            background: 'none',
-                            color: 'var(--accent-blue, #0969da)',
-                            fontSize: 10,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            padding: 0,
-                          }}
-                        >
-                          <span>{isCollapsed ? '▶' : '▼'}</span>
-                          {assertionIndices.length} assertion{assertionIndices.length > 1 ? 's' : ''}
-                        </button>
-                        <button
-                          onClick={() => onRunGroup(groupStepIds)}
-                          style={{
-                            background: 'var(--accent-green)',
-                            color: '#ffffff',
-                            borderRadius: 4,
-                            padding: '3px 10px',
-                            fontSize: 10,
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Act & Assert
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => onRunGroup(groupStepIds)}
+                        style={{ background: 'none', color: 'var(--accent-green)', fontSize: 9, fontWeight: 'bold', flexShrink: 0, padding: '0 2px' }}
+                      >
+                        Run
+                      </button>
                     )}
-
-                    {/* Nested assertions (expanded) */}
-                    {!isCollapsed && assertionIndices.map((idx) => {
-                      const step = activeTest.steps[idx];
-                      return (
-                        <StepItem
-                          key={step.id}
-                          step={step}
-                          index={idx}
-                          onAccept={() => onAcceptStep(step.id)}
-                          onDeny={() => onDenyStep(step.id)}
-                          onReset={() => onResetStep(step.id)}
-                          onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
-                        />
-                      );
-                    })}
                   </div>
 
-                  {/* Insert button after group */}
+                  {/* Assertion toggle */}
+                  {hasAssertions && (
+                    <div
+                      onClick={() => toggleGroup(group.actionIndex)}
+                      style={{
+                        paddingLeft: 18,
+                        fontSize: 10,
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '1px 0 1px 18px',
+                        userSelect: 'none',
+                      }}
+                    >
+                      <span style={{ marginRight: 4 }}>{isCollapsed ? '▸' : '▾'}</span>
+                      {assertionIndices.length} assertion{assertionIndices.length > 1 ? 's' : ''}
+                    </div>
+                  )}
+
+                  {/* Nested assertions */}
+                  {!isCollapsed && assertionIndices.map((idx) => {
+                    const step = activeTest.steps[idx];
+                    return (
+                      <StepItem
+                        key={step.id}
+                        step={step}
+                        index={idx}
+                        onAccept={() => onAcceptStep(step.id)}
+                        onDeny={() => onDenyStep(step.id)}
+                        onReset={() => onResetStep(step.id)}
+                        onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
+                      />
+                    );
+                  })}
+
+                  {/* Insert after group */}
                   {composerAt === group.indices[group.indices.length - 1] + 1 ? (
                     <StepComposer
                       onSubmit={(result) => {

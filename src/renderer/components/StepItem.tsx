@@ -8,10 +8,6 @@ const statusIcons: Record<string, { icon: string; color: string }> = {
   failed: { icon: '✗', color: 'var(--accent-red)' },
 };
 
-function isAssertion(action: StepAction): boolean {
-  return action.type === 'assert' || action.type === 'waitFor';
-}
-
 interface StepItemProps {
   step: Step;
   index: number;
@@ -27,11 +23,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate }: S
   const [editSelector, setEditSelector] = useState('');
   const [editValue, setEditValue] = useState('');
   const [editLabel, setEditLabel] = useState('');
-
-  const assertion = isAssertion(step.action);
-  const typeLabel = assertion ? 'ASSERT' : 'ACTION';
-  const typeColor = assertion ? 'var(--accent-blue, #0969da)' : 'var(--accent-green)';
-  const borderColor = step.status !== 'pending' ? color : typeColor;
+  const isAssertion = step.action.type === 'assert' || step.action.type === 'waitFor';
 
   const startEdit = () => {
     const action = step.action;
@@ -56,147 +48,60 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate }: S
     setEditing(false);
   };
 
-  const cancelEdit = () => setEditing(false);
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    background: 'var(--bg-secondary)',
-    color: 'var(--text-primary)',
-    borderRadius: 3,
-    padding: '3px 6px',
-    fontSize: 11,
-    fontFamily: 'var(--font-mono)',
-    border: '1px solid var(--border)',
-    marginBottom: 3,
-  };
-
-  return (
-    <div
-      style={{
-        background: step.status === 'running' ? 'var(--bg-primary)' : 'var(--bg-tertiary)',
-        borderRadius: 4,
-        padding: assertion ? '5px 8px' : 8,
-        borderLeft: `3px solid ${borderColor}`,
-        opacity: step.status === 'pending' ? 0.7 : 1,
-        marginLeft: assertion ? 12 : 0,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
-        <span style={{ color, fontSize: 12 }}>{icon}</span>
-
-        {/* Type badge */}
-        <span style={{
-          fontSize: 8,
-          fontWeight: 700,
-          color: typeColor,
-          background: `color-mix(in srgb, ${typeColor} 15%, transparent)`,
-          padding: '1px 4px',
-          borderRadius: 2,
-          letterSpacing: 0.5,
-          lineHeight: '14px',
-          flexShrink: 0,
-        }}>
-          {typeLabel}
-        </span>
-
-        {editing ? (
-          <input
-            value={editLabel}
-            onChange={(e) => setEditLabel(e.target.value)}
-            style={{ ...inputStyle, fontFamily: 'var(--font-sans)', fontWeight: 'bold', fontSize: assertion ? 11 : 12, marginBottom: 0, flex: 1 }}
-            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
-          />
-        ) : (
-          <span style={{ color: 'var(--text-primary)', fontSize: assertion ? 11 : 12, fontWeight: assertion ? 500 : 'bold' }}>
-            <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{index + 1}. </span>{step.label}
-          </span>
-        )}
-      </div>
-
-      {editing ? (
-        <div style={{ paddingLeft: 17 }}>
+  if (editing) {
+    return (
+      <div style={{ padding: '4px 0 4px 20px' }}>
+        <input
+          value={editLabel}
+          onChange={(e) => setEditLabel(e.target.value)}
+          style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 3, padding: '3px 6px', fontSize: 11, fontFamily: 'var(--font-mono)', border: '1px solid var(--border)', marginBottom: 3 }}
+          autoFocus
+          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
+        />
+        {(step.action.type === 'fill' || step.action.type === 'assert' || step.action.type === 'navigate') && (
           <input
             value={editSelector}
             onChange={(e) => setEditSelector(e.target.value)}
             placeholder={step.action.type === 'navigate' ? 'URL...' : 'Selector...'}
-            style={inputStyle}
-            autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
+            style={{ width: '100%', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', borderRadius: 3, padding: '3px 6px', fontSize: 11, fontFamily: 'var(--font-mono)', border: '1px solid var(--border)', marginBottom: 3 }}
+            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(false); }}
           />
-          {(step.action.type === 'fill' || step.action.type === 'assert') && (
-            <input
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              placeholder={step.action.type === 'fill' ? 'Value...' : 'Expected...'}
-              style={inputStyle}
-              onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
-            />
-          )}
-          <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
-            <button onClick={saveEdit} style={{ background: 'var(--accent-green)', color: '#ffffff', borderRadius: 3, padding: '2px 8px', fontSize: 9, fontWeight: 'bold' }}>
-              Save
-            </button>
-            <button onClick={cancelEdit} style={{ background: 'var(--bg-primary)', color: 'var(--text-muted)', borderRadius: 3, padding: '2px 8px', fontSize: 9, border: '1px solid var(--border)' }}>
-              Cancel
-            </button>
-          </div>
+        )}
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button onClick={saveEdit} style={{ background: 'var(--accent-green)', color: '#fff', borderRadius: 3, padding: '1px 6px', fontSize: 9, fontWeight: 'bold' }}>Save</button>
+          <button onClick={() => setEditing(false)} style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', borderRadius: 3, padding: '1px 6px', fontSize: 9 }}>Cancel</button>
         </div>
-      ) : (
-        <div
-          onClick={onUpdate ? startEdit : undefined}
-          style={{
-            color: 'var(--text-muted)',
-            fontSize: 10,
-            paddingLeft: 17,
-            fontFamily: 'var(--font-mono)',
-            cursor: onUpdate ? 'pointer' : 'default',
-            borderRadius: 3,
-          }}
-          title={onUpdate ? 'Click to edit' : undefined}
-        >
-          {formatAction(step.action)}
-        </div>
-      )}
+      </div>
+    );
+  }
 
-      {!editing && step.status === 'pending' && (
-        <div style={{ display: 'flex', gap: 4, marginTop: 4, paddingLeft: 17 }}>
-          <button onClick={onAccept} style={{ background: 'var(--accent-green)', color: '#ffffff', borderRadius: 3, padding: '2px 8px', fontSize: 9, fontWeight: 'bold' }}>
-            Accept
-          </button>
-          <button onClick={onDeny} style={{ background: 'var(--accent-red)', color: 'white', borderRadius: 3, padding: '2px 8px', fontSize: 9, fontWeight: 'bold' }}>
-            Deny
-          </button>
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 6,
+        padding: '3px 0',
+        paddingLeft: isAssertion ? 16 : 0,
+        cursor: onUpdate ? 'pointer' : 'default',
+        opacity: step.status === 'pending' ? 0.7 : 1,
+      }}
+      onClick={onUpdate ? startEdit : undefined}
+      title={onUpdate ? 'Click to edit' : undefined}
+    >
+      <span style={{ color, fontSize: 11, flexShrink: 0 }}>{icon}</span>
+      <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1, lineHeight: 1.3 }}>
+        {step.label}
+      </span>
+      {step.status === 'pending' && (
+        <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+          <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ background: 'none', color: 'var(--accent-green)', fontSize: 9, fontWeight: 'bold', padding: '0 2px' }}>Run</button>
+          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ background: 'none', color: 'var(--text-muted)', fontSize: 9, padding: '0 2px' }}>×</button>
         </div>
       )}
-      {!editing && (step.status === 'passed' || step.status === 'failed') && (
-        <div style={{ display: 'flex', gap: 4, marginTop: 4, paddingLeft: 17 }}>
-          <button onClick={onAccept} style={{ background: 'var(--bg-tertiary)', color: 'var(--accent-green)', borderRadius: 3, padding: '2px 8px', fontSize: 9, fontWeight: 'bold', border: '1px solid var(--accent-green)' }}>
-            Re-run
-          </button>
-          <button onClick={onDeny} style={{ background: 'var(--bg-primary)', color: 'var(--text-muted)', borderRadius: 3, padding: '2px 8px', fontSize: 9, border: '1px solid var(--border)' }}>
-            Remove
-          </button>
-        </div>
-      )}
-      {step.error && (
-        <div style={{ color: 'var(--accent-red)', fontSize: 10, paddingLeft: 17, marginTop: 4 }}>
-          {step.error}
-        </div>
+      {step.status === 'failed' && (
+        <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ background: 'none', color: 'var(--accent-yellow)', fontSize: 9, fontWeight: 'bold', flexShrink: 0, padding: '0 2px' }}>Retry</button>
       )}
     </div>
   );
-}
-
-function formatAction(action: Step['action']): string {
-  switch (action.type) {
-    case 'navigate': return `goto('${action.url}')`;
-    case 'click': return `click('${action.selector}')`;
-    case 'fill': return `fill('${action.selector}', '${action.value}')`;
-    case 'assert': {
-      const sel = action.selector ? `(${action.selector})` : '';
-      return `expect${sel}.${action.assertionType}('${action.expected}')`;
-    }
-    case 'screenshot': return 'screenshot()';
-    case 'waitFor': return `waitFor('${action.selector}')`;
-  }
 }
