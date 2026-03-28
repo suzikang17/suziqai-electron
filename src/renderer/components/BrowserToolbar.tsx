@@ -47,10 +47,12 @@ export function BrowserToolbar({
         alignItems: 'center',
         gap: 8,
         borderBottom: '1px solid var(--border)',
+        overflow: 'hidden',
+        flexShrink: 0,
       }}
     >
       {/* Back / Forward */}
-      <div style={{ display: 'flex', gap: 2 }}>
+      <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
         <button
           onClick={onGoBack}
           style={{ background: 'none', padding: '2px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}
@@ -68,7 +70,7 @@ export function BrowserToolbar({
       </div>
 
       {/* URL bar */}
-      <form onSubmit={handleUrlSubmit} style={{ flex: 1 }}>
+      <form onSubmit={handleUrlSubmit} style={{ flex: 1, minWidth: 0 }}>
         <input
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
