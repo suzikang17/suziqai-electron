@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
+import { CheckCircle2, Circle, Loader2, XCircle, Play, ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
 import type { Step, StepAction } from '@shared/types';
 
-const statusIcons: Record<string, { icon: string; color: string }> = {
-  passed: { icon: '✓', color: 'var(--accent-green)' },
-  running: { icon: '●', color: 'var(--accent-yellow)' },
-  pending: { icon: '○', color: 'var(--text-muted)' },
-  failed: { icon: '✗', color: 'var(--accent-red)' },
-};
+const iconSize = 14;
+
+function StatusIcon({ status, hovered }: { status: string; hovered: boolean }) {
+  if (hovered && (status === 'pending' || status === 'passed' || status === 'failed')) {
+    return <Play size={iconSize} color="var(--accent-green)" style={{ cursor: 'pointer' }} />;
+  }
+  switch (status) {
+    case 'passed': return <CheckCircle2 size={iconSize} color="var(--accent-green)" />;
+    case 'running': return <Loader2 size={iconSize} color="var(--accent-yellow)" className="spin" />;
+    case 'failed': return <XCircle size={iconSize} color="var(--accent-red)" />;
+    default: return <Circle size={iconSize} color="var(--text-muted)" />;
+  }
+}
 
 interface StepItemProps {
   step: Step;
@@ -33,7 +41,6 @@ const tinyBtn: React.CSSProperties = {
 };
 
 export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onMoveUp, onMoveDown, onToggle, isExpanded, childCount }: StepItemProps) {
-  const { icon, color } = statusIcons[step.status];
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -347,20 +354,18 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           zIndex: 1,
         }}>
           {onMoveUp && (
-            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} style={{ ...tinyBtn, color: 'var(--text-muted)' }} title="Move up">↑</button>
+            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} style={tinyBtn} title="Move up"><ChevronUp size={14} color="var(--text-muted)" /></button>
           )}
           {onMoveDown && (
-            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} style={{ ...tinyBtn, color: 'var(--text-muted)' }} title="Move down">↓</button>
+            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} style={tinyBtn} title="Move down"><ChevronDown size={14} color="var(--text-muted)" /></button>
           )}
           {onAddBelow && (
-            <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} style={{ ...tinyBtn, color: 'var(--text-secondary)' }} title="Add below">+</button>
+            <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} style={tinyBtn} title="Add below"><Plus size={14} color="var(--text-secondary)" /></button>
           )}
           {onUpdate && (
-            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }} title="Edit">✎</button>
+            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={tinyBtn} title="Edit"><Pencil size={13} color="var(--accent-blue, #0969da)" /></button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--accent-red)', fontSize: 11, opacity: 0.7 }} title="Delete">
-            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M11 1.5v1h3.5a.5.5 0 010 1h-.538l-.853 10.66A2 2 0 0111.115 16h-6.23a2 2 0 01-1.994-1.84L2.038 3.5H1.5a.5.5 0 010-1H5v-1A1.5 1.5 0 016.5 0h3A1.5 1.5 0 0111 1.5zm-5 0v1h4v-1a.5.5 0 00-.5-.5h-3a.5.5 0 00-.5.5zM4.5 5.029a.5.5 0 01.5.5v7.948a.5.5 0 01-1 0V5.529a.5.5 0 01.5-.5zm5.058.024a.5.5 0 01.5.5v7.948a.5.5 0 01-1 0V5.553a.5.5 0 01.5-.5zM8 5.029a.5.5 0 01.5.5v7.948a.5.5 0 01-1 0V5.529A.5.5 0 018 5.03z"/></svg>
-          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={tinyBtn} title="Delete"><Trash2 size={13} color="var(--accent-red)" /></button>
         </div>
       )}
 
@@ -382,9 +387,9 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
         <span
           onClick={(e) => { e.stopPropagation(); onAccept(); }}
           title={step.status === 'pending' ? 'Run' : 'Re-run'}
-          style={{ color, fontSize: 13, flexShrink: 0, cursor: 'pointer' }}
+          style={{ flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
         >
-          {hovered && (step.status === 'pending' || step.status === 'passed' || step.status === 'failed') ? '▶' : icon}
+          <StatusIcon status={step.status} hovered={hovered} />
         </span>
         <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1, lineHeight: 1.4 }}>
           {step.label}
@@ -403,14 +408,14 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           color: 'var(--text-muted)',
           fontFamily: 'var(--font-mono)',
           padding: '2px 0 4px',
-          paddingLeft: isAssertion ? 42 : draggable ? 36 : 18,
+          paddingLeft: isAssertion ? 42 : 18,
         }}>
           {formatAction(step.action)}
         </div>
       )}
 
       {step.error && (
-        <div style={{ color: 'var(--accent-red)', fontSize: 10, paddingLeft: isAssertion ? 34 : draggable ? 36 : 18, marginTop: -2, marginBottom: 2 }}>
+        <div style={{ color: 'var(--accent-red)', fontSize: 10, paddingLeft: isAssertion ? 42 : 18, marginTop: -2, marginBottom: 2 }}>
           {step.error}
         </div>
       )}
