@@ -34,9 +34,11 @@ function findTargetPage(b: Browser): Page | null {
   return allPages[allPages.length - 1] ?? null;
 }
 
+let cachedPage: Page | null = null;
+
 /**
  * Connect Playwright to the Electron app via CDP.
- * Lazily called on first action. Uses a mutex to prevent concurrent connections.
+ * Reuses existing connection if still alive. Reconnects with retry on failure.
  */
 export async function connectToElectron(): Promise<Page> {
   if (connectPromise) return connectPromise;
@@ -49,19 +51,43 @@ export async function connectToElectron(): Promise<Page> {
 }
 
 async function _connectToElectron(): Promise<Page> {
-  // Always reconnect to get the latest page state
+  // Reuse if connection and page are still alive
+  if (browser && browser.isConnected() && cachedPage && !cachedPage.isClosed()) {
+    return cachedPage;
+  }
+
+  // Close stale connection
   if (browser) {
     await browser.close().catch(() => {});
     browser = null;
+    cachedPage = null;
   }
 
-  const chromium = await getChromium();
-  browser = await chromium.connectOverCDP('http://127.0.0.1:' + CDP_PORT);
+  // Retry up to 3 times with delay
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const chromium = await getChromium();
+      browser = await chromium.connectOverCDP('http://127.0.0.1:' + CDP_PORT);
 
-  const page = findTargetPage(browser);
-  if (!page) throw new Error('No suitable page found via CDP');
-  console.log('[suziQai] Using CDP page:', page.url());
-  return page;
+      const page = findTargetPage(browser);
+      if (!page) throw new Error('No suitable page found via CDP');
+      console.log('[suziQai] Connected to CDP page:', page.url());
+      cachedPage = page;
+
+      // Auto-clear cache when connection drops
+      browser.on('disconnected', () => {
+        browser = null;
+        cachedPage = null;
+      });
+
+      return page;
+    } catch (err) {
+      console.error(`[suziQai] CDP connect attempt ${attempt + 1} failed:`, err);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+    }
+  }
+
+  throw new Error('Failed to connect to browser via CDP after 3 attempts');
 }
 
 /**
