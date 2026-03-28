@@ -64,6 +64,34 @@ describe('generateSpec', () => {
     expect(code).not.toContain('missing');
   });
 
+  it('generates flat spec when useProjects is true even with devices', () => {
+    const suite: TestSuite = {
+      id: 'suite-1', name: 'Responsive', fileName: 'responsive',
+      beforeAll: [], afterEach: [], afterAll: [],
+      beforeEach: [
+        { id: 's0', label: 'Navigate', action: { type: 'navigate', url: '/' }, status: 'passed' },
+      ],
+      devices: [
+        { name: 'iPhone 14' },
+        { name: 'Desktop Chrome' },
+      ],
+      tests: [{ id: 'b1', name: 'renders correctly', steps: [
+        { id: 's1', label: 'Assert visible', action: { type: 'assert', assertionType: 'visible', expected: '', selector: 'h1' }, status: 'passed' },
+      ]}],
+    };
+    const code = generateSpec(suite, true);
+    // Should NOT contain device wrapping
+    expect(code).not.toContain("test.describe('iPhone 14'");
+    expect(code).not.toContain("test.describe('Desktop Chrome'");
+    expect(code).not.toContain("test.use(");
+    expect(code).not.toContain("devices");
+    // Should still contain the test content
+    expect(code).toContain("import { test, expect } from '@playwright/test'");
+    expect(code).toContain("test.describe('Responsive'");
+    expect(code).toContain("test('renders correctly'");
+    expect(code).toContain("test.beforeEach(async ({ page })");
+  });
+
   it('wraps tests in device-specific describe blocks', () => {
     const suite: TestSuite = {
       id: 'suite-1', name: 'Responsive', fileName: 'responsive',

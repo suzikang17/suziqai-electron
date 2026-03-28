@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Step, TestCase, TestBlock, TestSuite, ChatMessage, AppMode, LibraryEntry } from '@shared/types';
+import type { Step, TestCase, TestBlock, TestSuite, ChatMessage, AppMode, LibraryEntry, PlaywrightConfig } from '@shared/types';
 import { migrateToSuite } from '@shared/utils/migrateSuite';
+import { defaultPlaywrightConfig } from '@shared/utils/generatePlaywrightConfig';
 import { ProjectSetup } from './components/ProjectSetup';
 import { StepSidebar } from './components/StepSidebar';
 import { ChatPanel } from './components/ChatPanel';
@@ -32,6 +33,9 @@ export function App() {
   const [isAutopilot, setIsAutopilot] = useState(false);
   const [sidebarMode, setSidebarMode] = useState<'session' | 'library'>('session');
   const [libraryEntries, setLibraryEntries] = useState<LibraryEntry[]>([]);
+  const [playwrightConfig, setPlaywrightConfig] = useState<PlaywrightConfig>(() =>
+    defaultPlaywrightConfig('http://localhost:3000', './tests')
+  );
   const autopilotRef = useRef(false);
   const autopilotRetriesRef = useRef(0);
   const AUTOPILOT_MAX_RETRIES = 3;
@@ -48,9 +52,12 @@ export function App() {
         try {
           const parsed = JSON.parse(last);
           if (parsed.path) {
-            setBaseUrl(parsed.url || 'http://localhost:3000');
+            const url = parsed.url || 'http://localhost:3000';
+            setBaseUrl(url);
             await window.suziqai.openProject(parsed.path, parsed.url);
             setProjectPath(parsed.path);
+            // Initialize playwright config with project's base URL and test dir
+            setPlaywrightConfig(prev => ({ ...prev, baseURL: url }));
           }
         } catch {
           // Old format or invalid — show setup screen
@@ -168,10 +175,21 @@ export function App() {
     setSuites(prev => prev.map(s => s.id === suiteId ? { ...s, devices } : s));
   };
 
+  const savePlaywrightConfig = async () => {
+    if (!projectPath) return;
+    try {
+      await window.suziqai.savePlaywrightConfig(playwrightConfig, projectPath);
+      log(`Saved playwright.config.ts`);
+    } catch (err) {
+      log(`Config save failed: ${(err as Error).message}`);
+    }
+  };
+
   const saveTest = async () => {
     if (!currentSuite) return;
     try {
-      const result = await window.suziqai.saveToLibrary(currentSuite);
+      const hasProjects = playwrightConfig.projects && playwrightConfig.projects.length > 0;
+      const result = await window.suziqai.saveToLibrary(currentSuite, undefined, hasProjects);
       log(`Saved "${currentSuite.name}" → ${result.fileName}.spec.ts`);
     } catch (err) {
       log(`Save failed: ${(err as Error).message}`);
@@ -681,6 +699,9 @@ export function App() {
           onDeleteFromLibrary={deleteFromLibrary}
           onRefreshLibrary={refreshLibrary}
           onUpdateSuiteDevices={updateSuiteDevices}
+          playwrightConfig={playwrightConfig}
+          onPlaywrightConfigChange={setPlaywrightConfig}
+          onSavePlaywrightConfig={savePlaywrightConfig}
         />
       </div>
 

@@ -96,18 +96,21 @@ function generateTestsBlock(suite: TestSuite, indent: string): string {
   return code;
 }
 
-export function generateSpec(suite: TestSuite): string {
+export function generateSpec(suite: TestSuite, useProjects: boolean = false): string {
   const suiteName = suite.name.replace(/'/g, "\\'");
   const hasDevices = suite.devices && suite.devices.length > 0;
+  // When useProjects is true, devices are handled by playwright.config.ts projects,
+  // so we skip the per-device describe wrapping even if devices are present.
+  const wrapDevices = hasDevices && !useProjects;
 
-  const importLine = hasDevices
+  const importLine = wrapDevices
     ? `import { test, expect, devices } from '@playwright/test';\n\n`
     : `import { test, expect } from '@playwright/test';\n\n`;
 
   let code = importLine;
   code += `test.describe('${suiteName}', () => {\n`;
 
-  if (hasDevices) {
+  if (wrapDevices) {
     for (const device of suite.devices) {
       const deviceName = device.name.replace(/'/g, "\\'");
       code += `  test.describe('${deviceName}', () => {\n`;

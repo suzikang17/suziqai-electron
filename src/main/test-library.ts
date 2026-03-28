@@ -1,20 +1,21 @@
 import { readdir, readFile, writeFile, unlink, mkdir, access } from 'fs/promises';
 import path from 'path';
-import type { TestSuite, LibraryEntry } from '../shared/types';
+import type { TestSuite, LibraryEntry, PlaywrightConfig } from '../shared/types';
 import { generateSpec } from '../shared/utils/generateSpec';
+import { generatePlaywrightConfig } from '../shared/utils/generatePlaywrightConfig';
 
 export class TestLibrary {
   constructor(private testOutputDir: string) {}
 
-  async save(suite: TestSuite, fileName?: string): Promise<{ fileName: string; path: string }> {
+  async save(suite: TestSuite, fileName?: string, useProjects: boolean = false): Promise<{ fileName: string; path: string }> {
     await mkdir(this.testOutputDir, { recursive: true });
 
     const resolvedName = fileName || await this.resolveFileName(suite, suite.fileName);
     const specPath = path.join(this.testOutputDir, `${resolvedName}.spec.ts`);
     const sidecarPath = path.join(this.testOutputDir, `${resolvedName}.suziqai.json`);
 
-    // Generate spec file
-    const specContent = generateSpec(suite);
+    // Generate spec file — when useProjects is true, skip device wrapping
+    const specContent = generateSpec(suite, useProjects);
     await writeFile(specPath, specContent, 'utf-8');
 
     // Read existing sidecar for savedAt, or use now
@@ -101,6 +102,12 @@ export class TestLibrary {
       tests: data.tests || [],
       devices: data.devices || [],
     };
+  }
+
+  async savePlaywrightConfig(config: PlaywrightConfig, projectPath: string): Promise<void> {
+    const configContent = generatePlaywrightConfig(config);
+    const configPath = path.join(projectPath, 'playwright.config.ts');
+    await writeFile(configPath, configContent, 'utf-8');
   }
 
   async delete(fileName: string): Promise<void> {

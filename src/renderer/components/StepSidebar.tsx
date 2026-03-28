@@ -3,7 +3,8 @@ import { PlayCircle, Zap } from 'lucide-react';
 import { StepItem } from './StepItem';
 import { StepComposer } from './StepComposer';
 import { LibraryView } from './LibraryView';
-import type { TestSuite, StepAction, HookType, DeviceConfig } from '@shared/types';
+import { PlaywrightConfigPanel } from './PlaywrightConfigPanel';
+import type { TestSuite, StepAction, HookType, DeviceConfig, PlaywrightConfig } from '@shared/types';
 import type { LibraryEntry } from '@shared/types';
 
 const POPULAR_DEVICES = [
@@ -53,6 +54,9 @@ interface StepSidebarProps {
   onDeleteFromLibrary: (fileName: string) => void;
   onRefreshLibrary: () => void;
   onUpdateSuiteDevices: (suiteId: string, devices: DeviceConfig[]) => void;
+  playwrightConfig?: PlaywrightConfig;
+  onPlaywrightConfigChange?: (config: PlaywrightConfig) => void;
+  onSavePlaywrightConfig?: () => void;
 }
 
 export function StepSidebar({
@@ -91,6 +95,9 @@ export function StepSidebar({
   onDeleteFromLibrary,
   onRefreshLibrary,
   onUpdateSuiteDevices,
+  playwrightConfig,
+  onPlaywrightConfigChange,
+  onSavePlaywrightConfig,
 }: StepSidebarProps) {
   const activeSuite = suites.find(s => s.id === activeSuiteId) || suites[0];
   const activeBlock = activeSuite?.tests.find(b => b.id === activeBlockId) || activeSuite?.tests[0];
@@ -811,6 +818,18 @@ export function StepSidebar({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Playwright config */}
+          {playwrightConfig && onPlaywrightConfigChange && onSavePlaywrightConfig && (
+            <>
+              <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+              <PlaywrightConfigPanel
+                config={playwrightConfig}
+                onChange={onPlaywrightConfigChange}
+                onSave={onSavePlaywrightConfig}
+              />
+            </>
           )}
 
           <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />

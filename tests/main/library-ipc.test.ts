@@ -90,7 +90,7 @@ describe('library IPC handlers', () => {
     const mockTest = { id: 'test-1', name: 'My Test', steps: [] };
     await handler({} /* _event */, mockTest, 'my-test');
 
-    expect(deps._testLibrary.save).toHaveBeenCalledWith(mockTest, 'my-test');
+    expect(deps._testLibrary.save).toHaveBeenCalledWith(mockTest, 'my-test', undefined);
   });
 
   it('library:load handler calls testLibrary.load() with fileName', async () => {

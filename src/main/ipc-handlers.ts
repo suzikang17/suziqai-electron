@@ -6,7 +6,7 @@ import type { Recorder } from './recorder';
 import type { Observer } from './observer';
 import type { TestExporter } from './test-exporter';
 import type { TestLibrary } from './test-library';
-import type { StepAction } from '../shared/types';
+import type { StepAction, PlaywrightConfig } from '../shared/types';
 
 interface Deps {
   browserManager: BrowserManager;
@@ -16,6 +16,7 @@ interface Deps {
   testExporter: TestExporter;
   getTestLibrary: () => TestLibrary;
   getWindow: () => BrowserWindow | null;
+  getProjectPath?: () => string;
 }
 
 function delay(ms: number): Promise<void> {
@@ -181,8 +182,8 @@ export function registerIpcHandlers(deps: Deps): void {
     return getTestLibrary().list();
   });
 
-  ipcMain.handle(IPC.LIBRARY_SAVE, async (_event, test: any, fileName?: string) => {
-    return getTestLibrary().save(test, fileName);
+  ipcMain.handle(IPC.LIBRARY_SAVE, async (_event, test: any, fileName?: string, useProjects?: boolean) => {
+    return getTestLibrary().save(test, fileName, useProjects);
   });
 
   ipcMain.handle(IPC.LIBRARY_LOAD, async (_event, fileName: string) => {
@@ -191,5 +192,10 @@ export function registerIpcHandlers(deps: Deps): void {
 
   ipcMain.handle(IPC.LIBRARY_DELETE, async (_event, fileName: string) => {
     return getTestLibrary().delete(fileName);
+  });
+
+  // Playwright config
+  ipcMain.handle(IPC.PLAYWRIGHT_CONFIG_SAVE, async (_event, config: PlaywrightConfig, projectPath: string) => {
+    return getTestLibrary().savePlaywrightConfig(config, projectPath);
   });
 }

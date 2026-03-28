@@ -25,6 +25,7 @@ const IPC = {
   LIBRARY_SAVE: 'library:save',
   LIBRARY_LOAD: 'library:load',
   LIBRARY_DELETE: 'library:delete',
+  PLAYWRIGHT_CONFIG_SAVE: 'playwright:config-save',
 } as const;
 
 contextBridge.exposeInMainWorld('suziqai', {
@@ -100,7 +101,10 @@ contextBridge.exposeInMainWorld('suziqai', {
 
   // Library
   listLibrary: () => ipcRenderer.invoke(IPC.LIBRARY_LIST),
-  saveToLibrary: (test: any, fileName?: string) => ipcRenderer.invoke(IPC.LIBRARY_SAVE, test, fileName),
+  saveToLibrary: (test: any, fileName?: string, useProjects?: boolean) => ipcRenderer.invoke(IPC.LIBRARY_SAVE, test, fileName, useProjects),
   loadFromLibrary: (fileName: string) => ipcRenderer.invoke(IPC.LIBRARY_LOAD, fileName),
   deleteFromLibrary: (fileName: string) => ipcRenderer.invoke(IPC.LIBRARY_DELETE, fileName),
+
+  // Playwright config
+  savePlaywrightConfig: (config: any, projectPath: string) => ipcRenderer.invoke(IPC.PLAYWRIGHT_CONFIG_SAVE, config, projectPath),
 });

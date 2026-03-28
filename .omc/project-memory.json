@@ -116,80 +116,110 @@
   "hotPaths": [
     {
       "path": "src/renderer/components/StepSidebar.tsx",
-      "accessCount": 117,
-      "lastAccessed": 1774718577539,
+      "accessCount": 209,
+      "lastAccessed": 1774721860285,
       "type": "file"
     },
     {
       "path": "src/renderer/App.tsx",
-      "accessCount": 64,
-      "lastAccessed": 1774718586416,
+      "accessCount": 110,
+      "lastAccessed": 1774721918398,
       "type": "file"
     },
     {
       "path": "src/renderer/components/StepItem.tsx",
-      "accessCount": 56,
-      "lastAccessed": 1774718635628,
+      "accessCount": 87,
+      "lastAccessed": 1774721919850,
       "type": "file"
     },
     {
       "path": "src/main/main.ts",
-      "accessCount": 48,
-      "lastAccessed": 1774652360919,
+      "accessCount": 74,
+      "lastAccessed": 1774721922659,
       "type": "file"
     },
     {
       "path": "src/shared/types.ts",
-      "accessCount": 23,
-      "lastAccessed": 1774718406304,
+      "accessCount": 38,
+      "lastAccessed": 1774721672072,
       "type": "file"
     },
     {
       "path": "tests/renderer/StepSidebar.test.tsx",
-      "accessCount": 22,
-      "lastAccessed": 1774718596393,
+      "accessCount": 30,
+      "lastAccessed": 1774720698535,
       "type": "file"
     },
     {
       "path": "src/main/test-library.ts",
-      "accessCount": 18,
-      "lastAccessed": 1774718450706,
+      "accessCount": 27,
+      "lastAccessed": 1774721765784,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/BrowserToolbar.tsx",
+      "accessCount": 23,
+      "lastAccessed": 1774721555772,
+      "type": "file"
+    },
+    {
+      "path": "src/main/browser-actions.ts",
+      "accessCount": 22,
+      "lastAccessed": 1774720054174,
       "type": "file"
     },
     {
       "path": "src/main/ipc-handlers.ts",
-      "accessCount": 17,
-      "lastAccessed": 1774652355243,
+      "accessCount": 22,
+      "lastAccessed": 1774721903296,
+      "type": "file"
+    },
+    {
+      "path": "src/preload/preload.ts",
+      "accessCount": 18,
+      "lastAccessed": 1774721898376,
       "type": "file"
     },
     {
       "path": "",
-      "accessCount": 16,
-      "lastAccessed": 1774718523057,
-      "type": "directory"
-    },
-    {
-      "path": "src/main/browser-actions.ts",
-      "accessCount": 11,
-      "lastAccessed": 1774647024355,
-      "type": "file"
-    },
-    {
-      "path": "tests/main/test-library.test.ts",
-      "accessCount": 9,
-      "lastAccessed": 1774718420662,
-      "type": "file"
-    },
-    {
-      "path": "src",
-      "accessCount": 8,
-      "lastAccessed": 1774718379875,
+      "accessCount": 17,
+      "lastAccessed": 1774720206789,
       "type": "directory"
     },
     {
       "path": "src/shared/utils/generateSpec.ts",
+      "accessCount": 13,
+      "lastAccessed": 1774721727625,
+      "type": "file"
+    },
+    {
+      "path": "tests/main/test-library.test.ts",
+      "accessCount": 11,
+      "lastAccessed": 1774720356426,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 11,
+      "lastAccessed": 1774721295248,
+      "type": "directory"
+    },
+    {
+      "path": "src/renderer/types.ts",
+      "accessCount": 9,
+      "lastAccessed": 1774719263410,
+      "type": "file"
+    },
+    {
+      "path": "tests/shared/types.test.ts",
       "accessCount": 8,
-      "lastAccessed": 1774718429168,
+      "lastAccessed": 1774720323365,
+      "type": "file"
+    },
+    {
+      "path": "tests/main/library-ipc.test.ts",
+      "accessCount": 7,
+      "lastAccessed": 1774721939968,
       "type": "file"
     },
     {
@@ -202,24 +232,6 @@
       "path": "src/main/claude-session.ts",
       "accessCount": 6,
       "lastAccessed": 1774646819362,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/components/BrowserToolbar.tsx",
-      "accessCount": 6,
-      "lastAccessed": 1774646820997,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/types.ts",
-      "accessCount": 6,
-      "lastAccessed": 1774717207476,
-      "type": "file"
-    },
-    {
-      "path": "tests/shared/types.test.ts",
-      "accessCount": 6,
-      "lastAccessed": 1774718506781,
       "type": "file"
     },
     {
@@ -241,12 +253,6 @@
       "type": "file"
     },
     {
-      "path": "tests/main/library-ipc.test.ts",
-      "accessCount": 5,
-      "lastAccessed": 1774652377916,
-      "type": "file"
-    },
-    {
       "path": "package.json",
       "accessCount": 4,
       "lastAccessed": 1774646355364,
@@ -259,15 +265,9 @@
       "type": "file"
     },
     {
-      "path": "src/preload/preload.ts",
-      "accessCount": 4,
-      "lastAccessed": 1774647297895,
-      "type": "file"
-    },
-    {
       "path": "src/renderer/components/LibraryView.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1774713944675,
+      "accessCount": 4,
+      "lastAccessed": 1774721636092,
       "type": "file"
     },
     {
@@ -281,6 +281,18 @@
       "accessCount": 3,
       "lastAccessed": 1774717458006,
       "type": "directory"
+    },
+    {
+      "path": "tests",
+      "accessCount": 3,
+      "lastAccessed": 1774720365325,
+      "type": "directory"
+    },
+    {
+      "path": "src/main/project-config.ts",
+      "accessCount": 3,
+      "lastAccessed": 1774721652925,
+      "type": "file"
     },
     {
       "path": "tests/main/browser-manager.test.ts",
@@ -311,12 +323,6 @@
       "accessCount": 2,
       "lastAccessed": 1774647149669,
       "type": "file"
-    },
-    {
-      "path": "tests",
-      "accessCount": 2,
-      "lastAccessed": 1774718600449,
-      "type": "directory"
     },
     {
       "path": "docs/superpowers/specs/2026-03-25-suziqai-design.md",
@@ -382,12 +388,6 @@
       "path": "docs/superpowers/specs/2026-03-27-test-library-design.md",
       "accessCount": 1,
       "lastAccessed": 1774646580056,
-      "type": "file"
-    },
-    {
-      "path": "src/main/project-config.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774646616248,
       "type": "file"
     },
     {

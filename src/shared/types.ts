@@ -51,6 +51,30 @@ export interface TestSuite {
   devices: DeviceConfig[];  // empty = no device-specific wrapping
 }
 
+export interface PlaywrightProject {
+  name: string;
+  device?: string;        // Playwright device name (e.g., "iPhone 14")
+  viewport?: { width: number; height: number };  // custom viewport
+  browser?: 'chromium' | 'firefox' | 'webkit';
+}
+
+export interface PlaywrightConfig {
+  baseURL: string;
+  testDir: string;
+  projects: PlaywrightProject[];
+  timeout: number;           // ms, default 30000
+  expectTimeout: number;     // ms, default 5000
+  retries: number;           // default 0
+  workers: number | string;  // default '50%', can be number or percentage string
+  reporter: 'html' | 'json' | 'list' | 'dot';  // default 'html'
+  use: {
+    headless: boolean;       // default true
+    screenshot: 'off' | 'on' | 'only-on-failure';  // default 'only-on-failure'
+    video: 'off' | 'on' | 'retain-on-failure';     // default 'off'
+    trace: 'off' | 'on' | 'retain-on-failure';     // default 'off'
+  };
+}
+
 export type AppMode = 'command' | 'record' | 'observe';
 
 export interface ChatMessage {
@@ -66,6 +90,7 @@ export interface ProjectConfig {
   testOutputDir: string;
   locatorStrategy: 'recommended' | 'css' | 'testid';
   claudeModel?: string;
+  playwrightConfig?: PlaywrightConfig;
 }
 
 export interface Snapshot {
@@ -124,4 +149,7 @@ export const IPC = {
   LIBRARY_SAVE: 'library:save',
   LIBRARY_LOAD: 'library:load',
   LIBRARY_DELETE: 'library:delete',
+
+  // Playwright config
+  PLAYWRIGHT_CONFIG_SAVE: 'playwright:config-save',
 } as const;
