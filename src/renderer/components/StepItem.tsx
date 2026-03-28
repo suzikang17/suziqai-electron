@@ -151,7 +151,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
             onDragStart={onDragStart}
             onClick={(e) => e.stopPropagation()}
             style={{ color: 'var(--text-muted)', fontSize: 10, cursor: 'grab', flexShrink: 0, userSelect: 'none' }}
-          >⠿</span>
+          >::</span>
         )}
         <span style={{ color, fontSize: 11, flexShrink: 0 }}>{icon}</span>
         <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1, lineHeight: 1.3 }}>
