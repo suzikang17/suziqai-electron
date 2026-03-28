@@ -499,6 +499,15 @@ export function App() {
             setIsChatLoading(true);
             window.suziqai.sendChat(prompt);
           }}
+          onRunActAndAssert={() => {
+            const actions = currentTest.steps
+              .filter(s => (s.status === 'pending' || s.status === 'passed') && s.action.type !== 'assert' && s.action.type !== 'waitFor');
+            const assertions = currentTest.steps
+              .filter(s => (s.status === 'pending' || s.status === 'passed') && (s.action.type === 'assert' || s.action.type === 'waitFor'));
+            const ordered = [...actions, ...assertions].map(s => ({ id: s.id, action: s.action }));
+            log(`▶▶ Act & Assert: ${actions.length} action(s), then ${assertions.length} assertion(s)`);
+            window.suziqai.executeAllSteps(ordered);
+          }}
           onRunAll={() => {
             const pendingSteps = currentTest.steps
               .filter(s => s.status === 'pending' || s.status === 'passed')

@@ -1,0 +1,407 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1774640660144,
+  "projectRoot": "/Users/suki/dev/suziQai",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "playwright",
+        "version": "1.58.2",
+        "category": "testing"
+      },
+      {
+        "name": "react",
+        "version": "19.2.4",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.2.4",
+        "category": "frontend"
+      },
+      {
+        "name": "vite",
+        "version": "8.0.2",
+        "category": "build"
+      },
+      {
+        "name": "vitest",
+        "version": "4.1.1",
+        "category": "testing"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": "npm test",
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "tsc -p tsconfig.main.json && concurrently \"vite\" \"tsc -p tsconfig.main.json --watch\" \"NODE_ENV=development electron .\"",
+      "build:renderer": "vite build",
+      "build:main": "tsc -p tsconfig.main.json",
+      "build": "npm run build:renderer && npm run build:main",
+      "test": "vitest run",
+      "test:watch": "vitest",
+      "package": "electron-builder"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "src",
+      "tests"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 0,
+      "lastAccessed": 1774640660091,
+      "keyFiles": []
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 0,
+      "lastAccessed": 1774640660091,
+      "keyFiles": []
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1774640660091,
+      "keyFiles": []
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 0,
+      "lastAccessed": 1774640660091,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/main/main.ts",
+      "accessCount": 48,
+      "lastAccessed": 1774652360919,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/App.tsx",
+      "accessCount": 34,
+      "lastAccessed": 1774714175475,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/StepSidebar.tsx",
+      "accessCount": 22,
+      "lastAccessed": 1774714186908,
+      "type": "file"
+    },
+    {
+      "path": "src/main/ipc-handlers.ts",
+      "accessCount": 17,
+      "lastAccessed": 1774652355243,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/types.ts",
+      "accessCount": 14,
+      "lastAccessed": 1774647261207,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 13,
+      "lastAccessed": 1774647443697,
+      "type": "directory"
+    },
+    {
+      "path": "src/main/browser-actions.ts",
+      "accessCount": 11,
+      "lastAccessed": 1774647024355,
+      "type": "file"
+    },
+    {
+      "path": "tests/renderer/StepSidebar.test.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1774714181612,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-03-25-suziqai-implementation.md",
+      "accessCount": 6,
+      "lastAccessed": 1774644301661,
+      "type": "file"
+    },
+    {
+      "path": "src/main/claude-session.ts",
+      "accessCount": 6,
+      "lastAccessed": 1774646819362,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/BrowserToolbar.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1774646820997,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 6,
+      "lastAccessed": 1774647068588,
+      "type": "directory"
+    },
+    {
+      "path": "tests/main/claude-session.test.ts",
+      "accessCount": 5,
+      "lastAccessed": 1774645826493,
+      "type": "file"
+    },
+    {
+      "path": "src/main",
+      "accessCount": 5,
+      "lastAccessed": 1774646839622,
+      "type": "directory"
+    },
+    {
+      "path": "src/renderer/utils/generateSpec.ts",
+      "accessCount": 5,
+      "lastAccessed": 1774647063465,
+      "type": "file"
+    },
+    {
+      "path": "tests/main/test-library.test.ts",
+      "accessCount": 5,
+      "lastAccessed": 1774647149721,
+      "type": "file"
+    },
+    {
+      "path": "src/main/test-library.ts",
+      "accessCount": 5,
+      "lastAccessed": 1774647264364,
+      "type": "file"
+    },
+    {
+      "path": "tests/main/library-ipc.test.ts",
+      "accessCount": 5,
+      "lastAccessed": 1774652377916,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 4,
+      "lastAccessed": 1774646355364,
+      "type": "file"
+    },
+    {
+      "path": "src/main/browser-manager.ts",
+      "accessCount": 4,
+      "lastAccessed": 1774646549697,
+      "type": "file"
+    },
+    {
+      "path": "src/preload/preload.ts",
+      "accessCount": 4,
+      "lastAccessed": 1774647297895,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/types.ts",
+      "accessCount": 4,
+      "lastAccessed": 1774647302656,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/StepItem.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1774714066059,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/LibraryView.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1774713944675,
+      "type": "file"
+    },
+    {
+      "path": "tests/renderer/LibraryView.test.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1774714035693,
+      "type": "file"
+    },
+    {
+      "path": "tests/main/browser-manager.test.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774646543972,
+      "type": "file"
+    },
+    {
+      "path": "src/main/test-exporter.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774646610981,
+      "type": "file"
+    },
+    {
+      "path": "vitest.config.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774646940919,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/CodePreview.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1774647087065,
+      "type": "file"
+    },
+    {
+      "path": "tests/main/test-exporter.test.ts",
+      "accessCount": 2,
+      "lastAccessed": 1774647149669,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer",
+      "accessCount": 2,
+      "lastAccessed": 1774713875447,
+      "type": "directory"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-03-25-suziqai-design.md",
+      "accessCount": 1,
+      "lastAccessed": 1774644267009,
+      "type": "file"
+    },
+    {
+      "path": "src/main/observer.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774644556478,
+      "type": "file"
+    },
+    {
+      "path": "src/main/claude-code.d.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774644623702,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-03-27-visual-qa-design.md",
+      "accessCount": 1,
+      "lastAccessed": 1774645126536,
+      "type": "file"
+    },
+    {
+      "path": "tests/__mocks__/@anthropic-ai/claude-code.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774645286429,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/ChatPanel.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1774646109376,
+      "type": "file"
+    },
+    {
+      "path": "src/main/recorder.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774646116903,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/components/ProjectSetup.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1774646118898,
+      "type": "file"
+    },
+    {
+      "path": "tests/main/recorder.test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774646124607,
+      "type": "file"
+    },
+    {
+      "path": "vite.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774646127435,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-03-27-test-library-design.md",
+      "accessCount": 1,
+      "lastAccessed": 1774646580056,
+      "type": "file"
+    },
+    {
+      "path": "src/main/project-config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774646616248,
+      "type": "file"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-03-27-test-library.md",
+      "accessCount": 1,
+      "lastAccessed": 1774646752680,
+      "type": "file"
+    },
+    {
+      "path": "tests/shared/types.test.ts",
+      "accessCount": 1,
+      "lastAccessed": 1774646833880,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1774646940974,
+      "type": "file"
+    },
+    {
+      "path": "src/shared",
+      "accessCount": 1,
+      "lastAccessed": 1774647444352,
+      "type": "directory"
+    },
+    {
+      "path": "tests",
+      "accessCount": 1,
+      "lastAccessed": 1774713972603,
+      "type": "directory"
+    }
+  ],
+  "userDirectives": []
+}

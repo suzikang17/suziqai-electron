@@ -50,6 +50,7 @@ interface StepSidebarProps {
   onInsertStep: (index: number, step: { label: string; action: StepAction }) => void;
   onInsertPrompt: (index: number, prompt: string) => void;
   onRunAll: () => void;
+  onRunActAndAssert: () => void;
   onExport: () => void;
   sidebarMode: 'session' | 'library';
   onSidebarModeChange: (mode: 'session' | 'library') => void;
@@ -74,6 +75,7 @@ export function StepSidebar({
   onInsertStep,
   onInsertPrompt,
   onRunAll,
+  onRunActAndAssert,
   onExport,
   sidebarMode,
   onSidebarModeChange,
@@ -207,27 +209,6 @@ export function StepSidebar({
                       >
                         {test.name}
                       </span>
-                      {test.id === activeTestId && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRenameValue(test.name);
-                            setRenamingTestId(test.id);
-                          }}
-                          style={{
-                            background: 'none',
-                            color: 'var(--text-muted)',
-                            fontSize: 10,
-                            padding: 0,
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                            lineHeight: 1,
-                          }}
-                          title="Rename test"
-                        >
-                          ✎
-                        </button>
-                      )}
                     </span>
                   )}
                   <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
@@ -304,11 +285,11 @@ export function StepSidebar({
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
             <button
-              onClick={onRunAll}
+              onClick={onRunActAndAssert}
               style={{
-                flex: 1,
+                flex: 2,
                 background: 'var(--accent-green)',
                 color: '#ffffff',
                 borderRadius: 6,
@@ -316,6 +297,22 @@ export function StepSidebar({
                 fontSize: 11,
                 fontWeight: 'bold',
                 letterSpacing: 0.3,
+              }}
+            >
+              Act & Assert
+            </button>
+            <button
+              onClick={onRunAll}
+              style={{
+                flex: 1,
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-secondary)',
+                borderRadius: 6,
+                padding: '8px 0',
+                fontSize: 11,
+                fontWeight: 'bold',
+                letterSpacing: 0.3,
+                border: '1px solid var(--border)',
               }}
             >
               Run All
