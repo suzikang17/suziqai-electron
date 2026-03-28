@@ -352,13 +352,13 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           {onMoveDown && (
             <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} style={{ ...tinyBtn, color: 'var(--text-muted)' }} title="Move down">↓</button>
           )}
-          {onUpdate && (
-            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }} title="Edit">✎</button>
-          )}
           {onAddBelow && (
             <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} style={{ ...tinyBtn, color: 'var(--text-secondary)' }} title="Add below">+</button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--accent-red)' }} title="Delete">×</button>
+          {onUpdate && (
+            <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }} title="Edit">✎</button>
+          )}
+          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--accent-red)' }} title="Delete">🗑</button>
         </div>
       )}
 
