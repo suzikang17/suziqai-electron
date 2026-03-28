@@ -34,7 +34,7 @@ contextBridge.exposeInMainWorld('suziqai', {
     ipcRenderer.on(IPC.CHAT_RESPONSE, (_event, message) => callback(message)),
 
   // Steps
-  executeStep: (stepId: string, action?: any) => ipcRenderer.invoke(IPC.STEP_EXECUTE, stepId, action),
+  executeStep: (stepId: string, action?: any, timeout?: number) => ipcRenderer.invoke(IPC.STEP_EXECUTE, stepId, action, timeout),
   executeAllSteps: (steps?: any[]) => ipcRenderer.invoke(IPC.STEP_EXECUTE_ALL, steps),
   onStepsProposed: (callback: (steps: unknown[]) => void) =>
     ipcRenderer.on(IPC.STEPS_PROPOSED, (_event, steps) => callback(steps)),

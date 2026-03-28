@@ -561,7 +561,7 @@ export function App() {
             const step = currentBlock?.steps.find(s => s.id === stepId);
             if (step) {
               log(`▶ Running: ${step.label}`);
-              window.suziqai.executeStep(stepId, step.action);
+              window.suziqai.executeStep(stepId, step.action, step.timeout);
             }
           }}
           onDenyStep={(stepId: string) => {
@@ -578,11 +578,11 @@ export function App() {
               ),
             }));
           }}
-          onUpdateStep={(stepId: string, action: any, label: string) => {
+          onUpdateStep={(stepId: string, action: any, label: string, timeout?: number) => {
             updateCurrentBlock(b => ({
               ...b,
               steps: b.steps.map(s =>
-                s.id === stepId ? { ...s, action, label, status: 'pending' as const, error: undefined } : s
+                s.id === stepId ? { ...s, action, label, timeout, status: 'pending' as const, error: undefined } : s
               ),
             }));
           }}
@@ -609,7 +609,7 @@ export function App() {
               .filter(s => (s.status === 'pending' || s.status === 'passed') && s.action.type !== 'assert' && s.action.type !== 'waitFor');
             const assertions = currentBlock.steps
               .filter(s => (s.status === 'pending' || s.status === 'passed') && (s.action.type === 'assert' || s.action.type === 'waitFor'));
-            const ordered = [...actions, ...assertions].map(s => ({ id: s.id, action: s.action }));
+            const ordered = [...actions, ...assertions].map(s => ({ id: s.id, action: s.action, timeout: s.timeout }));
             log(`▶▶ Act & Assert: ${actions.length} action(s), then ${assertions.length} assertion(s)`);
             window.suziqai.executeAllSteps(ordered);
           }}
@@ -617,7 +617,7 @@ export function App() {
             if (!currentBlock) return;
             const stepsToRun = currentBlock.steps
               .filter(s => stepIds.includes(s.id))
-              .map(s => ({ id: s.id, action: s.action }));
+              .map(s => ({ id: s.id, action: s.action, timeout: s.timeout }));
             log(`▶▶ Act & Assert: running ${stepsToRun.length} step(s)`);
             window.suziqai.executeAllSteps(stepsToRun);
           }}
@@ -634,7 +634,7 @@ export function App() {
             if (!currentBlock) return;
             const pendingSteps = currentBlock.steps
               .filter(s => s.status === 'pending' || s.status === 'passed')
-              .map(s => ({ id: s.id, action: s.action }));
+              .map(s => ({ id: s.id, action: s.action, timeout: s.timeout }));
             log(`▶▶ Running all ${pendingSteps.length} steps...`);
             window.suziqai.executeAllSteps(pendingSteps);
           }}

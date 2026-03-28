@@ -16,6 +16,7 @@ export interface Step {
   action: StepAction;
   status: StepStatus;
   error?: string;
+  timeout?: number; // ms, default 5000
 }
 
 export interface TestCase {

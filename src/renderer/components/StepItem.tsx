@@ -22,7 +22,7 @@ interface StepItemProps {
   onAccept: () => void;
   onDeny: () => void;
   onReset?: () => void;
-  onUpdate?: (action: StepAction, label: string) => void;
+  onUpdate?: (action: StepAction, label: string, timeout?: number) => void;
   onAddBelow?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -48,6 +48,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
   const [editLabel, setEditLabel] = useState('');
   const [editType, setEditType] = useState(step.action.type);
   const [editAssertType, setEditAssertType] = useState(step.action.type === 'assert' ? step.action.assertionType : 'visible');
+  const [editTimeout, setEditTimeout] = useState(step.timeout ?? 5000);
   const [editorMode, setEditorMode] = useState<'form' | 'code'>('form');
   const [rawCode, setRawCode] = useState('');
   const isAssertion = step.action.type === 'assert' || step.action.type === 'waitFor';
@@ -62,6 +63,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
     if ('value' in action) setEditValue(action.value);
     else if (action.type === 'assert') { setEditValue(action.expected); setEditAssertType(action.assertionType); }
     else setEditValue('');
+    setEditTimeout(step.timeout ?? 5000);
     setRawCode(formatAction(action));
     setEditorMode('form');
     setEditing(true);
@@ -144,7 +146,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
       case 'screenshot': action = { type: 'screenshot' }; break;
       default: action = step.action;
     }
-    onUpdate(action, editLabel);
+    onUpdate(action, editLabel, editTimeout);
     setEditing(false);
   };
 
@@ -312,6 +314,19 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
             </div>
           </div>
         )}
+
+        {/* Timeout */}
+        <div>
+          <div style={labelStyle}>Timeout (ms)</div>
+          <input
+            type="number"
+            value={editTimeout}
+            onChange={(e) => setEditTimeout(parseInt(e.target.value) || 5000)}
+            min={500}
+            step={500}
+            style={{ ...fieldStyle, width: 120 }}
+          />
+        </div>
 
         {/* Buttons */}
         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>

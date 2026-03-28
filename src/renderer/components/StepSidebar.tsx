@@ -23,7 +23,7 @@ interface StepSidebarProps {
   onAcceptStep: (stepId: string) => void;
   onDenyStep: (stepId: string) => void;
   onResetStep: (stepId: string) => void;
-  onUpdateStep: (stepId: string, action: any, label: string) => void;
+  onUpdateStep: (stepId: string, action: any, label: string, timeout?: number) => void;
   onInsertStep: (index: number, step: { label: string; action: StepAction }) => void;
   onInsertPrompt: (index: number, prompt: string) => void;
   onRunAll: () => void;
@@ -168,7 +168,7 @@ export function StepSidebar({
                 onAccept={() => onAcceptStep(actionStep.id)}
                 onDeny={() => onDenyStep(actionStep.id)}
                 onReset={() => onResetStep(actionStep.id)}
-                onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
+                onUpdate={(action, label, timeout) => onUpdateStep(actionStep.id, action, label, timeout)}
                 onAddBelow={() => setComposerAt(group.actionIndex + 1)}
                 onMoveUp={group.actionIndex > 0 ? () => onMoveStep(group.actionIndex, 'up') : undefined}
                 onMoveDown={group.actionIndex < activeBlock.steps.length - 1 ? () => onMoveStep(group.actionIndex, 'down') : undefined}
@@ -188,7 +188,7 @@ export function StepSidebar({
                     onAccept={() => onAcceptStep(step.id)}
                     onDeny={() => onDenyStep(step.id)}
                     onReset={() => onResetStep(step.id)}
-                    onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
+                    onUpdate={(action, label, timeout) => onUpdateStep(step.id, action, label, timeout)}
                     onAddBelow={() => setComposerAt(idx + 1)}
                     onMoveUp={idx > 0 ? () => onMoveStep(idx, 'up') : undefined}
                     onMoveDown={idx < activeBlock.steps.length - 1 ? () => onMoveStep(idx, 'down') : undefined}
@@ -266,125 +266,6 @@ export function StepSidebar({
 
       {sidebarMode === 'session' ? (
         <>
-          {/* File section */}
-          {activeSuite && (
-            <div style={{ marginBottom: 8, flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>File</span>
-              </div>
-            <div
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                setRenameFileNameValue(activeSuite.fileName || '');
-                setRenamingFileNameId(activeSuite.id);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '2px 8px',
-                marginBottom: 8,
-                flexShrink: 0,
-              }}
-            >
-              {renamingFileNameId === activeSuite.id ? (
-                <input
-                  autoFocus
-                  value={renameFileNameValue}
-                  onChange={(e) => setRenameFileNameValue(e.target.value)}
-                  onBlur={() => {
-                    if (renameFileNameValue.trim()) onRenameSuiteFileName(activeSuite.id, renameFileNameValue.trim());
-                    setRenamingFileNameId(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (renameFileNameValue.trim()) onRenameSuiteFileName(activeSuite.id, renameFileNameValue.trim());
-                      setRenamingFileNameId(null);
-                    }
-                    if (e.key === 'Escape') setRenamingFileNameId(null);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    flex: 1,
-                    fontSize: 10,
-                    background: 'var(--bg-primary)',
-                    color: 'var(--text-muted)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 3,
-                    padding: '1px 4px',
-                    outline: 'none',
-                    fontFamily: 'var(--font-mono, monospace)',
-                  }}
-                />
-              ) : (
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {activeSuite.fileName}.spec.ts
-                </span>
-              )}
-            </div>
-            </div>
-          )}
-
-          {/* Suite section */}
-          {activeSuite && (
-            <div style={{ marginBottom: 8, flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Suite</span>
-              </div>
-              <div
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  setRenameValue(activeSuite.name);
-                  setRenamingSuiteId(activeSuite.id);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '4px 8px',
-                  borderRadius: 3,
-                  background: 'var(--bg-tertiary)',
-                  borderLeft: '2px solid var(--accent-green)',
-                }}
-              >
-                {renamingSuiteId === activeSuite.id ? (
-                  <input
-                    autoFocus
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onBlur={() => {
-                      if (renameValue.trim()) onRenameSuite(activeSuite.id, renameValue.trim());
-                      setRenamingSuiteId(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        if (renameValue.trim()) onRenameSuite(activeSuite.id, renameValue.trim());
-                        setRenamingSuiteId(null);
-                      }
-                      if (e.key === 'Escape') setRenamingSuiteId(null);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      flex: 1,
-                      fontSize: 11,
-                      background: 'var(--bg-primary)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--accent-green)',
-                      borderRadius: 3,
-                      padding: '2px 6px',
-                      outline: 'none',
-                    }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 'bold', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {activeSuite.name}
-                  </span>
-                )}
-                <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
-                  {activeSuite.tests.length} test{activeSuite.tests.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-          )}
           {/* Test block list */}
           <div style={{ marginBottom: 8, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -574,6 +455,127 @@ export function StepSidebar({
         </>
       ) : (
         <>
+          {/* File section */}
+          {activeSuite && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>File</span>
+              </div>
+              <div
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setRenameFileNameValue(activeSuite.fileName || '');
+                  setRenamingFileNameId(activeSuite.id);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '4px 8px',
+                  borderRadius: 3,
+                  background: 'var(--bg-tertiary)',
+                }}
+              >
+                {renamingFileNameId === activeSuite.id ? (
+                  <input
+                    autoFocus
+                    value={renameFileNameValue}
+                    onChange={(e) => setRenameFileNameValue(e.target.value)}
+                    onBlur={() => {
+                      if (renameFileNameValue.trim()) onRenameSuiteFileName(activeSuite.id, renameFileNameValue.trim());
+                      setRenamingFileNameId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (renameFileNameValue.trim()) onRenameSuiteFileName(activeSuite.id, renameFileNameValue.trim());
+                        setRenamingFileNameId(null);
+                      }
+                      if (e.key === 'Escape') setRenamingFileNameId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      flex: 1,
+                      fontSize: 10,
+                      background: 'var(--bg-primary)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 3,
+                      padding: '1px 4px',
+                      outline: 'none',
+                      fontFamily: 'var(--font-mono, monospace)',
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {activeSuite.fileName}.spec.ts
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Suite section */}
+          {activeSuite && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Suite</span>
+              </div>
+              <div
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setRenameValue(activeSuite.name);
+                  setRenamingSuiteId(activeSuite.id);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '4px 8px',
+                  borderRadius: 3,
+                  background: 'var(--bg-tertiary)',
+                  borderLeft: '2px solid var(--accent-green)',
+                }}
+              >
+                {renamingSuiteId === activeSuite.id ? (
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => {
+                      if (renameValue.trim()) onRenameSuite(activeSuite.id, renameValue.trim());
+                      setRenamingSuiteId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (renameValue.trim()) onRenameSuite(activeSuite.id, renameValue.trim());
+                        setRenamingSuiteId(null);
+                      }
+                      if (e.key === 'Escape') setRenamingSuiteId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      flex: 1,
+                      fontSize: 11,
+                      background: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--accent-green)',
+                      borderRadius: 3,
+                      padding: '2px 6px',
+                      outline: 'none',
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 'bold', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {activeSuite.name}
+                  </span>
+                )}
+                <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
+                  {activeSuite.tests.length} test{activeSuite.tests.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+          )}
+          <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+
           {/* Suite management */}
           <div style={{ marginBottom: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>

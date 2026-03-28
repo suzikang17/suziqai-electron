@@ -11,9 +11,9 @@ import { TestLibrary } from './test-library';
 import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
 // Lazy-loaded to avoid importing playwright at startup
-async function executeActionOnView(view: any, action: any): Promise<void> {
+async function executeActionOnView(view: any, action: any, timeout?: number): Promise<void> {
   const { executeActionOnView: exec } = await import('./browser-actions');
-  return exec(view, action);
+  return exec(view, action, timeout);
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -337,7 +337,7 @@ function createWindow(): void {
 
   // Override step execution to use BrowserView with visual QA
   ipcMain.removeHandler(IPC.STEP_EXECUTE);
-  ipcMain.handle(IPC.STEP_EXECUTE, async (_event, stepId: string, action: any) => {
+  ipcMain.handle(IPC.STEP_EXECUTE, async (_event, stepId: string, action: any, timeout?: number) => {
     const win = mainWindow;
     if (!win || !browserView) return;
 
@@ -346,7 +346,7 @@ function createWindow(): void {
     try {
       const beforeScreenshot = await captureBrowserViewScreenshot();
 
-      await executeActionOnView(browserView, action);
+      await executeActionOnView(browserView, action, timeout);
       win.webContents.send(IPC.STEP_RESULT, stepId, 'passed');
       win.webContents.send(IPC.BROWSER_URL_CHANGED, browserView.webContents.getURL());
 
@@ -384,7 +384,7 @@ function createWindow(): void {
   });
 
   ipcMain.removeHandler(IPC.STEP_EXECUTE_ALL);
-  ipcMain.handle(IPC.STEP_EXECUTE_ALL, async (_event, steps: Array<{ id: string; action: any }>) => {
+  ipcMain.handle(IPC.STEP_EXECUTE_ALL, async (_event, steps: Array<{ id: string; action: any; timeout?: number }>) => {
     const win = mainWindow;
     if (!win || !browserView) return;
 
@@ -395,7 +395,7 @@ function createWindow(): void {
       try {
         const beforeScreenshot = await captureBrowserViewScreenshot();
 
-        await executeActionOnView(browserView, step.action);
+        await executeActionOnView(browserView, step.action, step.timeout);
         win.webContents.send(IPC.STEP_RESULT, step.id, 'passed');
 
         await new Promise(r => setTimeout(r, 500));

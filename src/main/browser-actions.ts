@@ -104,13 +104,13 @@ export async function disconnectPlaywright(): Promise<void> {
 /**
  * Execute a step action using Playwright's native API.
  */
-export async function executeActionOnView(_view: any, action: any): Promise<void> {
+export async function executeActionOnView(_view: any, action: any, timeout: number = 5000): Promise<void> {
   const p = await connectToElectron();
 
   switch (action.type) {
     case 'navigate': {
       const url = action.url.startsWith('http') ? action.url : 'http://' + action.url;
-      await p.goto(url, { waitUntil: 'domcontentloaded' });
+      await p.goto(url, { waitUntil: 'domcontentloaded', timeout });
       break;
     }
 
@@ -119,15 +119,15 @@ export async function executeActionOnView(_view: any, action: any): Promise<void
       const locator = resolveLocator(p, action.selector);
       const count = await locator.count();
       console.log('[suziQai] Found', count, 'elements matching selector');
-      await locator.scrollIntoViewIfNeeded({ timeout: 5000 });
-      await locator.click({ timeout: 5000 });
+      await locator.scrollIntoViewIfNeeded({ timeout });
+      await locator.click({ timeout });
       console.log('[suziQai] Click completed, page now:', p.url());
       break;
     }
 
     case 'fill': {
       const locator = resolveLocator(p, action.selector);
-      await locator.fill(action.value || '', { timeout: 5000 });
+      await locator.fill(action.value || '', { timeout });
       break;
     }
 
@@ -139,7 +139,7 @@ export async function executeActionOnView(_view: any, action: any): Promise<void
         }
       } else if (action.assertionType === 'visible') {
         const locator = resolveLocator(p, action.selector || '');
-        await locator.waitFor({ state: 'visible', timeout: 3000 });
+        await locator.waitFor({ state: 'visible', timeout });
       } else if (action.assertionType === 'text') {
         const bodyText = await p.locator('body').innerText();
         if (!bodyText.includes(action.expected)) {
@@ -147,7 +147,7 @@ export async function executeActionOnView(_view: any, action: any): Promise<void
         }
       } else if (action.assertionType === 'hidden') {
         const locator = resolveLocator(p, action.selector || '');
-        await locator.waitFor({ state: 'hidden', timeout: 3000 });
+        await locator.waitFor({ state: 'hidden', timeout });
       } else if (action.assertionType === 'value') {
         const locator = resolveLocator(p, action.selector || '');
         const val = await locator.inputValue();
@@ -159,7 +159,7 @@ export async function executeActionOnView(_view: any, action: any): Promise<void
 
     case 'waitFor': {
       const locator = resolveLocator(p, action.selector);
-      await locator.waitFor({ state: 'visible', timeout: 5000 });
+      await locator.waitFor({ state: 'visible', timeout });
       break;
     }
 
