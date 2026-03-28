@@ -32,11 +32,17 @@ describe('LibraryView', () => {
     expect(onLoad).toHaveBeenCalledWith('login-flow');
   });
 
-  it('calls onDelete when clicking delete button', () => {
+  it('calls onDelete after hover and confirm', () => {
     const onDelete = vi.fn();
     render(<LibraryView entries={mockEntries} onLoad={vi.fn()} onDelete={onDelete} onRefresh={vi.fn()} />);
-    const deleteButtons = screen.getAllByText('×');
-    fireEvent.click(deleteButtons[0]);
+    // Hover over the entry to reveal the delete button
+    const entry = screen.getByText('Login flow').closest('div[style]')!;
+    fireEvent.mouseEnter(entry);
+    // Click × to start confirmation
+    const deleteButton = screen.getByTitle('Delete test');
+    fireEvent.click(deleteButton);
+    // Confirm deletion
+    fireEvent.click(screen.getByText('Delete'));
     expect(onDelete).toHaveBeenCalledWith('login-flow');
   });
 

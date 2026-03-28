@@ -85,6 +85,8 @@ export function StepSidebar({
 }: StepSidebarProps) {
   const activeTest = tests.find(t => t.id === activeTestId) || tests[0];
   const [composerAt, setComposerAt] = useState<number | null>(null);
+  const [renamingTestId, setRenamingTestId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   return (
     <div
@@ -97,21 +99,29 @@ export function StepSidebar({
       }}
     >
       {/* Session / Library toggle */}
-      <div style={{ display: 'flex', marginBottom: 8 }}>
+      <div style={{
+        display: 'flex',
+        marginBottom: 10,
+        background: 'var(--bg-primary)',
+        borderRadius: 6,
+        padding: 2,
+        gap: 2,
+      }}>
         {(['session', 'library'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => onSidebarModeChange(tab)}
             style={{
               flex: 1,
-              padding: '4px 0',
+              padding: '5px 0',
               fontSize: 11,
-              fontWeight: sidebarMode === tab ? 'bold' : 'normal',
+              fontWeight: 600,
               color: sidebarMode === tab ? 'var(--text-primary)' : 'var(--text-muted)',
               background: sidebarMode === tab ? 'var(--bg-tertiary)' : 'transparent',
-              borderBottom: sidebarMode === tab ? '2px solid var(--accent-green)' : '2px solid transparent',
+              borderRadius: 4,
               cursor: 'pointer',
-              textTransform: 'capitalize',
+              transition: 'all 0.15s ease',
+              letterSpacing: 0.3,
             }}
           >
             {tab === 'session' ? 'Session' : 'Library'}
@@ -155,16 +165,71 @@ export function StepSidebar({
                     borderLeft: test.id === activeTestId ? '2px solid var(--accent-green)' : '2px solid transparent',
                   }}
                 >
-                  <span
-                    style={{ fontSize: 11, color: test.id === activeTestId ? 'var(--text-primary)' : 'var(--text-secondary)', flex: 1 }}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      const newName = prompt('Rename test:', test.name);
-                      if (newName) onRenameTest(test.id, newName);
-                    }}
-                  >
-                    {test.name}
-                  </span>
+                  {renamingTestId === test.id ? (
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={() => {
+                        if (renameValue.trim()) onRenameTest(test.id, renameValue.trim());
+                        setRenamingTestId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (renameValue.trim()) onRenameTest(test.id, renameValue.trim());
+                          setRenamingTestId(null);
+                        }
+                        if (e.key === 'Escape') setRenamingTestId(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        flex: 1,
+                        fontSize: 11,
+                        background: 'var(--bg-primary)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--accent-green)',
+                        borderRadius: 3,
+                        padding: '2px 6px',
+                        outline: 'none',
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{ fontSize: 11, color: test.id === activeTestId ? 'var(--text-primary)' : 'var(--text-secondary)', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <span
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setRenameValue(test.name);
+                          setRenamingTestId(test.id);
+                        }}
+                        style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      >
+                        {test.name}
+                      </span>
+                      {test.id === activeTestId && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenameValue(test.name);
+                            setRenamingTestId(test.id);
+                          }}
+                          style={{
+                            background: 'none',
+                            color: 'var(--text-muted)',
+                            fontSize: 10,
+                            padding: 0,
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            lineHeight: 1,
+                          }}
+                          title="Rename test"
+                        >
+                          ✎
+                        </button>
+                      )}
+                    </span>
+                  )}
                   <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
                     {test.steps.length} steps
                   </span>
@@ -239,17 +304,18 @@ export function StepSidebar({
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
             <button
               onClick={onRunAll}
               style={{
                 flex: 1,
                 background: 'var(--accent-green)',
                 color: '#ffffff',
-                borderRadius: 4,
-                padding: 6,
+                borderRadius: 6,
+                padding: '8px 0',
                 fontSize: 11,
                 fontWeight: 'bold',
+                letterSpacing: 0.3,
               }}
             >
               Run All
@@ -260,26 +326,14 @@ export function StepSidebar({
                 flex: 1,
                 background: 'var(--accent-blue, #0969da)',
                 color: '#ffffff',
-                borderRadius: 4,
-                padding: 6,
+                borderRadius: 6,
+                padding: '8px 0',
                 fontSize: 11,
                 fontWeight: 'bold',
+                letterSpacing: 0.3,
               }}
             >
-              Save
-            </button>
-            <button
-              onClick={onExport}
-              style={{
-                flex: 1,
-                background: 'var(--bg-tertiary)',
-                color: 'var(--text-secondary)',
-                borderRadius: 4,
-                padding: 6,
-                fontSize: 11,
-              }}
-            >
-              Export .spec.ts
+              Save to Library
             </button>
           </div>
         </>

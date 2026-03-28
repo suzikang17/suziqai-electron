@@ -54,12 +54,12 @@ describe('StepSidebar', () => {
     expect(onRunAll).toHaveBeenCalledOnce();
   });
 
-  it('calls onExport when Export button is clicked', () => {
-    const onExport = vi.fn();
-    render(<StepSidebar {...defaultProps} onExport={onExport} />);
+  it('calls onSaveTest when Save to Library button is clicked', () => {
+    const onSaveTest = vi.fn();
+    render(<StepSidebar {...defaultProps} onSaveTest={onSaveTest} />);
 
-    fireEvent.click(screen.getByText('Export .spec.ts'));
-    expect(onExport).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByText('Save to Library'));
+    expect(onSaveTest).toHaveBeenCalledOnce();
   });
 });
 
@@ -105,14 +105,14 @@ describe('Library toggle', () => {
     expect(screen.getByText(/no saved tests/i)).toBeDefined();
   });
 
-  it('renders Save button in session mode', () => {
+  it('renders Save to Library button in session mode', () => {
     render(<StepSidebar {...baseProps} />);
-    expect(screen.getByText('Save')).toBeDefined();
+    expect(screen.getByText('Save to Library')).toBeDefined();
   });
 
-  it('calls onSaveTest when clicking Save', () => {
+  it('calls onSaveTest when clicking Save to Library', () => {
     render(<StepSidebar {...baseProps} />);
-    fireEvent.click(screen.getByText('Save'));
+    fireEvent.click(screen.getByText('Save to Library'));
     expect(baseProps.onSaveTest).toHaveBeenCalled();
   });
 });
