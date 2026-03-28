@@ -266,9 +266,12 @@ export function StepSidebar({
 
       {sidebarMode === 'session' ? (
         <>
-          {/* Active suite header */}
+          {/* Suite section */}
           {activeSuite && (
             <div style={{ marginBottom: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Suite</span>
+              </div>
               {/* Suite name row */}
               <div
                 onDoubleClick={(e) => {
