@@ -87,6 +87,35 @@ export function StepSidebar({
 }: StepSidebarProps) {
   const activeTest = tests.find(t => t.id === activeTestId) || tests[0];
   const [composerAt, setComposerAt] = useState<number | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
+
+  // Group steps: each action + following assertions form a group
+  const stepGroups: Array<{ actionIndex: number; indices: number[] }> = [];
+  if (activeTest) {
+    let currentGroup: { actionIndex: number; indices: number[] } | null = null;
+    activeTest.steps.forEach((step, i) => {
+      const isAssertion = step.action.type === 'assert' || step.action.type === 'waitFor';
+      if (!isAssertion) {
+        if (currentGroup) stepGroups.push(currentGroup);
+        currentGroup = { actionIndex: i, indices: [i] };
+      } else if (currentGroup) {
+        currentGroup.indices.push(i);
+      } else {
+        // Orphan assertion — its own group
+        stepGroups.push({ actionIndex: i, indices: [i] });
+      }
+    });
+    if (currentGroup) stepGroups.push(currentGroup);
+  }
+
+  const toggleGroup = (actionIndex: number) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(actionIndex)) next.delete(actionIndex);
+      else next.add(actionIndex);
+      return next;
+    });
+  };
   const [renamingTestId, setRenamingTestId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
@@ -251,33 +280,99 @@ export function StepSidebar({
             ) : (
               <InsertButton onClick={() => setComposerAt(0)} />
             )}
-            {activeTest.steps.map((step, i) => (
-              <React.Fragment key={step.id}>
-                <StepItem
-                  step={step}
-                  index={i}
-                  onAccept={() => onAcceptStep(step.id)}
-                  onDeny={() => onDenyStep(step.id)}
-                  onReset={() => onResetStep(step.id)}
-                  onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
-                />
-                {composerAt === i + 1 ? (
-                  <StepComposer
-                    onSubmit={(result) => {
-                      if ('prompt' in result) {
-                        onInsertPrompt(i + 1, result.prompt);
-                      } else {
-                        onInsertStep(i + 1, result);
-                      }
-                      setComposerAt(null);
-                    }}
-                    onCancel={() => setComposerAt(null)}
-                  />
-                ) : (
-                  <InsertButton onClick={() => setComposerAt(i + 1)} />
-                )}
-              </React.Fragment>
-            ))}
+            {stepGroups.map((group) => {
+              const actionStep = activeTest.steps[group.actionIndex];
+              const assertionIndices = group.indices.slice(1);
+              const isCollapsed = collapsedGroups.has(group.actionIndex);
+              const hasAssertions = assertionIndices.length > 0;
+
+              return (
+                <React.Fragment key={actionStep.id}>
+                  {/* Action step with collapse toggle */}
+                  <div style={{ display: 'flex', alignItems: 'start', gap: 0 }}>
+                    {hasAssertions && (
+                      <button
+                        onClick={() => toggleGroup(group.actionIndex)}
+                        style={{
+                          background: 'none',
+                          color: 'var(--text-muted)',
+                          fontSize: 10,
+                          padding: '8px 2px 0 0',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          lineHeight: 1,
+                          width: 14,
+                          textAlign: 'center',
+                        }}
+                        title={isCollapsed ? `Show ${assertionIndices.length} assertion(s)` : 'Collapse assertions'}
+                      >
+                        {isCollapsed ? '▸' : '▾'}
+                      </button>
+                    )}
+                    <div style={{ flex: 1 }}>
+                      <StepItem
+                        step={actionStep}
+                        index={group.actionIndex}
+                        onAccept={() => onAcceptStep(actionStep.id)}
+                        onDeny={() => onDenyStep(actionStep.id)}
+                        onReset={() => onResetStep(actionStep.id)}
+                        onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Collapsed summary */}
+                  {hasAssertions && isCollapsed && (
+                    <div
+                      onClick={() => toggleGroup(group.actionIndex)}
+                      style={{
+                        marginLeft: 26,
+                        fontSize: 10,
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        padding: '2px 0',
+                      }}
+                    >
+                      {assertionIndices.length} assertion{assertionIndices.length > 1 ? 's' : ''} hidden
+                    </div>
+                  )}
+
+                  {/* Nested assertions */}
+                  {!isCollapsed && assertionIndices.map((idx) => {
+                    const step = activeTest.steps[idx];
+                    return (
+                      <StepItem
+                        key={step.id}
+                        step={step}
+                        index={idx}
+                        onAccept={() => onAcceptStep(step.id)}
+                        onDeny={() => onDenyStep(step.id)}
+                        onReset={() => onResetStep(step.id)}
+                        onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
+                      />
+                    );
+                  })}
+
+                  {/* Insert button after group */}
+                  {composerAt === group.indices[group.indices.length - 1] + 1 ? (
+                    <StepComposer
+                      onSubmit={(result) => {
+                        const insertIdx = group.indices[group.indices.length - 1] + 1;
+                        if ('prompt' in result) {
+                          onInsertPrompt(insertIdx, result.prompt);
+                        } else {
+                          onInsertStep(insertIdx, result);
+                        }
+                        setComposerAt(null);
+                      }}
+                      onCancel={() => setComposerAt(null)}
+                    />
+                  ) : (
+                    <InsertButton onClick={() => setComposerAt(group.indices[group.indices.length - 1] + 1)} />
+                  )}
+                </React.Fragment>
+              );
+            })}
             {activeTest.steps.length === 0 && (
               <div style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', marginTop: 40 }}>
                 No steps yet. Use the chat to describe what to test, or start recording.
