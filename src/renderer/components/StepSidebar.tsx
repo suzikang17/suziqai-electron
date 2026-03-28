@@ -340,6 +340,9 @@ export function StepSidebar({
                     onReset={() => onResetStep(actionStep.id)}
                     onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
                     onAddBelow={() => setComposerAt(group.actionIndex + 1)}
+                    onToggle={hasAssertions ? () => toggleGroup(group.actionIndex) : undefined}
+                    isExpanded={!isCollapsed}
+                    childCount={assertionIndices.length}
                     draggable
                     onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromGroup(groupIdx); }}
                     onDragOver={(e) => { e.preventDefault(); setDragOverGroup(groupIdx); }}
@@ -357,24 +360,6 @@ export function StepSidebar({
                     }}
                     isDragOver={dragOverGroup === groupIdx}
                   />
-
-                  {/* Assertion toggle */}
-                  {hasAssertions && (
-                    <div
-                      onClick={() => toggleGroup(group.actionIndex)}
-                      style={{
-                        paddingLeft: 18,
-                        fontSize: 10,
-                        color: 'var(--text-muted)',
-                        cursor: 'pointer',
-                        padding: '1px 0 1px 18px',
-                        userSelect: 'none',
-                      }}
-                    >
-                      <span style={{ marginRight: 4 }}>{isCollapsed ? '▸' : '▾'}</span>
-                      {assertionIndices.length} assertion{assertionIndices.length > 1 ? 's' : ''}
-                    </div>
-                  )}
 
                   {/* Nested assertions */}
                   {!isCollapsed && assertionIndices.map((idx) => {

@@ -16,6 +16,9 @@ interface StepItemProps {
   onReset?: () => void;
   onUpdate?: (action: StepAction, label: string) => void;
   onAddBelow?: () => void;
+  onToggle?: () => void;
+  isExpanded?: boolean;
+  childCount?: number;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;
@@ -32,7 +35,7 @@ const tinyBtn: React.CSSProperties = {
   lineHeight: '16px',
 };
 
-export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, draggable, onDragStart, onDragOver, onDrop, isDragOver }: StepItemProps) {
+export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onToggle, isExpanded, childCount, draggable, onDragStart, onDragOver, onDrop, isDragOver }: StepItemProps) {
   const { icon, color } = statusIcons[step.status];
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -127,7 +130,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
       <div
         onDragOver={onDragOver}
         onDrop={onDrop}
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => onToggle ? onToggle() : setExpanded(!expanded)}
         style={{
           display: 'flex',
           alignItems: 'baseline',
@@ -150,16 +153,26 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
             style={{ color: 'var(--text-muted)', fontSize: 10, cursor: 'grab', flexShrink: 0, userSelect: 'none' }}
           >⠿</span>
         )}
+        {/* Expand indicator for groups */}
+        {childCount != null && childCount > 0 && (
+          <span style={{ color: 'var(--text-muted)', fontSize: 9, flexShrink: 0, width: 10, textAlign: 'center' }}>
+            {(isExpanded !== undefined ? isExpanded : expanded) ? '▾' : '▸'}
+          </span>
+        )}
         <span style={{ color, fontSize: 11, flexShrink: 0 }}>{icon}</span>
         <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1, lineHeight: 1.3 }}>
           {step.label}
         </span>
+        {childCount != null && childCount > 0 && (
+          <span style={{ color: 'var(--text-muted)', fontSize: 9, flexShrink: 0 }}>
+            {childCount}
+          </span>
+        )}
       </div>
 
-      {/* Expanded details */}
-      {expanded && !editing && (
+      {/* Expanded details (for assertion steps clicked individually) */}
+      {!onToggle && expanded && !editing && (
         <div style={{
-          paddingLeft: draggable ? 36 : 18,
           fontSize: 10,
           color: 'var(--text-muted)',
           fontFamily: 'var(--font-mono)',
