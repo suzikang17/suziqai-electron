@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PlayCircle, Zap } from 'lucide-react';
 import { StepItem } from './StepItem';
 import { StepComposer } from './StepComposer';
 import { LibraryView } from './LibraryView';
@@ -512,38 +513,45 @@ export function StepSidebar({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 6,
+                gap: 5,
                 background: isAutopilot ? 'var(--accent-green)' : 'var(--bg-tertiary)',
                 color: isAutopilot ? '#ffffff' : 'var(--text-secondary)',
                 borderRadius: 6,
-                padding: '7px 0',
+                padding: '6px 0',
                 fontSize: 12,
-                fontWeight: 'bold',
-                border: isAutopilot ? 'none' : '1px solid var(--border)',
+                fontWeight: 600,
+                border: isAutopilot ? '1px solid var(--accent-green)' : '1px solid var(--border)',
                 cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
               <input
                 type="checkbox"
                 checked={isAutopilot}
                 onChange={onAutopilotToggle}
-                style={{ accentColor: 'white', cursor: 'pointer' }}
+                style={{ display: 'none' }}
               />
+              <Zap size={13} fill={isAutopilot ? 'white' : 'none'} />
               Autopilot
             </label>
             <button
               onClick={onRunAll}
               style={{
                 flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-secondary)',
                 borderRadius: 6,
-                padding: '7px 0',
+                padding: '6px 0',
                 fontSize: 12,
-                fontWeight: 'bold',
+                fontWeight: 600,
                 border: '1px solid var(--border)',
               }}
             >
+              <PlayCircle size={13} />
               Run All
             </button>
           </div>
