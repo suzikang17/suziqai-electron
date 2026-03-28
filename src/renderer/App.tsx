@@ -515,12 +515,16 @@ export function App() {
             log(`▶▶ Act & Assert: running ${stepsToRun.length} step(s)`);
             window.suziqai.executeAllSteps(stepsToRun);
           }}
-          onReorderStep={(fromIndex: number, toIndex: number) => {
+          onReorderStep={(fromStepIds: string[], beforeStepId: string) => {
             updateCurrentTest(t => {
-              const steps = [...t.steps];
-              const [moved] = steps.splice(fromIndex, 1);
-              steps.splice(toIndex, 0, moved);
-              return { ...t, steps };
+              // Remove the dragged group from the list
+              const remaining = t.steps.filter(s => !fromStepIds.includes(s.id));
+              const movedSteps = t.steps.filter(s => fromStepIds.includes(s.id));
+              // Find where to insert (before the target step)
+              const insertAt = remaining.findIndex(s => s.id === beforeStepId);
+              if (insertAt === -1) return t;
+              remaining.splice(insertAt, 0, ...movedSteps);
+              return { ...t, steps: remaining };
             });
           }}
           onRunAll={() => {

@@ -52,7 +52,7 @@ interface StepSidebarProps {
   onRunAll: () => void;
   onRunActAndAssert: () => void;
   onRunGroup: (stepIds: string[]) => void;
-  onReorderStep: (fromIndex: number, toIndex: number) => void;
+  onReorderStep: (fromStepIds: string[], beforeStepId: string) => void;
   onExport: () => void;
   sidebarMode: 'session' | 'library';
   onSidebarModeChange: (mode: 'session' | 'library') => void;
@@ -91,8 +91,8 @@ export function StepSidebar({
 }: StepSidebarProps) {
   const activeTest = tests.find(t => t.id === activeTestId) || tests[0];
   const [composerAt, setComposerAt] = useState<number | null>(null);
-  const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragFromGroup, setDragFromGroup] = useState<number | null>(null); // group index in stepGroups
+  const [dragOverGroup, setDragOverGroup] = useState<number | null>(null);
   // Start with all groups collapsed when there are many steps
   const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
   const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
@@ -322,7 +322,7 @@ export function StepSidebar({
             ) : (
               <InsertButton onClick={() => setComposerAt(0)} />
             )}
-            {stepGroups.map((group) => {
+            {stepGroups.map((group, groupIdx) => {
               const actionStep = activeTest.steps[group.actionIndex];
               const assertionIndices = group.indices.slice(1);
               const isCollapsed = collapsedGroups.has(group.actionIndex);
@@ -340,10 +340,21 @@ export function StepSidebar({
                     onReset={() => onResetStep(actionStep.id)}
                     onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromIndex(group.actionIndex); }}
-                    onDragOver={(e) => { e.preventDefault(); setDragOverIndex(group.actionIndex); }}
-                    onDrop={(e) => { e.preventDefault(); if (dragFromIndex !== null && dragFromIndex !== group.actionIndex) onReorderStep(dragFromIndex, group.actionIndex); setDragFromIndex(null); setDragOverIndex(null); }}
-                    isDragOver={dragOverIndex === group.actionIndex}
+                    onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromGroup(groupIdx); }}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverGroup(groupIdx); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragFromGroup !== null && dragFromGroup !== groupIdx) {
+                        // Move entire group (action + assertions)
+                        const fromGroup = stepGroups[dragFromGroup];
+                        const fromIds = fromGroup.indices.map(i => activeTest.steps[i].id);
+                        const toGroupFirstId = actionStep.id;
+                        onReorderStep(fromIds as any, toGroupFirstId as any);
+                      }
+                      setDragFromGroup(null);
+                      setDragOverGroup(null);
+                    }}
+                    isDragOver={dragOverGroup === groupIdx}
                   />
 
                   {/* Assertion toggle */}
@@ -376,11 +387,6 @@ export function StepSidebar({
                         onDeny={() => onDenyStep(step.id)}
                         onReset={() => onResetStep(step.id)}
                         onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
-                        draggable
-                        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromIndex(idx); }}
-                        onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
-                        onDrop={(e) => { e.preventDefault(); if (dragFromIndex !== null && dragFromIndex !== idx) onReorderStep(dragFromIndex, idx); setDragFromIndex(null); setDragOverIndex(null); }}
-                        isDragOver={dragOverIndex === idx}
                       />
                     );
                   })}
