@@ -1,4 +1,4 @@
-import type { TestCase, StepAction } from '@shared/types';
+import type { TestSuite, StepAction } from '@shared/types';
 
 function actionToPlaywright(action: StepAction): string {
   switch (action.type) {
@@ -59,31 +59,43 @@ function selectorToPlaywright(selector: string): string {
   return `page.locator('${selector.replace(/'/g, "\\'")}')`;
 }
 
-export function generateSpec(test: TestCase, baseUrl?: string): string {
+export function generateSpec(suite: TestSuite): string {
   const indent = '    ';
-  const steps = test.steps
-    .filter(s => s.status !== 'failed') // skip failed steps
-    .map(s => `${indent}${actionToPlaywright(s.action)}`)
-    .join('\n');
-
-  const testName = test.name.replace(/'/g, "\\'");
+  const suiteName = suite.name.replace(/'/g, "\\'");
 
   let code = `import { test, expect } from '@playwright/test';\n\n`;
 
-  if (baseUrl) {
-    code += `// Base URL: ${baseUrl}\n\n`;
+  code += `test.describe('${suiteName}', () => {\n`;
+
+  // beforeEach block (only if there are steps)
+  if (suite.beforeEach.length > 0) {
+    const beforeSteps = suite.beforeEach
+      .filter(s => s.status !== 'failed')
+      .map(s => `${indent}${actionToPlaywright(s.action)}`)
+      .join('\n');
+    code += `  test.beforeEach(async ({ page }) => {\n`;
+    code += beforeSteps || `${indent}// No steps yet`;
+    code += `\n  });\n\n`;
   }
 
-  code += `test.describe('${testName}', () => {\n`;
-  code += `  test('${testName}', async ({ page }) => {\n`;
-  code += steps || `${indent}// No steps yet`;
-  code += `\n  });\n`;
+  // individual test blocks
+  for (const block of suite.tests) {
+    const blockName = block.name.replace(/'/g, "\\'");
+    const steps = block.steps
+      .filter(s => s.status !== 'failed')
+      .map(s => `${indent}${actionToPlaywright(s.action)}`)
+      .join('\n');
+    code += `  test('${blockName}', async ({ page }) => {\n`;
+    code += steps || `${indent}// No steps yet`;
+    code += `\n  });\n`;
+  }
+
   code += `});\n`;
 
   return code;
 }
 
-export function generateSpecFilename(test: TestCase): string {
-  const slug = test.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled';
+export function generateSpecFilename(suite: TestSuite): string {
+  const slug = suite.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled';
   return `${slug}.spec.ts`;
 }
