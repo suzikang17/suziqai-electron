@@ -358,7 +358,9 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           {onUpdate && (
             <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }} title="Edit">✎</button>
           )}
-          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--accent-red)' }} title="Delete">🗑</button>
+          <button onClick={(e) => { e.stopPropagation(); onDeny(); }} style={{ ...tinyBtn, color: 'var(--accent-red)', fontSize: 11, opacity: 0.7 }} title="Delete">
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M11 1.5v1h3.5a.5.5 0 010 1h-.538l-.853 10.66A2 2 0 0111.115 16h-6.23a2 2 0 01-1.994-1.84L2.038 3.5H1.5a.5.5 0 010-1H5v-1A1.5 1.5 0 016.5 0h3A1.5 1.5 0 0111 1.5zm-5 0v1h4v-1a.5.5 0 00-.5-.5h-3a.5.5 0 00-.5.5zM4.5 5.029a.5.5 0 01.5.5v7.948a.5.5 0 01-1 0V5.529a.5.5 0 01.5-.5zm5.058.024a.5.5 0 01.5.5v7.948a.5.5 0 01-1 0V5.553a.5.5 0 01.5-.5zM8 5.029a.5.5 0 01.5.5v7.948a.5.5 0 01-1 0V5.529A.5.5 0 018 5.03z"/></svg>
+          </button>
         </div>
       )}
 
