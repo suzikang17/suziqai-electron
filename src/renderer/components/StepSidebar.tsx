@@ -421,38 +421,35 @@ export function StepSidebar({
             </div>
           </div>
 
-          {/* beforeEach section */}
+          {/* Hooks section */}
           {activeSuite && (
-            <div style={{ marginBottom: 6 }}>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hooks</span>
+              </div>
               <div
                 onClick={() => setBeforeEachExpanded(!beforeEachExpanded)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  justifyContent: 'space-between',
                   padding: '4px 8px',
+                  borderRadius: 3,
                   cursor: 'pointer',
                   borderLeft: '2px solid var(--accent-blue, #0969da)',
-                  borderRadius: 3,
-                  background: 'var(--bg-tertiary)',
-                  marginBottom: 2,
+                  background: beforeEachExpanded ? 'var(--bg-tertiary)' : 'transparent',
                 }}
               >
-                <span style={{ fontSize: 10, color: 'var(--accent-blue, #0969da)' }}>
-                  {beforeEachExpanded ? '\u25BE' : '\u25B8'}
-                </span>
-                <span style={{ fontSize: 10, color: 'var(--accent-blue, #0969da)' }}>
-                  {'\u21BB'}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent-blue, #0969da)', flex: 1 }}>
-                  beforeEach
+                <span style={{ fontSize: 11, color: 'var(--accent-blue, #0969da)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span>{'\u21BB'}</span>
+                  <span>beforeEach</span>
                 </span>
                 <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
                   {activeSuite.beforeEach.length} step{activeSuite.beforeEach.length !== 1 ? 's' : ''}
                 </span>
               </div>
               {beforeEachExpanded && (
-                <div style={{ paddingLeft: 10 }}>
+                <div style={{ paddingLeft: 10, marginTop: 2 }}>
                   {activeSuite.beforeEach.map((step) => (
                     <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 4px', fontSize: 11 }}>
                       <span style={{ color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
