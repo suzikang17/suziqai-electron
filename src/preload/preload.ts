@@ -105,6 +105,10 @@ contextBridge.exposeInMainWorld('suziqai', {
   loadFromLibrary: (fileName: string) => ipcRenderer.invoke(IPC.LIBRARY_LOAD, fileName),
   deleteFromLibrary: (fileName: string) => ipcRenderer.invoke(IPC.LIBRARY_DELETE, fileName),
 
+  // Element highlighting
+  highlightElement: (selector: string) => ipcRenderer.invoke('element:highlight', selector),
+  clearHighlight: () => ipcRenderer.invoke('element:clear-highlight'),
+
   // Playwright config
   savePlaywrightConfig: (config: any, projectPath: string) => ipcRenderer.invoke(IPC.PLAYWRIGHT_CONFIG_SAVE, config, projectPath),
 });

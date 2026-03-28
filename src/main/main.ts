@@ -273,6 +273,57 @@ function createWindow(): void {
     autopilotEnabled = enabled;
   });
 
+  // Element highlighting
+  ipcMain.removeHandler('element:highlight');
+  ipcMain.handle('element:highlight', async (_event, selector: string) => {
+    if (!browserView) return;
+    try {
+      const s = selector.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      await browserView.webContents.executeJavaScript(`
+        (function() {
+          document.querySelectorAll('[data-suziqai-highlight]').forEach(el => el.remove());
+          var sel = '${s}';
+          var el = null;
+          try {
+            // getByRole('role', { name: 'text' })
+            var m = sel.match(/^getByRole\\(['"](.+?)['"](?:,\\s*\\{\\s*name:\\s*['"](.+?)['"]\\s*\\})?\\)$/);
+            if (m) { var candidates = document.querySelectorAll('[role="'+m[1]+'"],'+m[1]); for (var i=0;i<candidates.length;i++) { if (!m[2] || candidates[i].textContent.trim().includes(m[2]) || (candidates[i].getAttribute('aria-label')||'').includes(m[2])) { el = candidates[i]; break; } } }
+            // getByText('text')
+            if (!el) { m = sel.match(/^getByText\\(['"](.+?)['"]\\)$/); if (m) { var tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); while(tw.nextNode()) { if (tw.currentNode.textContent.includes(m[1])) { el = tw.currentNode.parentElement; break; } } } }
+            // getByLabel('text')
+            if (!el) { m = sel.match(/^getByLabel\\(['"](.+?)['"]\\)$/); if (m) { var labels = document.querySelectorAll('label'); for (var i=0;i<labels.length;i++) { if (labels[i].textContent.includes(m[1])) { el = labels[i].control || labels[i].querySelector('input,select,textarea'); break; } } } }
+            // getByTestId('id')
+            if (!el) { m = sel.match(/^getByTestId\\(['"](.+?)['"]\\)$/); if (m) { el = document.querySelector('[data-testid="'+m[1]+'"]'); } }
+            // getByPlaceholder('text')
+            if (!el) { m = sel.match(/^getByPlaceholder\\(['"](.+?)['"]\\)$/); if (m) { el = document.querySelector('[placeholder="'+m[1]+'"]'); } }
+            // CSS fallback
+            if (!el) { el = document.querySelector(sel); }
+          } catch(e) {}
+          if (el) {
+            var rect = el.getBoundingClientRect();
+            var overlay = document.createElement('div');
+            overlay.setAttribute('data-suziqai-highlight', 'true');
+            overlay.style.cssText = 'position:fixed;left:'+rect.left+'px;top:'+rect.top+'px;width:'+rect.width+'px;height:'+rect.height+'px;border:2px solid #0969da;background:rgba(9,105,218,0.15);border-radius:3px;z-index:99999;pointer-events:none;transition:all 0.2s ease;';
+            document.body.appendChild(overlay);
+            el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }
+        })()
+      `);
+    } catch (err) {
+      console.error('[suziQai] Highlight failed:', err);
+    }
+  });
+
+  ipcMain.removeHandler('element:clear-highlight');
+  ipcMain.handle('element:clear-highlight', async () => {
+    if (!browserView) return;
+    try {
+      await browserView.webContents.executeJavaScript(`
+        document.querySelectorAll('[data-suziqai-highlight]').forEach(el => el.remove());
+      `);
+    } catch {}
+  });
+
   // Helper: capture screenshot from BrowserView as Buffer
   async function captureBrowserViewScreenshot(): Promise<Buffer> {
     if (!browserView) return Buffer.alloc(0);

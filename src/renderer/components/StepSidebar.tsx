@@ -252,6 +252,7 @@ export function StepSidebar({
                     onAddBelow={() => setComposerAt(idx + 1)}
                     onMoveUp={idx > 0 ? () => onMoveStep(idx, 'up') : undefined}
                     onMoveDown={idx < activeBlock.steps.length - 1 ? () => onMoveStep(idx, 'down') : undefined}
+                    onHighlight={'selector' in step.action && step.action.selector ? () => window.suziqai.highlightElement((step.action as any).selector) : undefined}
                   />
                 );
               })}

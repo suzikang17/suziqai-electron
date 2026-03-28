@@ -26,6 +26,7 @@ interface StepItemProps {
   onAddBelow?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  onHighlight?: () => void;
   onToggle?: () => void;
   isExpanded?: boolean;
   childCount?: number;
@@ -39,7 +40,7 @@ const tinyBtn: React.CSSProperties = {
   alignItems: 'center',
 };
 
-export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onMoveUp, onMoveDown, onToggle, isExpanded, childCount }: StepItemProps) {
+export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onMoveUp, onMoveDown, onHighlight, onToggle, isExpanded, childCount }: StepItemProps) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -212,7 +213,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
 
       {/* Step row */}
       <div
-        onClick={() => onToggle ? onToggle() : setExpanded(!expanded)}
+        onClick={() => { if (onToggle) onToggle(); else setExpanded(!expanded); if (onHighlight) onHighlight(); }}
         style={{
           display: 'flex',
           alignItems: 'baseline',
