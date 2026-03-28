@@ -758,6 +758,7 @@ export function App() {
               if (path) window.suziqai.exportTest(currentSuite.id, path);
             });
           }}
+          isDirty={isDirty}
           isAutopilot={isAutopilot}
           onAutopilotToggle={() => { const next = !isAutopilot; setIsAutopilot(next); window.suziqai.setAutopilot(next); }}
           sidebarMode={sidebarMode}

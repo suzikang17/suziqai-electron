@@ -55,6 +55,7 @@ interface StepSidebarProps {
   onRunGroup: (stepIds: string[]) => void;
   onMoveStep: (stepIndex: number, direction: 'up' | 'down') => void;
   onExport: () => void;
+  isDirty: boolean;
   isAutopilot: boolean;
   onAutopilotToggle: () => void;
   sidebarMode: 'session' | 'library';
@@ -98,6 +99,7 @@ export function StepSidebar({
   onRunGroup,
   onMoveStep,
   onExport,
+  isDirty,
   isAutopilot,
   onAutopilotToggle,
   sidebarMode,
@@ -675,7 +677,7 @@ export function StepSidebar({
                 letterSpacing: 0.3,
               }}
             >
-              Save to Library
+              {isDirty ? 'Save •' : 'Save to Library'}
             </button>
           </div>
         </>
@@ -732,7 +734,7 @@ export function StepSidebar({
                   />
                 ) : (
                   <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {activeSuite.fileName}.spec.ts
+                    {activeSuite.fileName}.spec.ts{isDirty ? ' •' : ''}
                   </span>
                 )}
               </div>

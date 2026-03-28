@@ -53,6 +53,7 @@ const defaultProps = {
   onRunGroup: vi.fn(),
   onMoveStep: vi.fn(),
   onExport: vi.fn(),
+  isDirty: false,
   isAutopilot: false,
   onAutopilotToggle: vi.fn(),
   sidebarMode: 'session' as const,
