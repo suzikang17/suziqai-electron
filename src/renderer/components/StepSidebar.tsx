@@ -506,10 +506,13 @@ export function StepSidebar({
 
           {/* Run All + Autopilot */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexShrink: 0 }}>
-            <button
-              onClick={onAutopilotToggle}
+            <label
               style={{
                 flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
                 background: isAutopilot ? 'var(--accent-green)' : 'var(--bg-tertiary)',
                 color: isAutopilot ? '#ffffff' : 'var(--text-secondary)',
                 borderRadius: 6,
@@ -517,10 +520,17 @@ export function StepSidebar({
                 fontSize: 12,
                 fontWeight: 'bold',
                 border: isAutopilot ? 'none' : '1px solid var(--border)',
+                cursor: 'pointer',
               }}
             >
-              {isAutopilot ? '⚡ ON' : '⚡ Autopilot'}
-            </button>
+              <input
+                type="checkbox"
+                checked={isAutopilot}
+                onChange={onAutopilotToggle}
+                style={{ accentColor: 'white', cursor: 'pointer' }}
+              />
+              Autopilot
+            </label>
             <button
               onClick={onRunAll}
               style={{
