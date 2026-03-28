@@ -231,6 +231,7 @@ export function StepSidebar({
                 onAddBelow={() => setComposerAt(group.actionIndex + 1)}
                 onMoveUp={group.actionIndex > 0 ? () => onMoveStep(group.actionIndex, 'up') : undefined}
                 onMoveDown={group.actionIndex < activeBlock.steps.length - 1 ? () => onMoveStep(group.actionIndex, 'down') : undefined}
+                onHighlight={'selector' in actionStep.action ? () => window.suziqai.highlightElement((actionStep.action as any).selector) : undefined}
                 onToggle={hasAssertions ? () => toggleGroup(group.actionIndex) : undefined}
                 isExpanded={!isCollapsed}
                 childCount={assertionIndices.length}
@@ -343,6 +344,9 @@ export function StepSidebar({
               : null;
             return (
               <div style={{ marginBottom: 8, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Device</span>
+                </div>
                 <select
                   value={previewDevice}
                   onChange={(e) => onPreviewDeviceChange(e.target.value)}
