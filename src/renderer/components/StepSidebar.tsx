@@ -406,8 +406,36 @@ export function StepSidebar({
             <div style={{ marginBottom: 8, flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hooks</span>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const hookType = e.target.value as HookType;
+                    if (hookType) {
+                      setExpandedHooks(prev => new Set([...prev, hookType]));
+                      setHookComposerOpen(hookType);
+                    }
+                    e.target.value = '';
+                  }}
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    color: 'var(--accent-blue, #0969da)',
+                    borderRadius: 3,
+                    padding: '2px 6px',
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    border: 'none',
+                  }}
+                >
+                  <option value="">+ Add</option>
+                  {(['beforeAll', 'beforeEach', 'afterEach', 'afterAll'] as HookType[])
+                    .filter(h => activeSuite[h].length === 0 && hookComposerOpen !== h)
+                    .map(h => <option key={h} value={h}>{h}</option>)
+                  }
+                </select>
               </div>
-              {(['beforeAll', 'beforeEach', 'afterEach', 'afterAll'] as HookType[]).map(hookType => {
+              {(['beforeAll', 'beforeEach', 'afterEach', 'afterAll'] as HookType[])
+                .filter(hookType => activeSuite[hookType].length > 0 || hookComposerOpen === hookType)
+                .map(hookType => {
                 const steps = activeSuite[hookType];
                 const isExpanded = expandedHooks.has(hookType);
                 return (
@@ -421,12 +449,12 @@ export function StepSidebar({
                         padding: '4px 8px',
                         borderRadius: 3,
                         cursor: 'pointer',
-                        borderLeft: `2px solid ${steps.length > 0 ? 'var(--accent-blue, #0969da)' : 'var(--border)'}`,
+                        borderLeft: '2px solid var(--accent-blue, #0969da)',
                         background: isExpanded ? 'var(--bg-tertiary)' : 'transparent',
                         marginBottom: 2,
                       }}
                     >
-                      <span style={{ fontSize: 11, color: steps.length > 0 ? 'var(--accent-blue, #0969da)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ fontSize: 11, color: 'var(--accent-blue, #0969da)', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span>{hookType}</span>
                       </span>
                       <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
@@ -481,7 +509,24 @@ export function StepSidebar({
             {renderStepGroups()}
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10, flexShrink: 0 }}>
+            <button
+              onClick={onAutopilotToggle}
+              style={{
+                width: '100%',
+                background: isAutopilot ? 'var(--accent-green)' : 'var(--bg-tertiary)',
+                color: isAutopilot ? '#ffffff' : 'var(--text-secondary)',
+                borderRadius: 6,
+                padding: '8px 0',
+                fontSize: 12,
+                fontWeight: 'bold',
+                letterSpacing: 0.3,
+                border: isAutopilot ? 'none' : '1px solid var(--border)',
+              }}
+            >
+              {isAutopilot ? '⚡ Autopilot ON' : '⚡ Autopilot'}
+            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
             <button
               onClick={onRunAll}
               style={{
@@ -513,6 +558,7 @@ export function StepSidebar({
             >
               Save to Library
             </button>
+            </div>
           </div>
         </>
       ) : (

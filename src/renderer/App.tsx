@@ -671,6 +671,8 @@ export function App() {
               if (path) window.suziqai.exportTest(currentSuite.id, path);
             });
           }}
+          isAutopilot={isAutopilot}
+          onAutopilotToggle={() => { const next = !isAutopilot; setIsAutopilot(next); window.suziqai.setAutopilot(next); }}
           sidebarMode={sidebarMode}
           onSidebarModeChange={setSidebarMode}
           onSaveTest={saveTest}
@@ -719,8 +721,6 @@ export function App() {
             setIsRecording(!isRecording);
           }}
           onPickToggle={togglePicker}
-          isAutopilot={isAutopilot}
-          onAutopilotToggle={() => { const next = !isAutopilot; setIsAutopilot(next); window.suziqai.setAutopilot(next); }}
         />
         {/* Browser viewport area — BrowserView is positioned here by main process */}
         <div
