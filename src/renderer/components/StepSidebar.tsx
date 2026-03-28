@@ -268,7 +268,7 @@ export function StepSidebar({
         <>
           {/* Active suite header */}
           {activeSuite && (
-            <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 8, flexShrink: 0 }}>
               {/* Suite name row */}
               <div
                 onDoubleClick={(e) => {
@@ -376,7 +376,7 @@ export function StepSidebar({
             </div>
           )}
           {/* Test block list */}
-          <div style={{ marginBottom: 8 }}>
+          <div style={{ marginBottom: 8, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tests</span>
               <button
@@ -465,7 +465,7 @@ export function StepSidebar({
 
           {/* Hooks section */}
           {activeSuite && (
-            <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 8, flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hooks</span>
               </div>

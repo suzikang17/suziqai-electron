@@ -25,7 +25,7 @@ export function App() {
   const [isPicking, setIsPicking] = useState(false);
   const [pickedSelectors, setPickedSelectors] = useState<Array<{ type: string; selector: string; confidence: string }> | null>(null);
   const [pickedElement, setPickedElement] = useState<{ tag: string; text: string; id: string | null } | null>(null);
-  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [sidebarWidth, setSidebarWidth] = useState(340);
   const [chatHeight, setChatHeight] = useState(200);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null);
@@ -333,8 +333,9 @@ export function App() {
       if (data) {
         if (data.messages) setMessages(data.messages);
         if (data.suites) {
-          // New format
-          setSuites(data.suites);
+          // New format — still migrate to fill in any missing fields (e.g. fileName)
+          const migrated = data.suites.map((s: any) => migrateToSuite(s));
+          setSuites(migrated);
           setActiveSuiteId(data.activeSuiteId || data.suites[0]?.id || 'suite-1');
           setActiveBlockId(data.activeBlockId || data.suites[0]?.tests[0]?.id || 'block-1');
         } else if (data.tests) {
