@@ -173,225 +173,6 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
   const assertNeedsExpected = editAssertType === 'text' || editAssertType === 'url' || editAssertType === 'value' || editAssertType === 'count';
   const showValue = editType === 'fill' || (editType === 'assert' && assertNeedsExpected);
 
-  if (editing) {
-    return (
-      <div style={{
-        padding: 10,
-        background: 'var(--bg-tertiary)',
-        borderRadius: 6,
-        border: '1px solid var(--border)',
-        margin: '2px 0',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-      }}>
-        {/* Mode toggle */}
-        <div style={{ display: 'flex', gap: 0, background: 'var(--bg-primary)', borderRadius: 4, padding: 2 }}>
-          {(['form', 'code'] as const).map(m => (
-            <button
-              key={m}
-              onClick={() => {
-                if (m === 'code' && editorMode === 'form') syncFormToCode();
-                if (m === 'form' && editorMode === 'code') syncCodeToForm();
-                setEditorMode(m);
-              }}
-              style={{
-                flex: 1,
-                padding: '3px 0',
-                fontSize: 10,
-                fontWeight: 600,
-                color: editorMode === m ? 'var(--text-primary)' : 'var(--text-muted)',
-                background: editorMode === m ? 'var(--bg-tertiary)' : 'transparent',
-                borderRadius: 3,
-                cursor: 'pointer',
-              }}
-            >
-              {m === 'form' ? 'Form' : 'Code'}
-            </button>
-          ))}
-        </div>
-
-        {/* Label */}
-        <div>
-          <div style={labelStyle}>Description</div>
-          <input
-            value={editLabel}
-            onChange={(e) => setEditLabel(e.target.value)}
-            style={fieldStyle}
-            autoFocus
-            onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }}
-          />
-        </div>
-
-        {editorMode === 'form' ? (
-          <>
-            {/* Action / Assertion toggle */}
-            <div>
-              <div style={labelStyle}>Category</div>
-              <div style={{ display: 'flex', gap: 0, background: 'var(--bg-primary)', borderRadius: 4, padding: 2 }}>
-                {(['action', 'assertion'] as const).map(cat => {
-                  const isActive = cat === 'action' ? editType !== 'assert' : editType === 'assert';
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        if (cat === 'action' && editType === 'assert') setEditType('click');
-                        if (cat === 'assertion' && editType !== 'assert') setEditType('assert');
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '4px 0',
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                        background: isActive ? 'var(--bg-tertiary)' : 'transparent',
-                        borderRadius: 3,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {cat === 'action' ? 'Action' : 'Assertion'}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Action type */}
-            {editType !== 'assert' && (
-              <div>
-                <div style={labelStyle}>Action</div>
-                <select
-                  value={editType}
-                  onChange={(e) => setEditType(e.target.value as any)}
-                  style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}
-                >
-                  <option value="navigate">Navigate</option>
-                  <option value="click">Click</option>
-                  <option value="fill">Fill</option>
-                  <option value="screenshot">Screenshot</option>
-                  <option value="waitFor">Wait For</option>
-                </select>
-              </div>
-            )}
-
-            {/* Assertion type */}
-            {editType === 'assert' && (
-              <div>
-                <div style={labelStyle}>Assertion</div>
-                <select
-                  value={editAssertType}
-                  onChange={(e) => setEditAssertType(e.target.value as any)}
-                  style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}
-                >
-                  <optgroup label="Visibility">
-                    <option value="visible">Visible</option>
-                    <option value="hidden">Hidden</option>
-                  </optgroup>
-                  <optgroup label="Content">
-                    <option value="text">Text Contains</option>
-                    <option value="value">Input Value</option>
-                    <option value="empty">Empty</option>
-                    <option value="count">Element Count</option>
-                  </optgroup>
-                  <optgroup label="State">
-                    <option value="enabled">Enabled</option>
-                    <option value="disabled">Disabled</option>
-                    <option value="checked">Checked</option>
-                    <option value="unchecked">Unchecked</option>
-                    <option value="focused">Focused</option>
-                    <option value="editable">Editable</option>
-                  </optgroup>
-                  <optgroup label="Page">
-                    <option value="url">URL Matches</option>
-                  </optgroup>
-                </select>
-              </div>
-            )}
-
-            {/* Selector / URL */}
-            {showSelector && (
-              <div>
-                <div style={labelStyle}>{editType === 'navigate' ? 'URL' : 'Selector'}</div>
-                <input
-                  value={editSelector}
-                  onChange={(e) => setEditSelector(e.target.value)}
-                  placeholder={editType === 'navigate' ? 'https://...' : "getByRole('button', { name: '...' })"}
-                  style={fieldStyle}
-                  onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }}
-                />
-              </div>
-            )}
-
-            {/* Value / Expected */}
-            {showValue && (
-              <div>
-                <div style={labelStyle}>{editType === 'fill' ? 'Value' : 'Expected'}</div>
-                <input
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  placeholder={editType === 'fill' ? 'Text to type...' : 'Expected value...'}
-                  style={fieldStyle}
-                  onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }}
-                />
-              </div>
-            )}
-          </>
-        ) : (
-          /* Code editor */
-          <div>
-            <div style={labelStyle}>Playwright Code</div>
-            <textarea
-              value={rawCode}
-              onChange={(e) => setRawCode(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }}
-              spellCheck={false}
-              style={{
-                ...fieldStyle,
-                minHeight: 60,
-                resize: 'vertical',
-                lineHeight: 1.5,
-                tabSize: 2,
-              }}
-              placeholder={"goto('https://...')\nclick('selector')\nfill('selector', 'value')\nexpect(selector).visible('expected')"}
-            />
-            <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 3 }}>
-              Supported: goto, click, fill, waitFor, screenshot, expect(...).visible/hidden/text/url/value
-            </div>
-          </div>
-        )}
-
-        {/* Timeout */}
-        <div>
-          <div style={labelStyle}>Timeout (ms)</div>
-          <input
-            type="number"
-            value={editTimeout}
-            onChange={(e) => setEditTimeout(parseInt(e.target.value) || 5000)}
-            min={500}
-            step={500}
-            style={{ ...fieldStyle, width: 120 }}
-          />
-        </div>
-
-        {/* Buttons */}
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-          <button
-            onClick={() => setEditing(false)}
-            style={{ background: 'var(--bg-primary)', color: 'var(--text-muted)', borderRadius: 4, padding: '4px 12px', fontSize: 10, border: '1px solid var(--border)' }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={saveEdit}
-            style={{ background: 'var(--accent-green)', color: '#fff', borderRadius: 4, padding: '4px 12px', fontSize: 10, fontWeight: 'bold' }}
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -500,6 +281,99 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
       {step.error && (
         <div style={{ color: 'var(--accent-red)', fontSize: 10, paddingLeft: isAssertion ? 42 : 18, marginTop: -2, marginBottom: 2 }}>
           {step.error}
+        </div>
+      )}
+
+      {/* Inline editor */}
+      {editing && (
+        <div style={{
+          padding: 8,
+          margin: '4px 0',
+          background: 'var(--bg-tertiary)',
+          borderRadius: 4,
+          border: '1px solid var(--border)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}>
+          <div style={{ display: 'flex', gap: 0, background: 'var(--bg-primary)', borderRadius: 4, padding: 2 }}>
+            {(['form', 'code'] as const).map(m => (
+              <button key={m} onClick={() => { if (m === 'code' && editorMode === 'form') syncFormToCode(); if (m === 'form' && editorMode === 'code') syncCodeToForm(); setEditorMode(m); }}
+                style={{ flex: 1, padding: '3px 0', fontSize: 10, fontWeight: 600, color: editorMode === m ? 'var(--text-primary)' : 'var(--text-muted)', background: editorMode === m ? 'var(--bg-tertiary)' : 'transparent', borderRadius: 3, cursor: 'pointer' }}>
+                {m === 'form' ? 'Form' : 'Code'}
+              </button>
+            ))}
+          </div>
+          <div>
+            <div style={labelStyle}>Description</div>
+            <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} style={fieldStyle} autoFocus onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }} />
+          </div>
+          {editorMode === 'form' ? (
+            <>
+              <div>
+                <div style={labelStyle}>Category</div>
+                <div style={{ display: 'flex', gap: 0, background: 'var(--bg-primary)', borderRadius: 4, padding: 2 }}>
+                  {(['action', 'assertion'] as const).map(cat => {
+                    const isActive = cat === 'action' ? editType !== 'assert' : editType === 'assert';
+                    return (<button key={cat} onClick={() => { if (cat === 'action' && editType === 'assert') setEditType('click'); if (cat === 'assertion' && editType !== 'assert') setEditType('assert'); }}
+                      style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, color: isActive ? 'var(--text-primary)' : 'var(--text-muted)', background: isActive ? 'var(--bg-tertiary)' : 'transparent', borderRadius: 3, cursor: 'pointer' }}>
+                      {cat === 'action' ? 'Action' : 'Assertion'}
+                    </button>);
+                  })}
+                </div>
+              </div>
+              {editType !== 'assert' && (
+                <div>
+                  <div style={labelStyle}>Action</div>
+                  <select value={editType} onChange={(e) => setEditType(e.target.value as any)} style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}>
+                    <option value="navigate">Navigate</option>
+                    <option value="click">Click</option>
+                    <option value="fill">Fill</option>
+                    <option value="screenshot">Screenshot</option>
+                    <option value="waitFor">Wait For</option>
+                  </select>
+                </div>
+              )}
+              {editType === 'assert' && (
+                <div>
+                  <div style={labelStyle}>Assertion</div>
+                  <select value={editAssertType} onChange={(e) => setEditAssertType(e.target.value as any)} style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}>
+                    <optgroup label="Visibility"><option value="visible">Visible</option><option value="hidden">Hidden</option></optgroup>
+                    <optgroup label="Content"><option value="text">Text Contains</option><option value="value">Input Value</option><option value="empty">Empty</option><option value="count">Element Count</option></optgroup>
+                    <optgroup label="State"><option value="enabled">Enabled</option><option value="disabled">Disabled</option><option value="checked">Checked</option><option value="unchecked">Unchecked</option><option value="focused">Focused</option><option value="editable">Editable</option></optgroup>
+                    <optgroup label="Page"><option value="url">URL Matches</option></optgroup>
+                  </select>
+                </div>
+              )}
+              {showSelector && (
+                <div>
+                  <div style={labelStyle}>{editType === 'navigate' ? 'URL' : 'Selector'}</div>
+                  <input value={editSelector} onChange={(e) => setEditSelector(e.target.value)} placeholder={editType === 'navigate' ? 'https://...' : "getByRole('button', { name: '...' })"} style={fieldStyle} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }} />
+                </div>
+              )}
+              {showValue && (
+                <div>
+                  <div style={labelStyle}>{editType === 'fill' ? 'Value' : 'Expected'}</div>
+                  <input value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder={editType === 'fill' ? 'Text to type...' : 'Expected value...'} style={fieldStyle} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }} />
+                </div>
+              )}
+            </>
+          ) : (
+            <div>
+              <div style={labelStyle}>Playwright Code</div>
+              <textarea value={rawCode} onChange={(e) => setRawCode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }} spellCheck={false}
+                style={{ ...fieldStyle, minHeight: 60, resize: 'vertical', lineHeight: 1.5, tabSize: 2 }}
+                placeholder={"goto('https://...')\nclick('selector')\nfill('selector', 'value')"} />
+            </div>
+          )}
+          <div>
+            <div style={labelStyle}>Timeout (ms)</div>
+            <input type="number" value={editTimeout} onChange={(e) => setEditTimeout(parseInt(e.target.value) || 5000)} min={500} step={500} style={{ ...fieldStyle, width: 120 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+            <button onClick={() => setEditing(false)} style={{ background: 'var(--bg-primary)', color: 'var(--text-muted)', borderRadius: 4, padding: '4px 12px', fontSize: 10, border: '1px solid var(--border)' }}>Cancel</button>
+            <button onClick={saveEdit} style={{ background: 'var(--accent-green)', color: '#fff', borderRadius: 4, padding: '4px 12px', fontSize: 10, fontWeight: 'bold' }}>Save</button>
+          </div>
         </div>
       )}
     </div>
