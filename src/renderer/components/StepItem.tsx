@@ -225,31 +225,59 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
 
         {editorMode === 'form' ? (
           <>
-            {/* Type selector */}
+            {/* Action / Assertion toggle */}
             <div>
-              <div style={labelStyle}>Type</div>
-              <select
-                value={editType}
-                onChange={(e) => setEditType(e.target.value as any)}
-                style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}
-              >
-                <optgroup label="Actions">
+              <div style={labelStyle}>Category</div>
+              <div style={{ display: 'flex', gap: 0, background: 'var(--bg-primary)', borderRadius: 4, padding: 2 }}>
+                {(['action', 'assertion'] as const).map(cat => {
+                  const isActive = cat === 'action' ? editType !== 'assert' : editType === 'assert';
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        if (cat === 'action' && editType === 'assert') setEditType('click');
+                        if (cat === 'assertion' && editType !== 'assert') setEditType('assert');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '4px 0',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                        background: isActive ? 'var(--bg-tertiary)' : 'transparent',
+                        borderRadius: 3,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {cat === 'action' ? 'Action' : 'Assertion'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action type */}
+            {editType !== 'assert' && (
+              <div>
+                <div style={labelStyle}>Action</div>
+                <select
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value as any)}
+                  style={{ ...fieldStyle, fontFamily: 'var(--font-sans)' }}
+                >
                   <option value="navigate">Navigate</option>
                   <option value="click">Click</option>
                   <option value="fill">Fill</option>
                   <option value="screenshot">Screenshot</option>
                   <option value="waitFor">Wait For</option>
-                </optgroup>
-                <optgroup label="Assertions">
-                  <option value="assert">Assert</option>
-                </optgroup>
-              </select>
-            </div>
+                </select>
+              </div>
+            )}
 
-            {/* Assert type */}
+            {/* Assertion type */}
             {editType === 'assert' && (
               <div>
-                <div style={labelStyle}>Assertion Type</div>
+                <div style={labelStyle}>Assertion</div>
                 <select
                   value={editAssertType}
                   onChange={(e) => setEditAssertType(e.target.value as any)}
