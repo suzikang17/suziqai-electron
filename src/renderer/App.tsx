@@ -36,7 +36,7 @@ export function App() {
   const [playwrightConfig, setPlaywrightConfig] = useState<PlaywrightConfig>(() =>
     defaultPlaywrightConfig('http://localhost:3000', './tests')
   );
-  const [previewDevice, setPreviewDevice] = useState<string>('default');
+  const [previewDevice, setPreviewDevice] = useState<string>('Desktop Chrome');
 
   const DEVICE_VIEWPORTS: Record<string, { width: number; height: number }> = {
     'iPhone 15 Pro': { width: 393, height: 659 },

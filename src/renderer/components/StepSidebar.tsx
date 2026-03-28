@@ -391,12 +391,11 @@ export function StepSidebar({
                       border: '1px solid var(--border)',
                     }}
                   >
-                    <option value="default">Default (full space)</option>
                     {configProjects.map(project => {
                       const vp = project.viewport || (project.device ? DEVICE_VIEWPORTS[project.device] : null);
                       return (
                         <option key={project.name} value={project.name}>
-                          {project.name}{vp ? ` (${vp.width}\u00d7${vp.height})` : ''}
+                          {project.name}{vp ? ` (${vp.width}×${vp.height})` : ''}
                         </option>
                       );
                     })}
@@ -408,7 +407,7 @@ export function StepSidebar({
                 )}
                 {activeViewport && (
                   <span style={{ fontSize: 9, color: 'var(--text-muted)', display: 'block', marginTop: 2, textAlign: 'center' }}>
-                    {activeViewport.width} \u00d7 {activeViewport.height}
+                    {activeViewport.width} × {activeViewport.height}
                   </span>
                 )}
               </div>
