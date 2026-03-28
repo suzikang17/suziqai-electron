@@ -115,21 +115,33 @@
   },
   "hotPaths": [
     {
+      "path": "src/renderer/components/StepSidebar.tsx",
+      "accessCount": 73,
+      "lastAccessed": 1774717586549,
+      "type": "file"
+    },
+    {
+      "path": "src/renderer/App.tsx",
+      "accessCount": 54,
+      "lastAccessed": 1774717327864,
+      "type": "file"
+    },
+    {
       "path": "src/main/main.ts",
       "accessCount": 48,
       "lastAccessed": 1774652360919,
       "type": "file"
     },
     {
-      "path": "src/renderer/App.tsx",
-      "accessCount": 34,
-      "lastAccessed": 1774714175475,
+      "path": "src/renderer/components/StepItem.tsx",
+      "accessCount": 33,
+      "lastAccessed": 1774717451337,
       "type": "file"
     },
     {
-      "path": "src/renderer/components/StepSidebar.tsx",
-      "accessCount": 22,
-      "lastAccessed": 1774714186908,
+      "path": "src/shared/types.ts",
+      "accessCount": 20,
+      "lastAccessed": 1774717181740,
       "type": "file"
     },
     {
@@ -139,16 +151,22 @@
       "type": "file"
     },
     {
-      "path": "src/shared/types.ts",
-      "accessCount": 14,
-      "lastAccessed": 1774647261207,
+      "path": "tests/renderer/StepSidebar.test.tsx",
+      "accessCount": 16,
+      "lastAccessed": 1774717618943,
       "type": "file"
     },
     {
       "path": "",
-      "accessCount": 13,
-      "lastAccessed": 1774647443697,
+      "accessCount": 15,
+      "lastAccessed": 1774717188091,
       "type": "directory"
+    },
+    {
+      "path": "src/main/test-library.ts",
+      "accessCount": 13,
+      "lastAccessed": 1774717102481,
+      "type": "file"
     },
     {
       "path": "src/main/browser-actions.ts",
@@ -157,10 +175,16 @@
       "type": "file"
     },
     {
-      "path": "tests/renderer/StepSidebar.test.tsx",
-      "accessCount": 9,
-      "lastAccessed": 1774714181612,
+      "path": "tests/main/test-library.test.ts",
+      "accessCount": 8,
+      "lastAccessed": 1774717116940,
       "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 7,
+      "lastAccessed": 1774717196020,
+      "type": "directory"
     },
     {
       "path": "docs/superpowers/plans/2026-03-25-suziqai-implementation.md",
@@ -181,10 +205,10 @@
       "type": "file"
     },
     {
-      "path": "src",
+      "path": "src/renderer/types.ts",
       "accessCount": 6,
-      "lastAccessed": 1774647068588,
-      "type": "directory"
+      "lastAccessed": 1774717207476,
+      "type": "file"
     },
     {
       "path": "tests/main/claude-session.test.ts",
@@ -205,21 +229,15 @@
       "type": "file"
     },
     {
-      "path": "tests/main/test-library.test.ts",
-      "accessCount": 5,
-      "lastAccessed": 1774647149721,
-      "type": "file"
-    },
-    {
-      "path": "src/main/test-library.ts",
-      "accessCount": 5,
-      "lastAccessed": 1774647264364,
-      "type": "file"
-    },
-    {
       "path": "tests/main/library-ipc.test.ts",
       "accessCount": 5,
       "lastAccessed": 1774652377916,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/utils/generateSpec.ts",
+      "accessCount": 5,
+      "lastAccessed": 1774716998036,
       "type": "file"
     },
     {
@@ -241,15 +259,9 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/types.ts",
+      "path": "tests/shared/types.test.ts",
       "accessCount": 4,
-      "lastAccessed": 1774647302656,
-      "type": "file"
-    },
-    {
-      "path": "src/renderer/components/StepItem.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1774714066059,
+      "lastAccessed": 1774716830880,
       "type": "file"
     },
     {
@@ -263,6 +275,12 @@
       "accessCount": 3,
       "lastAccessed": 1774714035693,
       "type": "file"
+    },
+    {
+      "path": "src/renderer",
+      "accessCount": 3,
+      "lastAccessed": 1774717458006,
+      "type": "directory"
     },
     {
       "path": "tests/main/browser-manager.test.ts",
@@ -293,12 +311,6 @@
       "accessCount": 2,
       "lastAccessed": 1774647149669,
       "type": "file"
-    },
-    {
-      "path": "src/renderer",
-      "accessCount": 2,
-      "lastAccessed": 1774713875447,
-      "type": "directory"
     },
     {
       "path": "docs/superpowers/specs/2026-03-25-suziqai-design.md",
@@ -379,12 +391,6 @@
       "type": "file"
     },
     {
-      "path": "tests/shared/types.test.ts",
-      "accessCount": 1,
-      "lastAccessed": 1774646833880,
-      "type": "file"
-    },
-    {
       "path": "tsconfig.json",
       "accessCount": 1,
       "lastAccessed": 1774646940974,
@@ -401,6 +407,12 @@
       "accessCount": 1,
       "lastAccessed": 1774713972603,
       "type": "directory"
+    },
+    {
+      "path": ".superpowers/brainstorm/46460-1774714956/content/data-model.html",
+      "accessCount": 1,
+      "lastAccessed": 1774714995295,
+      "type": "file"
     }
   ],
   "userDirectives": []

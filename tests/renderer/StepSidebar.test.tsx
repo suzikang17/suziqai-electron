@@ -1,25 +1,41 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { StepSidebar } from '../../src/renderer/components/StepSidebar';
-import type { TestCase } from '../../src/shared/types';
+import type { TestSuite } from '../../src/shared/types';
 
-const mockTest: TestCase = {
-  id: '1',
-  name: 'Login Test',
-  steps: [
-    { id: 's1', label: 'Navigate to /login', action: { type: 'navigate', url: '/login' }, status: 'passed' },
-    { id: 's2', label: 'Fill email', action: { type: 'fill', selector: '#email', value: 'test@test.com' }, status: 'running' },
-    { id: 's3', label: 'Click Sign In', action: { type: 'click', selector: 'button' }, status: 'pending' },
+const mockSuite: TestSuite = {
+  id: 'suite-1',
+  name: 'Login Suite',
+  beforeEach: [
+    { id: 'be1', label: 'Navigate to /login', action: { type: 'navigate', url: '/login' }, status: 'pending' },
+  ],
+  tests: [
+    {
+      id: 'block-1',
+      name: 'Login Test',
+      steps: [
+        { id: 's1', label: 'Navigate to /login', action: { type: 'navigate', url: '/login' }, status: 'passed' },
+        { id: 's2', label: 'Fill email', action: { type: 'fill', selector: '#email', value: 'test@test.com' }, status: 'running' },
+        { id: 's3', label: 'Click Sign In', action: { type: 'click', selector: 'button' }, status: 'pending' },
+      ],
+    },
   ],
 };
 
 const defaultProps = {
-  tests: [mockTest],
-  activeTestId: '1',
-  onSwitchTest: vi.fn(),
-  onCreateTest: vi.fn(),
-  onRenameTest: vi.fn(),
-  onDeleteTest: vi.fn(),
+  suites: [mockSuite],
+  activeSuiteId: 'suite-1',
+  activeBlockId: 'block-1',
+  onSwitchSuite: vi.fn(),
+  onSwitchBlock: vi.fn(),
+  onCreateSuite: vi.fn(),
+  onCreateBlock: vi.fn(),
+  onRenameSuite: vi.fn(),
+  onRenameBlock: vi.fn(),
+  onDeleteSuite: vi.fn(),
+  onDeleteBlock: vi.fn(),
+  onAddBeforeEachStep: vi.fn(),
+  onRemoveBeforeEachStep: vi.fn(),
   onAcceptStep: vi.fn(),
   onDenyStep: vi.fn(),
   onResetStep: vi.fn(),
@@ -64,16 +80,51 @@ describe('StepSidebar', () => {
     fireEvent.click(screen.getByText('Save to Library'));
     expect(onSaveTest).toHaveBeenCalledOnce();
   });
+
+  it('renders beforeEach section', () => {
+    render(<StepSidebar {...defaultProps} />);
+    expect(screen.getByText(/beforeEach/)).toBeTruthy();
+    expect(screen.getByText(/1 step/)).toBeTruthy();
+  });
+
+  it('renders test block sections', () => {
+    render(<StepSidebar {...defaultProps} />);
+    expect(screen.getByText(/test: Login Test/)).toBeTruthy();
+    expect(screen.getByText(/3 steps/)).toBeTruthy();
+  });
+
+  it('calls onCreateBlock when + New Test button is clicked', () => {
+    const onCreateBlock = vi.fn();
+    render(<StepSidebar {...defaultProps} onCreateBlock={onCreateBlock} />);
+
+    fireEvent.click(screen.getByText('+ New Test'));
+    expect(onCreateBlock).toHaveBeenCalledOnce();
+  });
+
+  it('calls onCreateSuite when + New Suite button is clicked in library tab', () => {
+    const onCreateSuite = vi.fn();
+    render(<StepSidebar {...defaultProps} sidebarMode="library" onCreateSuite={onCreateSuite} />);
+
+    fireEvent.click(screen.getByText('+ New Suite'));
+    expect(onCreateSuite).toHaveBeenCalledOnce();
+  });
 });
 
 describe('Library toggle', () => {
   const baseProps = {
-    tests: [{ id: '1', name: 'Test 1', steps: [] }],
-    activeTestId: '1',
-    onSwitchTest: vi.fn(),
-    onCreateTest: vi.fn(),
-    onRenameTest: vi.fn(),
-    onDeleteTest: vi.fn(),
+    suites: [{ id: 'suite-1', name: 'Suite 1', beforeEach: [], tests: [{ id: 'block-1', name: 'Test 1', steps: [] }] }],
+    activeSuiteId: 'suite-1',
+    activeBlockId: 'block-1',
+    onSwitchSuite: vi.fn(),
+    onSwitchBlock: vi.fn(),
+    onCreateSuite: vi.fn(),
+    onCreateBlock: vi.fn(),
+    onRenameSuite: vi.fn(),
+    onRenameBlock: vi.fn(),
+    onDeleteSuite: vi.fn(),
+    onDeleteBlock: vi.fn(),
+    onAddBeforeEachStep: vi.fn(),
+    onRemoveBeforeEachStep: vi.fn(),
     onAcceptStep: vi.fn(),
     onDenyStep: vi.fn(),
     onResetStep: vi.fn(),
@@ -81,9 +132,9 @@ describe('Library toggle', () => {
     onInsertStep: vi.fn(),
     onInsertPrompt: vi.fn(),
     onRunAll: vi.fn(),
-  onRunActAndAssert: vi.fn(),
-  onRunGroup: vi.fn(),
-  onReorderStep: vi.fn(),
+    onRunActAndAssert: vi.fn(),
+    onRunGroup: vi.fn(),
+    onReorderStep: vi.fn(),
     onExport: vi.fn(),
     sidebarMode: 'session' as const,
     onSidebarModeChange: vi.fn(),

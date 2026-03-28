@@ -310,103 +310,64 @@ export function StepSidebar({
 
       {sidebarMode === 'session' ? (
         <>
-          {/* Suite tabs */}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ color: 'var(--accent-red)', fontWeight: 'bold', fontSize: 13 }}>Suites</span>
-              <button
-                onClick={onCreateSuite}
+          {/* Active suite header */}
+          {activeSuite && (
+            <div style={{ marginBottom: 8 }}>
+              <div
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setRenameValue(activeSuite.name);
+                  setRenamingSuiteId(activeSuite.id);
+                }}
                 style={{
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--accent-green)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '4px 8px',
                   borderRadius: 3,
-                  padding: '2px 8px',
-                  fontSize: 11,
-                  fontWeight: 'bold',
+                  background: 'var(--bg-tertiary)',
+                  borderLeft: '2px solid var(--accent-green)',
                 }}
               >
-                + New Suite
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 120, overflowY: 'auto' }}>
-              {suites.map(suite => (
-                <div
-                  key={suite.id}
-                  onClick={() => onSwitchSuite(suite.id)}
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    setRenameValue(suite.name);
-                    setRenamingSuiteId(suite.id);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '4px 8px',
-                    borderRadius: 3,
-                    background: suite.id === activeSuiteId ? 'var(--bg-tertiary)' : 'transparent',
-                    cursor: 'pointer',
-                    borderLeft: suite.id === activeSuiteId ? '2px solid var(--accent-green)' : '2px solid transparent',
-                  }}
-                >
-                  {renamingSuiteId === suite.id ? (
-                    <input
-                      autoFocus
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={() => {
-                        if (renameValue.trim()) onRenameSuite(suite.id, renameValue.trim());
+                {renamingSuiteId === activeSuite.id ? (
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => {
+                      if (renameValue.trim()) onRenameSuite(activeSuite.id, renameValue.trim());
+                      setRenamingSuiteId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (renameValue.trim()) onRenameSuite(activeSuite.id, renameValue.trim());
                         setRenamingSuiteId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          if (renameValue.trim()) onRenameSuite(suite.id, renameValue.trim());
-                          setRenamingSuiteId(null);
-                        }
-                        if (e.key === 'Escape') setRenamingSuiteId(null);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        flex: 1,
-                        fontSize: 11,
-                        background: 'var(--bg-primary)',
-                        color: 'var(--text-primary)',
-                        border: '1px solid var(--accent-green)',
-                        borderRadius: 3,
-                        padding: '2px 6px',
-                        outline: 'none',
-                      }}
-                    />
-                  ) : (
-                    <span
-                      style={{ fontSize: 11, color: suite.id === activeSuiteId ? 'var(--text-primary)' : 'var(--text-secondary)', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}
-                    >
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {suite.name}
-                      </span>
-                    </span>
-                  )}
-                  <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
-                    {suite.tests.length} test{suite.tests.length !== 1 ? 's' : ''}
+                      }
+                      if (e.key === 'Escape') setRenamingSuiteId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      flex: 1,
+                      fontSize: 11,
+                      background: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      border: '1px solid var(--accent-green)',
+                      borderRadius: 3,
+                      padding: '2px 6px',
+                      outline: 'none',
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 'bold', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {activeSuite.name}
                   </span>
-                  {suites.length > 1 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeleteSuite(suite.id); }}
-                      style={{
-                        background: 'none',
-                        color: 'var(--text-muted)',
-                        fontSize: 11,
-                        marginLeft: 4,
-                        padding: '0 2px',
-                      }}
-                    >
-                      x
-                    </button>
-                  )}
-                </div>
-              ))}
+                )}
+                <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
+                  {activeSuite.tests.length} test{activeSuite.tests.length !== 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
           <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -641,12 +602,110 @@ export function StepSidebar({
           </div>
         </>
       ) : (
-        <LibraryView
-          entries={libraryEntries}
-          onLoad={onLoadFromLibrary}
-          onDelete={onDeleteFromLibrary}
-          onRefresh={onRefreshLibrary}
-        />
+        <>
+          {/* Suite management */}
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ color: 'var(--accent-red)', fontWeight: 'bold', fontSize: 13 }}>Suites</span>
+              <button
+                onClick={onCreateSuite}
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--accent-green)',
+                  borderRadius: 3,
+                  padding: '2px 8px',
+                  fontSize: 11,
+                  fontWeight: 'bold',
+                }}
+              >
+                + New Suite
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 150, overflowY: 'auto' }}>
+              {suites.map(suite => (
+                <div
+                  key={suite.id}
+                  onClick={() => { onSwitchSuite(suite.id); onSidebarModeChange('session'); }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setRenameValue(suite.name);
+                    setRenamingSuiteId(suite.id);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '4px 8px',
+                    borderRadius: 3,
+                    background: suite.id === activeSuiteId ? 'var(--bg-tertiary)' : 'transparent',
+                    cursor: 'pointer',
+                    borderLeft: suite.id === activeSuiteId ? '2px solid var(--accent-green)' : '2px solid transparent',
+                  }}
+                >
+                  {renamingSuiteId === suite.id ? (
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={() => {
+                        if (renameValue.trim()) onRenameSuite(suite.id, renameValue.trim());
+                        setRenamingSuiteId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (renameValue.trim()) onRenameSuite(suite.id, renameValue.trim());
+                          setRenamingSuiteId(null);
+                        }
+                        if (e.key === 'Escape') setRenamingSuiteId(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        flex: 1,
+                        fontSize: 11,
+                        background: 'var(--bg-primary)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--accent-green)',
+                        borderRadius: 3,
+                        padding: '2px 6px',
+                        outline: 'none',
+                      }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: 11, color: suite.id === activeSuiteId ? 'var(--text-primary)' : 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {suite.name}
+                    </span>
+                  )}
+                  <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
+                    {suite.tests.length} test{suite.tests.length !== 1 ? 's' : ''}
+                  </span>
+                  {suites.length > 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDeleteSuite(suite.id); }}
+                      style={{
+                        background: 'none',
+                        color: 'var(--text-muted)',
+                        fontSize: 11,
+                        marginLeft: 4,
+                        padding: '0 2px',
+                      }}
+                    >
+                      x
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+
+          {/* Saved test library */}
+          <LibraryView
+            entries={libraryEntries}
+            onLoad={onLoadFromLibrary}
+            onDelete={onDeleteFromLibrary}
+            onRefresh={onRefreshLibrary}
+          />
+        </>
       )}
     </div>
   );

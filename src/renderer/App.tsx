@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Step, TestCase, ChatMessage, AppMode, LibraryEntry } from '@shared/types';
+import type { Step, TestCase, TestBlock, TestSuite, ChatMessage, AppMode, LibraryEntry } from '@shared/types';
+import { migrateToSuite } from '@shared/utils/migrateSuite';
 import { ProjectSetup } from './components/ProjectSetup';
 import { StepSidebar } from './components/StepSidebar';
 import { ChatPanel } from './components/ChatPanel';
@@ -11,13 +12,13 @@ import { generateSpec, generateSpecFilename } from '@shared/utils/generateSpec';
 export function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);
   const [mode, setMode] = useState<AppMode>('command');
-  const [tests, setTests] = useState<TestCase[]>([{
-    id: '1',
-    name: 'Untitled Test',
-    steps: [],
-  }]);
-  const [activeTestId, setActiveTestId] = useState<string>('1');
-  const currentTest = tests.find(t => t.id === activeTestId) || tests[0];
+  const defaultBlock: TestBlock = { id: 'block-1', name: 'Untitled Test', steps: [] };
+  const defaultSuite: TestSuite = { id: 'suite-1', name: 'Untitled Suite', beforeEach: [], tests: [defaultBlock] };
+  const [suites, setSuites] = useState<TestSuite[]>([defaultSuite]);
+  const [activeSuiteId, setActiveSuiteId] = useState<string>('suite-1');
+  const [activeBlockId, setActiveBlockId] = useState<string>('block-1');
+  const currentSuite = suites.find(s => s.id === activeSuiteId) || suites[0];
+  const currentBlock = currentSuite?.tests.find(b => b.id === activeBlockId) || currentSuite?.tests[0];
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentUrl, setCurrentUrl] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -59,8 +60,15 @@ export function App() {
     });
   }, []);
 
-  const updateCurrentTest = (updater: (test: TestCase) => TestCase) => {
-    setTests(prev => prev.map(t => t.id === activeTestId ? updater(t) : t));
+  const updateCurrentBlock = (updater: (block: TestBlock) => TestBlock) => {
+    setSuites(prev => prev.map(s => s.id !== activeSuiteId ? s : {
+      ...s,
+      tests: s.tests.map(b => b.id === activeBlockId ? updater(b) : b),
+    }));
+  };
+
+  const updateCurrentSuite = (updater: (suite: TestSuite) => TestSuite) => {
+    setSuites(prev => prev.map(s => s.id === activeSuiteId ? updater(s) : s));
   };
 
   const log = (content: string, role: 'assistant' | 'system' = 'system' as any) => {
@@ -72,33 +80,74 @@ export function App() {
     }]);
   };
 
-  const createNewTest = () => {
-    const newTest: TestCase = {
-      id: `test-${Date.now()}`,
-      name: 'Untitled Test',
-      steps: [],
+  const createNewSuite = () => {
+    const blockId = `block-${Date.now()}`;
+    const suiteId = `suite-${Date.now()}`;
+    const newSuite: TestSuite = {
+      id: suiteId,
+      name: 'Untitled Suite',
+      beforeEach: [],
+      tests: [{ id: blockId, name: 'Untitled Test', steps: [] }],
     };
-    setTests(prev => [...prev, newTest]);
-    setActiveTestId(newTest.id);
+    setSuites(prev => [...prev, newSuite]);
+    setActiveSuiteId(suiteId);
+    setActiveBlockId(blockId);
   };
 
-  const renameTest = (testId: string, name: string) => {
-    setTests(prev => prev.map(t => t.id === testId ? { ...t, name } : t));
+  const createNewBlock = () => {
+    const blockId = `block-${Date.now()}`;
+    const newBlock: TestBlock = { id: blockId, name: 'Untitled Test', steps: [] };
+    setSuites(prev => prev.map(s => s.id !== activeSuiteId ? s : {
+      ...s,
+      tests: [...s.tests, newBlock],
+    }));
+    setActiveBlockId(blockId);
   };
 
-  const deleteTest = (testId: string) => {
-    setTests(prev => {
-      const filtered = prev.filter(t => t.id !== testId);
+  const renameSuite = (suiteId: string, name: string) => {
+    setSuites(prev => prev.map(s => s.id === suiteId ? { ...s, name } : s));
+  };
+
+  const renameBlock = (blockId: string, name: string) => {
+    setSuites(prev => prev.map(s => s.id !== activeSuiteId ? s : {
+      ...s,
+      tests: s.tests.map(b => b.id === blockId ? { ...b, name } : b),
+    }));
+  };
+
+  const deleteSuite = (suiteId: string) => {
+    setSuites(prev => {
+      const filtered = prev.filter(s => s.id !== suiteId);
       if (filtered.length === 0) {
-        const newTest: TestCase = { id: `test-${Date.now()}`, name: 'Untitled Test', steps: [] };
-        if (activeTestId === testId) setActiveTestId(newTest.id);
-        return [newTest];
+        const blockId = `block-${Date.now()}`;
+        const newSuiteId = `suite-${Date.now()}`;
+        const newSuite: TestSuite = { id: newSuiteId, name: 'Untitled Suite', beforeEach: [], tests: [{ id: blockId, name: 'Untitled Test', steps: [] }] };
+        if (activeSuiteId === suiteId) {
+          setActiveSuiteId(newSuiteId);
+          setActiveBlockId(blockId);
+        }
+        return [newSuite];
       }
-      if (activeTestId === testId) {
-        setActiveTestId(filtered[0].id);
+      if (activeSuiteId === suiteId) {
+        setActiveSuiteId(filtered[0].id);
+        setActiveBlockId(filtered[0].tests[0]?.id || '');
       }
       return filtered;
     });
+  };
+
+  const deleteBlock = (blockId: string) => {
+    setSuites(prev => prev.map(s => {
+      if (s.id !== activeSuiteId) return s;
+      const filtered = s.tests.filter(b => b.id !== blockId);
+      if (filtered.length === 0) {
+        const newBlockId = `block-${Date.now()}`;
+        if (activeBlockId === blockId) setActiveBlockId(newBlockId);
+        return { ...s, tests: [{ id: newBlockId, name: 'Untitled Test', steps: [] }] };
+      }
+      if (activeBlockId === blockId) setActiveBlockId(filtered[0].id);
+      return { ...s, tests: filtered };
+    }));
   };
 
   const refreshLibrary = async () => {
@@ -107,11 +156,10 @@ export function App() {
   };
 
   const saveTest = async () => {
-    const test = tests.find(t => t.id === activeTestId);
-    if (!test) return;
+    if (!currentSuite) return;
     try {
-      const result = await window.suziqai.saveToLibrary(test);
-      log(`Saved "${test.name}" → ${result.fileName}.spec.ts`);
+      const result = await window.suziqai.saveToLibrary(currentSuite);
+      log(`Saved "${currentSuite.name}" → ${result.fileName}.spec.ts`);
     } catch (err) {
       log(`Save failed: ${(err as Error).message}`);
     }
@@ -120,14 +168,16 @@ export function App() {
   const loadFromLibrary = async (fileName: string) => {
     try {
       const loaded = await window.suziqai.loadFromLibrary(fileName);
-      const newTest: TestCase = {
-        ...loaded,
-        id: `test-${Date.now()}`,
-      };
-      setTests(prev => [...prev, newTest]);
-      setActiveTestId(newTest.id);
+      const suite = migrateToSuite(loaded);
+      const suiteId = `suite-${Date.now()}`;
+      const newSuite: TestSuite = { ...suite, id: suiteId };
+      // Ensure block IDs are unique
+      newSuite.tests = newSuite.tests.map((b, i) => ({ ...b, id: `block-${Date.now()}-${i}` }));
+      setSuites(prev => [...prev, newSuite]);
+      setActiveSuiteId(suiteId);
+      setActiveBlockId(newSuite.tests[0]?.id || '');
       setSidebarMode('session');
-      log(`Loaded "${loaded.name}" from library`);
+      log(`Loaded "${suite.name}" from library`);
     } catch (err) {
       log(`Load failed: ${(err as Error).message}`);
     }
@@ -167,15 +217,21 @@ export function App() {
     });
 
     window.suziqai.onStepsProposed((steps) => {
-      setTests(prev => prev.map(t => {
-        if (t.id !== activeTestId) return t;
-        const newSteps = [...t.steps];
-        if (insertAtIndex !== null && insertAtIndex <= newSteps.length) {
-          newSteps.splice(insertAtIndex, 0, ...steps);
-        } else {
-          newSteps.push(...steps);
-        }
-        return { ...t, steps: newSteps };
+      setSuites(prev => prev.map(s => {
+        if (s.id !== activeSuiteId) return s;
+        return {
+          ...s,
+          tests: s.tests.map(b => {
+            if (b.id !== activeBlockId) return b;
+            const newSteps = [...b.steps];
+            if (insertAtIndex !== null && insertAtIndex <= newSteps.length) {
+              newSteps.splice(insertAtIndex, 0, ...steps);
+            } else {
+              newSteps.push(...steps);
+            }
+            return { ...b, steps: newSteps };
+          }),
+        };
       }));
       setInsertAtIndex(null); // reset after insert
       log(`${(steps as any[]).length} step(s) added`);
@@ -192,16 +248,20 @@ export function App() {
     });
 
     window.suziqai.onStepResult((stepId, status, error) => {
-      setTests(prev => {
-        const updated = prev.map(t => t.id === activeTestId ? {
-          ...t,
-          steps: t.steps.map(s =>
-            s.id === stepId ? { ...s, status: status as any, error } : s
-          ),
-        } : t);
+      setSuites(prev => {
+        const updated = prev.map(s => s.id !== activeSuiteId ? s : {
+          ...s,
+          tests: s.tests.map(b => b.id !== activeBlockId ? b : {
+            ...b,
+            steps: b.steps.map(st =>
+              st.id === stepId ? { ...st, status: status as any, error } : st
+            ),
+          }),
+        });
         // Log the result
-        const test = updated.find(t => t.id === activeTestId);
-        const step = test?.steps.find(s => s.id === stepId);
+        const suite = updated.find(s => s.id === activeSuiteId);
+        const block = suite?.tests.find(b => b.id === activeBlockId);
+        const step = block?.steps.find(s => s.id === stepId);
         if (step) {
           const icon = status === 'passed' ? '✓' : status === 'failed' ? '✗' : '●';
           const msg = `${icon} ${step.label}` + (error ? ` — ${error}` : '');
@@ -237,7 +297,7 @@ export function App() {
       window.suziqai.removeAllListeners('steps:proposed');
       window.suziqai.removeAllListeners('step:result');
     };
-  }, [activeTestId]);
+  }, [activeSuiteId, activeBlockId]);
 
   // Report viewport bounds to main process so BrowserView can be positioned
   useEffect(() => {
@@ -267,13 +327,23 @@ export function App() {
     window.suziqai.loadSession().then((data) => {
       if (data) {
         if (data.messages) setMessages(data.messages);
-        if (data.tests) {
-          setTests(data.tests);
-          setActiveTestId(data.activeTestId || data.tests[0]?.id || '1');
+        if (data.suites) {
+          // New format
+          setSuites(data.suites);
+          setActiveSuiteId(data.activeSuiteId || data.suites[0]?.id || 'suite-1');
+          setActiveBlockId(data.activeBlockId || data.suites[0]?.tests[0]?.id || 'block-1');
+        } else if (data.tests) {
+          // Old multi-test format — migrate each TestCase to a TestSuite
+          const migrated: TestSuite[] = (data.tests as any[]).map((t: any) => migrateToSuite(t));
+          setSuites(migrated);
+          setActiveSuiteId(migrated[0]?.id || 'suite-1');
+          setActiveBlockId(migrated[0]?.tests[0]?.id || 'block-1');
         } else if (data.currentTest) {
-          // Backwards compat with old session format
-          setTests([data.currentTest]);
-          setActiveTestId(data.currentTest.id);
+          // Oldest format — single test
+          const migrated = migrateToSuite(data.currentTest);
+          setSuites([migrated]);
+          setActiveSuiteId(migrated.id);
+          setActiveBlockId(migrated.tests[0]?.id || 'block-1');
         }
       }
     });
@@ -285,12 +355,13 @@ export function App() {
     const timeout = setTimeout(() => {
       window.suziqai.saveSession({
         messages,
-        tests,
-        activeTestId,
+        suites,
+        activeSuiteId,
+        activeBlockId,
       });
     }, 500); // debounce 500ms
     return () => clearTimeout(timeout);
-  }, [messages, tests, activeTestId, projectPath]);
+  }, [messages, suites, activeSuiteId, activeBlockId, projectPath]);
 
   // Listen for picker results
   useEffect(() => {
@@ -446,53 +517,78 @@ export function App() {
           )}
         </div>
         <StepSidebar
-          tests={tests}
-          activeTestId={activeTestId}
-          onSwitchTest={setActiveTestId}
-          onCreateTest={createNewTest}
-          onRenameTest={renameTest}
-          onDeleteTest={deleteTest}
+          suites={suites}
+          activeSuiteId={activeSuiteId}
+          activeBlockId={activeBlockId}
+          onSwitchSuite={(suiteId: string) => {
+            setActiveSuiteId(suiteId);
+            const suite = suites.find(s => s.id === suiteId);
+            if (suite) setActiveBlockId(suite.tests[0]?.id || '');
+          }}
+          onSwitchBlock={setActiveBlockId}
+          onCreateSuite={createNewSuite}
+          onCreateBlock={createNewBlock}
+          onRenameSuite={renameSuite}
+          onRenameBlock={renameBlock}
+          onDeleteSuite={deleteSuite}
+          onDeleteBlock={deleteBlock}
+          onAddBeforeEachStep={(step: { label: string; action: any }) => {
+            updateCurrentSuite(s => ({
+              ...s,
+              beforeEach: [...s.beforeEach, {
+                id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                label: step.label,
+                action: step.action,
+                status: 'pending' as const,
+              }],
+            }));
+          }}
+          onRemoveBeforeEachStep={(stepId: string) => {
+            updateCurrentSuite(s => ({
+              ...s,
+              beforeEach: s.beforeEach.filter(st => st.id !== stepId),
+            }));
+          }}
           onAcceptStep={(stepId: string) => {
-            const step = currentTest.steps.find(s => s.id === stepId);
+            const step = currentBlock?.steps.find(s => s.id === stepId);
             if (step) {
               log(`▶ Running: ${step.label}`);
               window.suziqai.executeStep(stepId, step.action);
             }
           }}
           onDenyStep={(stepId: string) => {
-            updateCurrentTest(t => ({
-              ...t,
-              steps: t.steps.filter(s => s.id !== stepId),
+            updateCurrentBlock(b => ({
+              ...b,
+              steps: b.steps.filter(s => s.id !== stepId),
             }));
           }}
           onResetStep={(stepId: string) => {
-            updateCurrentTest(t => ({
-              ...t,
-              steps: t.steps.map(s =>
+            updateCurrentBlock(b => ({
+              ...b,
+              steps: b.steps.map(s =>
                 s.id === stepId ? { ...s, status: 'pending' as const, error: undefined } : s
               ),
             }));
           }}
           onUpdateStep={(stepId: string, action: any, label: string) => {
-            updateCurrentTest(t => ({
-              ...t,
-              steps: t.steps.map(s =>
+            updateCurrentBlock(b => ({
+              ...b,
+              steps: b.steps.map(s =>
                 s.id === stepId ? { ...s, action, label, status: 'pending' as const, error: undefined } : s
               ),
             }));
           }}
           onInsertStep={(index: number, step: { label: string; action: any }) => {
-            setTests(prev => prev.map(t => {
-              if (t.id !== activeTestId) return t;
-              const newSteps = [...t.steps];
+            updateCurrentBlock(b => {
+              const newSteps = [...b.steps];
               newSteps.splice(index, 0, {
                 id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                 label: step.label,
                 action: step.action,
                 status: 'pending' as const,
               });
-              return { ...t, steps: newSteps };
-            }));
+              return { ...b, steps: newSteps };
+            });
           }}
           onInsertPrompt={(index: number, prompt: string) => {
             setInsertAtIndex(index);
@@ -500,43 +596,45 @@ export function App() {
             window.suziqai.sendChat(prompt);
           }}
           onRunActAndAssert={() => {
-            const actions = currentTest.steps
+            if (!currentBlock) return;
+            const actions = currentBlock.steps
               .filter(s => (s.status === 'pending' || s.status === 'passed') && s.action.type !== 'assert' && s.action.type !== 'waitFor');
-            const assertions = currentTest.steps
+            const assertions = currentBlock.steps
               .filter(s => (s.status === 'pending' || s.status === 'passed') && (s.action.type === 'assert' || s.action.type === 'waitFor'));
             const ordered = [...actions, ...assertions].map(s => ({ id: s.id, action: s.action }));
             log(`▶▶ Act & Assert: ${actions.length} action(s), then ${assertions.length} assertion(s)`);
             window.suziqai.executeAllSteps(ordered);
           }}
           onRunGroup={(stepIds: string[]) => {
-            const stepsToRun = currentTest.steps
+            if (!currentBlock) return;
+            const stepsToRun = currentBlock.steps
               .filter(s => stepIds.includes(s.id))
               .map(s => ({ id: s.id, action: s.action }));
             log(`▶▶ Act & Assert: running ${stepsToRun.length} step(s)`);
             window.suziqai.executeAllSteps(stepsToRun);
           }}
           onReorderStep={(fromStepIds: string[], beforeStepId: string) => {
-            updateCurrentTest(t => {
-              // Remove the dragged group from the list
-              const remaining = t.steps.filter(s => !fromStepIds.includes(s.id));
-              const movedSteps = t.steps.filter(s => fromStepIds.includes(s.id));
-              // Find where to insert (before the target step)
+            updateCurrentBlock(b => {
+              const remaining = b.steps.filter(s => !fromStepIds.includes(s.id));
+              const movedSteps = b.steps.filter(s => fromStepIds.includes(s.id));
               const insertAt = remaining.findIndex(s => s.id === beforeStepId);
-              if (insertAt === -1) return t;
+              if (insertAt === -1) return b;
               remaining.splice(insertAt, 0, ...movedSteps);
-              return { ...t, steps: remaining };
+              return { ...b, steps: remaining };
             });
           }}
           onRunAll={() => {
-            const pendingSteps = currentTest.steps
+            if (!currentBlock) return;
+            const pendingSteps = currentBlock.steps
               .filter(s => s.status === 'pending' || s.status === 'passed')
               .map(s => ({ id: s.id, action: s.action }));
             log(`▶▶ Running all ${pendingSteps.length} steps...`);
             window.suziqai.executeAllSteps(pendingSteps);
           }}
           onExport={() => {
-            window.suziqai.showSaveDialog(`${currentTest.name}.spec.ts`).then(path => {
-              if (path) window.suziqai.exportTest(currentTest.id, path);
+            if (!currentSuite) return;
+            window.suziqai.showSaveDialog(`${currentSuite.name}.spec.ts`).then(path => {
+              if (path) window.suziqai.exportTest(currentSuite.id, path);
             });
           }}
           sidebarMode={sidebarMode}
@@ -620,14 +718,14 @@ export function App() {
             pickerResult={pickedSelectors ? { selectors: pickedSelectors, element: pickedElement } : null}
             onPickSelector={(selector, element) => {
               window.suziqai.copyToClipboard(selector);
-              setTests(prev => prev.map(t => {
-                if (t.id !== activeTestId) return t;
-                return { ...t, steps: [...t.steps, {
+              updateCurrentBlock(b => ({
+                ...b,
+                steps: [...b.steps, {
                   id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                   label: `Click '${element?.text?.substring(0, 30) || selector}'`,
                   action: { type: 'click' as const, selector },
                   status: 'pending' as const,
-                }]};
+                }],
               }));
               setPickedSelectors(null);
               setPickedElement(null);

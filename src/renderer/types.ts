@@ -33,8 +33,8 @@ export interface SuziQaiAPI {
   copyToClipboard: (text: string) => Promise<void>;
   removeAllListeners: (channel: string) => void;
   listLibrary: () => Promise<import('@shared/types').LibraryEntry[]>;
-  saveToLibrary: (test: import('@shared/types').TestCase, fileName?: string) => Promise<{ fileName: string; path: string }>;
-  loadFromLibrary: (fileName: string) => Promise<import('@shared/types').TestCase>;
+  saveToLibrary: (test: import('@shared/types').TestSuite | import('@shared/types').TestCase, fileName?: string) => Promise<{ fileName: string; path: string }>;
+  loadFromLibrary: (fileName: string) => Promise<import('@shared/types').TestSuite | import('@shared/types').TestCase>;
   deleteFromLibrary: (fileName: string) => Promise<void>;
 }
 
