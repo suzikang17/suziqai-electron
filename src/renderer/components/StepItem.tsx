@@ -15,9 +15,14 @@ interface StepItemProps {
   onDeny: () => void;
   onReset?: () => void;
   onUpdate?: (action: StepAction, label: string) => void;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  isDragOver?: boolean;
 }
 
-export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate }: StepItemProps) {
+export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, draggable, onDragStart, onDragOver, onDrop, isDragOver }: StepItemProps) {
   const { icon, color } = statusIcons[step.status];
   const [editing, setEditing] = useState(false);
   const [editSelector, setEditSelector] = useState('');
@@ -77,18 +82,27 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate }: S
 
   return (
     <div
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       style={{
         display: 'flex',
         alignItems: 'baseline',
         gap: 6,
         padding: '3px 0',
         paddingLeft: isAssertion ? 16 : 0,
-        cursor: onUpdate ? 'pointer' : 'default',
+        cursor: draggable ? 'grab' : onUpdate ? 'pointer' : 'default',
         opacity: step.status === 'pending' ? 0.7 : 1,
+        borderTop: isDragOver ? '2px solid var(--accent-blue, #0969da)' : '2px solid transparent',
+        transition: 'border-color 0.1s',
       }}
       onClick={onUpdate ? startEdit : undefined}
       title={onUpdate ? 'Click to edit' : undefined}
     >
+      {draggable && (
+        <span style={{ color: 'var(--text-muted)', fontSize: 10, cursor: 'grab', flexShrink: 0, userSelect: 'none' }}>⠿</span>
+      )}
       <span style={{ color, fontSize: 11, flexShrink: 0 }}>{icon}</span>
       <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1, lineHeight: 1.3 }}>
         {step.label}

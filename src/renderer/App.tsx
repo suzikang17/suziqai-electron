@@ -515,6 +515,14 @@ export function App() {
             log(`▶▶ Act & Assert: running ${stepsToRun.length} step(s)`);
             window.suziqai.executeAllSteps(stepsToRun);
           }}
+          onReorderStep={(fromIndex: number, toIndex: number) => {
+            updateCurrentTest(t => {
+              const steps = [...t.steps];
+              const [moved] = steps.splice(fromIndex, 1);
+              steps.splice(toIndex, 0, moved);
+              return { ...t, steps };
+            });
+          }}
           onRunAll={() => {
             const pendingSteps = currentTest.steps
               .filter(s => s.status === 'pending' || s.status === 'passed')

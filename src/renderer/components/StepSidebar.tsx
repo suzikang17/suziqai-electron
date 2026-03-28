@@ -52,6 +52,7 @@ interface StepSidebarProps {
   onRunAll: () => void;
   onRunActAndAssert: () => void;
   onRunGroup: (stepIds: string[]) => void;
+  onReorderStep: (fromIndex: number, toIndex: number) => void;
   onExport: () => void;
   sidebarMode: 'session' | 'library';
   onSidebarModeChange: (mode: 'session' | 'library') => void;
@@ -78,6 +79,7 @@ export function StepSidebar({
   onRunAll,
   onRunActAndAssert,
   onRunGroup,
+  onReorderStep,
   onExport,
   sidebarMode,
   onSidebarModeChange,
@@ -89,6 +91,8 @@ export function StepSidebar({
 }: StepSidebarProps) {
   const activeTest = tests.find(t => t.id === activeTestId) || tests[0];
   const [composerAt, setComposerAt] = useState<number | null>(null);
+  const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   // Start with all groups collapsed when there are many steps
   const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
   const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
@@ -337,6 +341,11 @@ export function StepSidebar({
                         onDeny={() => onDenyStep(actionStep.id)}
                         onReset={() => onResetStep(actionStep.id)}
                         onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
+                        draggable
+                        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromIndex(group.actionIndex); }}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverIndex(group.actionIndex); }}
+                        onDrop={(e) => { e.preventDefault(); if (dragFromIndex !== null && dragFromIndex !== group.actionIndex) onReorderStep(dragFromIndex, group.actionIndex); setDragFromIndex(null); setDragOverIndex(null); }}
+                        isDragOver={dragOverIndex === group.actionIndex}
                       />
                     </div>
                     {hasAssertions && (
@@ -379,6 +388,11 @@ export function StepSidebar({
                         onDeny={() => onDenyStep(step.id)}
                         onReset={() => onResetStep(step.id)}
                         onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
+                        draggable
+                        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromIndex(idx); }}
+                        onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+                        onDrop={(e) => { e.preventDefault(); if (dragFromIndex !== null && dragFromIndex !== idx) onReorderStep(dragFromIndex, idx); setDragFromIndex(null); setDragOverIndex(null); }}
+                        isDragOver={dragOverIndex === idx}
                       />
                     );
                   })}
