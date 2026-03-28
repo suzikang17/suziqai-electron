@@ -16,26 +16,23 @@ interface StepItemProps {
   onReset?: () => void;
   onUpdate?: (action: StepAction, label: string) => void;
   onAddBelow?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   onToggle?: () => void;
   isExpanded?: boolean;
   childCount?: number;
-  draggable?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent) => void;
-  isDragOver?: boolean;
 }
 
 const tinyBtn: React.CSSProperties = {
   background: 'none',
-  fontSize: 9,
-  padding: '0 4px',
+  fontSize: 12,
+  padding: '0 5px',
   cursor: 'pointer',
   fontWeight: 600,
-  lineHeight: '16px',
+  lineHeight: '20px',
 };
 
-export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onToggle, isExpanded, childCount, draggable, onDragStart, onDragOver, onDrop, isDragOver }: StepItemProps) {
+export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onMoveUp, onMoveDown, onToggle, isExpanded, childCount }: StepItemProps) {
   const { icon, color } = statusIcons[step.status];
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -349,7 +346,12 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
           zIndex: 1,
         }}>
-          <button onClick={(e) => { e.stopPropagation(); onAccept(); }} style={{ ...tinyBtn, color: 'var(--accent-green)' }} title="Run">▶</button>
+          {onMoveUp && (
+            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} style={{ ...tinyBtn, color: 'var(--text-muted)' }} title="Move up">↑</button>
+          )}
+          {onMoveDown && (
+            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} style={{ ...tinyBtn, color: 'var(--text-muted)' }} title="Move down">↓</button>
+          )}
           {onUpdate && (
             <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={{ ...tinyBtn, color: 'var(--accent-blue, #0969da)' }} title="Edit">✎</button>
           )}
@@ -362,33 +364,27 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
 
       {/* Step row */}
       <div
-        onDragOver={onDragOver}
-        onDrop={onDrop}
         onClick={() => onToggle ? onToggle() : setExpanded(!expanded)}
         style={{
           display: 'flex',
           alignItems: 'baseline',
           gap: 6,
-          padding: '3px 0',
+          padding: '4px 0',
           paddingLeft: isAssertion ? 24 : 0,
           cursor: 'pointer',
           opacity: step.status === 'pending' ? 0.7 : 1,
-          borderTop: isDragOver ? '2px solid var(--accent-blue, #0969da)' : '2px solid transparent',
-          transition: 'border-color 0.1s',
           background: hovered ? 'var(--bg-tertiary)' : 'transparent',
           borderRadius: 3,
         }}
       >
-        {draggable && (
-          <span
-            draggable
-            onDragStart={onDragStart}
-            onClick={(e) => e.stopPropagation()}
-            style={{ color: 'var(--text-muted)', fontSize: 10, cursor: 'grab', flexShrink: 0, userSelect: 'none' }}
-          >::</span>
-        )}
-        <span style={{ color, fontSize: 11, flexShrink: 0 }}>{icon}</span>
-        <span style={{ fontSize: 11, color: 'var(--text-primary)', flex: 1, lineHeight: 1.3 }}>
+        <span
+          onClick={(e) => { e.stopPropagation(); onAccept(); }}
+          title={step.status === 'pending' ? 'Run' : 'Re-run'}
+          style={{ color, fontSize: 13, flexShrink: 0, cursor: 'pointer' }}
+        >
+          {hovered && (step.status === 'pending' || step.status === 'passed' || step.status === 'failed') ? '▶' : icon}
+        </span>
+        <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1, lineHeight: 1.4 }}>
           {step.label}
         </span>
         {childCount != null && childCount > 0 && (

@@ -14,6 +14,7 @@ interface StepSidebarProps {
   onCreateSuite: () => void;
   onCreateBlock: () => void;
   onRenameSuite: (suiteId: string, name: string) => void;
+  onRenameSuiteFileName: (suiteId: string, fileName: string) => void;
   onRenameBlock: (blockId: string, name: string) => void;
   onDeleteSuite: (suiteId: string) => void;
   onDeleteBlock: (blockId: string) => void;
@@ -28,7 +29,7 @@ interface StepSidebarProps {
   onRunAll: () => void;
   onRunActAndAssert: () => void;
   onRunGroup: (stepIds: string[]) => void;
-  onReorderStep: (fromStepIds: string[], beforeStepId: string) => void;
+  onMoveStep: (stepIndex: number, direction: 'up' | 'down') => void;
   onExport: () => void;
   sidebarMode: 'session' | 'library';
   onSidebarModeChange: (mode: 'session' | 'library') => void;
@@ -48,6 +49,7 @@ export function StepSidebar({
   onCreateSuite,
   onCreateBlock,
   onRenameSuite,
+  onRenameSuiteFileName,
   onRenameBlock,
   onDeleteSuite,
   onDeleteBlock,
@@ -62,7 +64,7 @@ export function StepSidebar({
   onRunAll,
   onRunActAndAssert,
   onRunGroup,
-  onReorderStep,
+  onMoveStep,
   onExport,
   sidebarMode,
   onSidebarModeChange,
@@ -77,8 +79,6 @@ export function StepSidebar({
 
   const [composerAt, setComposerAt] = useState<number | null>(null);
   const [beforeEachComposerOpen, setBeforeEachComposerOpen] = useState(false);
-  const [dragFromGroup, setDragFromGroup] = useState<number | null>(null);
-  const [dragOverGroup, setDragOverGroup] = useState<number | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
   const [hasAutoCollapsed, setHasAutoCollapsed] = useState(false);
   const [beforeEachExpanded, setBeforeEachExpanded] = useState(false);
@@ -131,6 +131,8 @@ export function StepSidebar({
   const [renamingSuiteId, setRenamingSuiteId] = useState<string | null>(null);
   const [renamingBlockId, setRenamingBlockId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [renamingFileNameId, setRenamingFileNameId] = useState<string | null>(null);
+  const [renameFileNameValue, setRenameFileNameValue] = useState('');
 
   // Render step groups for the active block (reused inside block accordion)
   const renderStepGroups = () => {
@@ -168,24 +170,11 @@ export function StepSidebar({
                 onReset={() => onResetStep(actionStep.id)}
                 onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
                 onAddBelow={() => setComposerAt(group.actionIndex + 1)}
+                onMoveUp={group.actionIndex > 0 ? () => onMoveStep(group.actionIndex, 'up') : undefined}
+                onMoveDown={group.actionIndex < activeBlock.steps.length - 1 ? () => onMoveStep(group.actionIndex, 'down') : undefined}
                 onToggle={hasAssertions ? () => toggleGroup(group.actionIndex) : undefined}
                 isExpanded={!isCollapsed}
                 childCount={assertionIndices.length}
-                draggable
-                onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromGroup(groupIdx); }}
-                onDragOver={(e) => { e.preventDefault(); setDragOverGroup(groupIdx); }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (dragFromGroup !== null && dragFromGroup !== groupIdx) {
-                    const fromGroup = stepGroups[dragFromGroup];
-                    const fromIds = fromGroup.indices.map(i => activeBlock.steps[i].id);
-                    const toGroupFirstId = actionStep.id;
-                    onReorderStep(fromIds as any, toGroupFirstId as any);
-                  }
-                  setDragFromGroup(null);
-                  setDragOverGroup(null);
-                }}
-                isDragOver={dragOverGroup === groupIdx}
               />
 
               {/* Nested assertions */}
@@ -201,6 +190,8 @@ export function StepSidebar({
                     onReset={() => onResetStep(step.id)}
                     onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
                     onAddBelow={() => setComposerAt(idx + 1)}
+                    onMoveUp={idx > 0 ? () => onMoveStep(idx, 'up') : undefined}
+                    onMoveDown={idx < activeBlock.steps.length - 1 ? () => onMoveStep(idx, 'down') : undefined}
                   />
                 );
               })}
@@ -330,6 +321,49 @@ export function StepSidebar({
                 <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>
                   {activeSuite.tests.length} test{activeSuite.tests.length !== 1 ? 's' : ''}
                 </span>
+              </div>
+              {/* fileName display — double-click to edit */}
+              <div style={{ padding: '2px 8px 4px' }}>
+                {renamingFileNameId === activeSuite.id ? (
+                  <input
+                    autoFocus
+                    value={renameFileNameValue}
+                    onChange={(e) => setRenameFileNameValue(e.target.value)}
+                    onBlur={() => {
+                      if (renameFileNameValue.trim()) onRenameSuiteFileName(activeSuite.id, renameFileNameValue.trim());
+                      setRenamingFileNameId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (renameFileNameValue.trim()) onRenameSuiteFileName(activeSuite.id, renameFileNameValue.trim());
+                        setRenamingFileNameId(null);
+                      }
+                      if (e.key === 'Escape') setRenamingFileNameId(null);
+                    }}
+                    style={{
+                      fontSize: 10,
+                      background: 'var(--bg-primary)',
+                      color: 'var(--text-muted)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 3,
+                      padding: '1px 4px',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      width: '100%',
+                      outline: 'none',
+                    }}
+                  />
+                ) : (
+                  <div
+                    onDoubleClick={() => {
+                      setRenameFileNameValue(activeSuite.fileName || '');
+                      setRenamingFileNameId(activeSuite.id);
+                    }}
+                    style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)', cursor: 'default' }}
+                    title="Double-click to rename file"
+                  >
+                    {activeSuite.fileName}.spec.ts
+                  </div>
+                )}
               </div>
             </div>
           )}
