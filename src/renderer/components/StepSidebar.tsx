@@ -51,6 +51,7 @@ interface StepSidebarProps {
   onInsertPrompt: (index: number, prompt: string) => void;
   onRunAll: () => void;
   onRunActAndAssert: () => void;
+  onRunGroup: (stepIds: string[]) => void;
   onExport: () => void;
   sidebarMode: 'session' | 'library';
   onSidebarModeChange: (mode: 'session' | 'library') => void;
@@ -76,6 +77,7 @@ export function StepSidebar({
   onInsertPrompt,
   onRunAll,
   onRunActAndAssert,
+  onRunGroup,
   onExport,
   sidebarMode,
   onSidebarModeChange,
@@ -185,6 +187,11 @@ export function StepSidebar({
                 <div
                   key={test.id}
                   onClick={() => onSwitchTest(test.id)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setRenameValue(test.name);
+                    setRenamingTestId(test.id);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -228,14 +235,7 @@ export function StepSidebar({
                     <span
                       style={{ fontSize: 11, color: test.id === activeTestId ? 'var(--text-primary)' : 'var(--text-secondary)', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}
                     >
-                      <span
-                        onDoubleClick={(e) => {
-                          e.stopPropagation();
-                          setRenameValue(test.name);
-                          setRenamingTestId(test.id);
-                        }}
-                        style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                      >
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {test.name}
                       </span>
                     </span>
@@ -380,22 +380,7 @@ export function StepSidebar({
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-            <button
-              onClick={onRunActAndAssert}
-              style={{
-                flex: 2,
-                background: 'var(--accent-green)',
-                color: '#ffffff',
-                borderRadius: 6,
-                padding: '8px 0',
-                fontSize: 11,
-                fontWeight: 'bold',
-                letterSpacing: 0.3,
-              }}
-            >
-              Act & Assert
-            </button>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
             <button
               onClick={onRunAll}
               style={{
