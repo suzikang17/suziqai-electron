@@ -8,6 +8,10 @@ const statusIcons: Record<string, { icon: string; color: string }> = {
   failed: { icon: '✗', color: 'var(--accent-red)' },
 };
 
+function isAssertion(action: StepAction): boolean {
+  return action.type === 'assert' || action.type === 'waitFor';
+}
+
 interface StepItemProps {
   step: Step;
   index: number;
@@ -23,6 +27,11 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate }: S
   const [editSelector, setEditSelector] = useState('');
   const [editValue, setEditValue] = useState('');
   const [editLabel, setEditLabel] = useState('');
+
+  const assertion = isAssertion(step.action);
+  const typeLabel = assertion ? 'ASSERT' : 'ACTION';
+  const typeColor = assertion ? 'var(--accent-blue, #0969da)' : 'var(--accent-green)';
+  const borderColor = step.status !== 'pending' ? color : typeColor;
 
   const startEdit = () => {
     const action = step.action;
@@ -66,23 +75,40 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate }: S
       style={{
         background: step.status === 'running' ? 'var(--bg-primary)' : 'var(--bg-tertiary)',
         borderRadius: 4,
-        padding: 8,
-        borderLeft: `3px solid ${color}`,
+        padding: assertion ? '5px 8px' : 8,
+        borderLeft: `3px solid ${borderColor}`,
         opacity: step.status === 'pending' ? 0.7 : 1,
+        marginLeft: assertion ? 12 : 0,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
         <span style={{ color, fontSize: 12 }}>{icon}</span>
+
+        {/* Type badge */}
+        <span style={{
+          fontSize: 8,
+          fontWeight: 700,
+          color: typeColor,
+          background: `color-mix(in srgb, ${typeColor} 15%, transparent)`,
+          padding: '1px 4px',
+          borderRadius: 2,
+          letterSpacing: 0.5,
+          lineHeight: '14px',
+          flexShrink: 0,
+        }}>
+          {typeLabel}
+        </span>
+
         {editing ? (
           <input
             value={editLabel}
             onChange={(e) => setEditLabel(e.target.value)}
-            style={{ ...inputStyle, fontFamily: 'var(--font-sans)', fontWeight: 'bold', fontSize: 12, marginBottom: 0, flex: 1 }}
+            style={{ ...inputStyle, fontFamily: 'var(--font-sans)', fontWeight: 'bold', fontSize: assertion ? 11 : 12, marginBottom: 0, flex: 1 }}
             onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
           />
         ) : (
-          <span style={{ color: 'var(--text-primary)', fontSize: 12, fontWeight: 'bold' }}>
-            <span>{index + 1}. </span><span>{step.label}</span>
+          <span style={{ color: 'var(--text-primary)', fontSize: assertion ? 11 : 12, fontWeight: assertion ? 500 : 'bold' }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{index + 1}. </span>{step.label}
           </span>
         )}
       </div>
@@ -133,7 +159,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate }: S
       )}
 
       {!editing && step.status === 'pending' && (
-        <div style={{ display: 'flex', gap: 4, marginTop: 6, paddingLeft: 17 }}>
+        <div style={{ display: 'flex', gap: 4, marginTop: 4, paddingLeft: 17 }}>
           <button onClick={onAccept} style={{ background: 'var(--accent-green)', color: '#ffffff', borderRadius: 3, padding: '2px 8px', fontSize: 9, fontWeight: 'bold' }}>
             Accept
           </button>
@@ -143,7 +169,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate }: S
         </div>
       )}
       {!editing && (step.status === 'passed' || step.status === 'failed') && (
-        <div style={{ display: 'flex', gap: 4, marginTop: 6, paddingLeft: 17 }}>
+        <div style={{ display: 'flex', gap: 4, marginTop: 4, paddingLeft: 17 }}>
           <button onClick={onAccept} style={{ background: 'var(--bg-tertiary)', color: 'var(--accent-green)', borderRadius: 3, padding: '2px 8px', fontSize: 9, fontWeight: 'bold', border: '1px solid var(--accent-green)' }}>
             Re-run
           </button>
@@ -166,7 +192,10 @@ function formatAction(action: Step['action']): string {
     case 'navigate': return `goto('${action.url}')`;
     case 'click': return `click('${action.selector}')`;
     case 'fill': return `fill('${action.selector}', '${action.value}')`;
-    case 'assert': return `expect(${action.selector ?? 'page'}).${action.assertionType}('${action.expected}')`;
+    case 'assert': {
+      const sel = action.selector ? `(${action.selector})` : '';
+      return `expect${sel}.${action.assertionType}('${action.expected}')`;
+    }
     case 'screenshot': return 'screenshot()';
     case 'waitFor': return `waitFor('${action.selector}')`;
   }
