@@ -339,6 +339,7 @@ export function StepSidebar({
                     onDeny={() => onDenyStep(actionStep.id)}
                     onReset={() => onResetStep(actionStep.id)}
                     onUpdate={(action, label) => onUpdateStep(actionStep.id, action, label)}
+                    onAddBelow={() => setComposerAt(group.actionIndex + 1)}
                     draggable
                     onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragFromGroup(groupIdx); }}
                     onDragOver={(e) => { e.preventDefault(); setDragOverGroup(groupIdx); }}
@@ -387,6 +388,7 @@ export function StepSidebar({
                         onDeny={() => onDenyStep(step.id)}
                         onReset={() => onResetStep(step.id)}
                         onUpdate={(action, label) => onUpdateStep(step.id, action, label)}
+                        onAddBelow={() => setComposerAt(idx + 1)}
                       />
                     );
                   })}
