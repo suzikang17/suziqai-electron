@@ -1,7 +1,7 @@
 {
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"npx vitest run 2>&1\",\"timeout\":30000,\"description\":\"Run all tests\"}",
-  "error": "Exit code 1\n\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.1.1 \u001b[39m\u001b[90m/Users/suki/dev/suziQai\u001b[39m\n\n \u001b[31m❯\u001b[39m tests/main/library-ipc.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m | \u001b[22m\u001b[31m1 failed\u001b[39m\u001b[2m)\u001b[22m\u001b[32m 12\u001b[2mms\u001b[22m\u001b[39m\n\u001b[31m     \u001b[31m×\u001b[31m library:save handler calls testLibrary.save() with test and fileName\u001b[39m\u001b[32m 6\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[31m⎯⎯⎯⎯⎯⎯⎯\u001b[39m\u001b[1m\u001b[41m Failed Tests 1 \u001b[49m\u001b[22m\u001b[31m⎯⎯⎯⎯⎯⎯⎯\u001b[39m\n\n\u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m tests/main/library-ipc.test.ts\u001b[2m > \u001b[22mlibrary IPC hand...",
-  "timestamp": "2026-03-28T18:18:50.201Z",
+  "tool_name": "Read",
+  "tool_input_preview": "{\"file_path\":\"/Users/suki/dev/suziQai/src/renderer/App.tsx\"}",
+  "error": "File content (10205 tokens) exceeds maximum allowed tokens (10000). Use offset and limit parameters to read specific portions of the file, or search for specific content instead of reading the whole file.",
+  "timestamp": "2026-03-28T18:22:49.257Z",
   "retry_count": 1
 }

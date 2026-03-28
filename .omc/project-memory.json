@@ -116,20 +116,20 @@
   "hotPaths": [
     {
       "path": "src/renderer/components/StepSidebar.tsx",
-      "accessCount": 209,
-      "lastAccessed": 1774721860285,
+      "accessCount": 217,
+      "lastAccessed": 1774722241203,
       "type": "file"
     },
     {
       "path": "src/renderer/App.tsx",
-      "accessCount": 110,
-      "lastAccessed": 1774721918398,
+      "accessCount": 120,
+      "lastAccessed": 1774722271264,
       "type": "file"
     },
     {
       "path": "src/renderer/components/StepItem.tsx",
-      "accessCount": 87,
-      "lastAccessed": 1774721919850,
+      "accessCount": 100,
+      "lastAccessed": 1774722274101,
       "type": "file"
     },
     {
@@ -140,14 +140,14 @@
     },
     {
       "path": "src/shared/types.ts",
-      "accessCount": 38,
-      "lastAccessed": 1774721672072,
+      "accessCount": 42,
+      "lastAccessed": 1774722203045,
       "type": "file"
     },
     {
       "path": "tests/renderer/StepSidebar.test.tsx",
-      "accessCount": 30,
-      "lastAccessed": 1774720698535,
+      "accessCount": 32,
+      "lastAccessed": 1774722275322,
       "type": "file"
     },
     {
@@ -157,15 +157,15 @@
       "type": "file"
     },
     {
-      "path": "src/renderer/components/BrowserToolbar.tsx",
-      "accessCount": 23,
-      "lastAccessed": 1774721555772,
+      "path": "src/main/browser-actions.ts",
+      "accessCount": 24,
+      "lastAccessed": 1774722057257,
       "type": "file"
     },
     {
-      "path": "src/main/browser-actions.ts",
-      "accessCount": 22,
-      "lastAccessed": 1774720054174,
+      "path": "src/renderer/components/BrowserToolbar.tsx",
+      "accessCount": 23,
+      "lastAccessed": 1774721555772,
       "type": "file"
     },
     {
@@ -182,8 +182,8 @@
     },
     {
       "path": "",
-      "accessCount": 17,
-      "lastAccessed": 1774720206789,
+      "accessCount": 18,
+      "lastAccessed": 1774722193103,
       "type": "directory"
     },
     {
