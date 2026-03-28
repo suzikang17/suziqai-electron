@@ -558,8 +558,27 @@ export function App() {
             }));
           }}
           onAcceptStep={(stepId: string) => {
-            const step = currentBlock?.steps.find(s => s.id === stepId);
-            if (step) {
+            if (!currentBlock) return;
+            const stepIndex = currentBlock.steps.findIndex(s => s.id === stepId);
+            const step = currentBlock.steps[stepIndex];
+            if (!step) return;
+
+            const isAction = step.action.type !== 'assert' && step.action.type !== 'waitFor';
+            if (isAction) {
+              // Run this action + all assertions nested under it
+              const group = [step];
+              for (let i = stepIndex + 1; i < currentBlock.steps.length; i++) {
+                const next = currentBlock.steps[i];
+                if (next.action.type === 'assert' || next.action.type === 'waitFor') {
+                  group.push(next);
+                } else {
+                  break;
+                }
+              }
+              log(`▶ Running: ${step.label} + ${group.length - 1} assertion(s)`);
+              window.suziqai.executeAllSteps(group.map(s => ({ id: s.id, action: s.action, timeout: s.timeout })));
+            } else {
+              // Single assertion — just run it
               log(`▶ Running: ${step.label}`);
               window.suziqai.executeStep(stepId, step.action, step.timeout);
             }
