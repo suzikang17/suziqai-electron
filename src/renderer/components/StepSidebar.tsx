@@ -309,8 +309,9 @@ export function StepSidebar({
           );
         })}
         {activeBlock.steps.length === 0 && (
-          <div style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', marginTop: 20 }}>
-            No steps yet. Use the chat to describe what to test, or start recording.
+          <div style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', marginTop: 32, lineHeight: 1.6, padding: '0 10px' }}>
+            No steps yet.<br />
+            <span style={{ fontSize: 11 }}>Use the chat to describe what to test, or start recording.</span>
           </div>
         )}
       </>
@@ -324,17 +325,18 @@ export function StepSidebar({
         background: 'var(--bg-secondary)',
         display: 'flex',
         flexDirection: 'column',
-        padding: 10,
+        padding: '12px 14px',
       }}
     >
       {/* Session / Library toggle */}
       <div style={{
         display: 'flex',
-        marginBottom: 10,
+        marginBottom: 12,
         background: 'var(--bg-primary)',
-        borderRadius: 6,
-        padding: 2,
+        borderRadius: 8,
+        padding: 3,
         gap: 2,
+        border: '1px solid var(--border)',
       }}>
         {(['session', 'library'] as const).map(tab => (
           <button
@@ -342,12 +344,12 @@ export function StepSidebar({
             onClick={() => onSidebarModeChange(tab)}
             style={{
               flex: 1,
-              padding: '5px 0',
+              padding: '6px 0',
               fontSize: 11,
               fontWeight: 600,
               color: sidebarMode === tab ? 'var(--text-primary)' : 'var(--text-muted)',
               background: sidebarMode === tab ? 'var(--bg-tertiary)' : 'transparent',
-              borderRadius: 4,
+              borderRadius: 6,
               cursor: 'pointer',
               transition: 'all 0.15s ease',
               letterSpacing: 0.3,
@@ -420,24 +422,26 @@ export function StepSidebar({
           })()}
 
           {/* Test block list */}
-          <div style={{ marginBottom: 8, flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Tests</span>
+          <div style={{ marginBottom: 10, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600 }}>Tests</span>
               <button
                 onClick={onCreateBlock}
                 style={{
-                  background: 'var(--bg-tertiary)',
+                  background: 'none',
                   color: 'var(--accent-green)',
-                  borderRadius: 3,
-                  padding: '2px 8px',
-                  fontSize: 11,
-                  fontWeight: 'bold',
+                  borderRadius: 4,
+                  padding: '2px 6px',
+                  fontSize: 10,
+                  fontWeight: 600,
+                  border: '1px solid var(--accent-green)',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                + New Test
+                + New
               </button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 120, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 120, overflowY: 'auto' }}>
               {activeSuite?.tests.map(block => (
                 <div
                   key={block.id}
@@ -451,11 +455,12 @@ export function StepSidebar({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '4px 8px',
-                    borderRadius: 3,
+                    padding: '5px 10px',
+                    borderRadius: 6,
                     background: block.id === activeBlockId ? 'var(--bg-tertiary)' : 'transparent',
                     cursor: 'pointer',
-                    borderLeft: block.id === activeBlockId ? '2px solid var(--accent-green)' : '2px solid transparent',
+                    borderLeft: block.id === activeBlockId ? '3px solid var(--accent-green)' : '3px solid transparent',
+                    transition: 'all 0.12s ease',
                   }}
                 >
                   {renamingBlockId === block.id ? (
@@ -509,9 +514,9 @@ export function StepSidebar({
 
           {/* Hooks section */}
           {activeSuite && (
-            <div style={{ marginBottom: 8, flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Hooks</span>
+            <div style={{ marginBottom: 10, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600 }}>Hooks</span>
                 <select
                   value=""
                   onChange={(e) => {
@@ -552,12 +557,13 @@ export function StepSidebar({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '4px 8px',
-                        borderRadius: 3,
+                        padding: '5px 10px',
+                        borderRadius: 6,
                         cursor: 'pointer',
-                        borderLeft: '2px solid var(--accent-blue, #0969da)',
+                        borderLeft: '3px solid var(--accent-blue, #0969da)',
                         background: isExpanded ? 'var(--bg-tertiary)' : 'transparent',
                         marginBottom: 2,
+                        transition: 'all 0.12s ease',
                       }}
                     >
                       <span style={{ fontSize: 11, color: 'var(--accent-blue, #0969da)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -608,10 +614,10 @@ export function StepSidebar({
             </div>
           )}
 
-          <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 10px', opacity: 0.6 }} />
 
           {/* Run All + Autopilot */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexShrink: 0 }}>
             <label
               style={{
                 flex: 1,
@@ -666,18 +672,20 @@ export function StepSidebar({
             {renderStepGroups()}
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 6, paddingTop: 10, marginTop: 8, flexShrink: 0, borderTop: '1px solid var(--border)' }}>
             <button
               onClick={onSaveTest}
               style={{
                 flex: 1,
-                background: 'var(--accent-blue, #0969da)',
-                color: '#ffffff',
+                background: isDirty ? 'var(--accent-blue, #0969da)' : 'var(--bg-tertiary)',
+                color: isDirty ? '#ffffff' : 'var(--text-secondary)',
                 borderRadius: 6,
                 padding: '8px 0',
                 fontSize: 11,
-                fontWeight: 'bold',
+                fontWeight: 600,
                 letterSpacing: 0.3,
+                border: isDirty ? 'none' : '1px solid var(--border)',
+                transition: 'all 0.2s ease',
               }}
             >
               {isDirty ? 'Save •' : 'Save to Library'}
@@ -921,7 +929,7 @@ export function StepSidebar({
           {/* Playwright config */}
           {playwrightConfig && onPlaywrightConfigChange && onSavePlaywrightConfig && (
             <>
-              <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 10px', opacity: 0.6 }} />
               <PlaywrightConfigPanel
                 config={playwrightConfig}
                 onChange={onPlaywrightConfigChange}
@@ -930,7 +938,7 @@ export function StepSidebar({
             </>
           )}
 
-          <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 10px', opacity: 0.6 }} />
 
           {/* Suite management */}
           <div style={{ marginBottom: 8 }}>
@@ -1025,7 +1033,7 @@ export function StepSidebar({
               ))}
             </div>
           </div>
-          <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0 10px', opacity: 0.6 }} />
 
           {/* Saved test library */}
           <LibraryView

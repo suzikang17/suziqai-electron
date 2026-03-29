@@ -106,11 +106,11 @@ describe('StepSidebar', () => {
     expect(screen.getByText(/3 steps/)).toBeTruthy();
   });
 
-  it('calls onCreateBlock when + New Test button is clicked', () => {
+  it('calls onCreateBlock when + New button is clicked', () => {
     const onCreateBlock = vi.fn();
     render(<StepSidebar {...defaultProps} onCreateBlock={onCreateBlock} />);
 
-    fireEvent.click(screen.getByText('+ New Test'));
+    fireEvent.click(screen.getByText('+ New'));
     expect(onCreateBlock).toHaveBeenCalledOnce();
   });
 
