@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Circle, Loader2, XCircle, Play, ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2, XCircle, Play, ChevronUp, ChevronDown, Plus, Pencil, Trash2, ListX } from 'lucide-react';
 import type { Step, StepAction } from '@shared/types';
 
 const iconSize = 14;
@@ -26,6 +26,7 @@ interface StepItemProps {
   onAddBelow?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  onClearChildren?: () => void;
   onHighlight?: () => void;
   onToggle?: () => void;
   isExpanded?: boolean;
@@ -40,7 +41,7 @@ const tinyBtn: React.CSSProperties = {
   alignItems: 'center',
 };
 
-export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onMoveUp, onMoveDown, onHighlight, onToggle, isExpanded, childCount }: StepItemProps) {
+export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onAddBelow, onMoveUp, onMoveDown, onClearChildren, onHighlight, onToggle, isExpanded, childCount }: StepItemProps) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -203,6 +204,9 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           )}
           {onAddBelow && (
             <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} style={tinyBtn} title="Add below"><Plus size={12} color="var(--text-secondary)" /></button>
+          )}
+          {onClearChildren && (
+            <button onClick={(e) => { e.stopPropagation(); onClearChildren(); }} style={tinyBtn} title="Clear assertions"><ListX size={12} color="var(--text-muted)" /></button>
           )}
           {onUpdate && (
             <button onClick={(e) => { e.stopPropagation(); startEdit(); }} style={tinyBtn} title="Edit"><Pencil size={11} color="var(--accent-blue, #0969da)" /></button>

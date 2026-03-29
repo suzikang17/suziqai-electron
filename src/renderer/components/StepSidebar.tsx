@@ -54,6 +54,7 @@ interface StepSidebarProps {
   onRunActAndAssert: () => void;
   onRunGroup: (stepIds: string[]) => void;
   onMoveStep: (stepIndex: number, direction: 'up' | 'down') => void;
+  onClearAssertions: (actionIndex: number, assertionCount: number) => void;
   onExport: () => void;
   isDirty: boolean;
   isAutopilot: boolean;
@@ -98,6 +99,7 @@ export function StepSidebar({
   onRunActAndAssert,
   onRunGroup,
   onMoveStep,
+  onClearAssertions,
   onExport,
   isDirty,
   isAutopilot,
@@ -261,6 +263,7 @@ export function StepSidebar({
                 onAddBelow={() => setComposerAt(group.actionIndex + 1)}
                 onMoveUp={group.actionIndex > 0 ? () => onMoveStep(group.actionIndex, 'up') : undefined}
                 onMoveDown={group.actionIndex < activeBlock.steps.length - 1 ? () => onMoveStep(group.actionIndex, 'down') : undefined}
+                onClearChildren={hasAssertions ? () => onClearAssertions(group.actionIndex, assertionIndices.length) : undefined}
                 onHighlight={'selector' in actionStep.action ? () => window.suziqai.highlightElement((actionStep.action as any).selector) : undefined}
                 onToggle={hasAssertions ? () => toggleGroup(group.actionIndex) : undefined}
                 isExpanded={!isCollapsed}

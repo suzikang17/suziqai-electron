@@ -744,6 +744,14 @@ export function App() {
               return { ...b, steps };
             });
           }}
+          onClearAssertions={(actionIndex: number, assertionCount: number) => {
+            setIsDirty(true);
+            updateCurrentBlock(b => {
+              const steps = [...b.steps];
+              steps.splice(actionIndex + 1, assertionCount);
+              return { ...b, steps };
+            });
+          }}
           onRunAll={() => {
             if (!currentBlock) return;
             const pendingSteps = currentBlock.steps
