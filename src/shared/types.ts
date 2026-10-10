@@ -77,6 +77,37 @@ export interface PlaywrightConfig {
 
 export type AppMode = 'command' | 'record' | 'observe';
 
+// Video import types (Pass 1 output — before selector resolution)
+export interface VideoStep {
+  label: string;
+  actionType: 'navigate' | 'click' | 'fill';
+  elementHint?: string;   // visual description, e.g. "purple button labeled 'Save' at bottom of modal"
+  url?: string;           // for navigate actions
+  value?: string;         // for fill actions
+  uncertain?: boolean;    // flagged by Claude as low-confidence
+  frameIndex?: number;    // source frame index for debugging
+}
+
+export interface VideoImportResult {
+  success: boolean;
+  steps?: Step[];
+  unresolvedCount?: number;
+  error?: string;
+  stats?: {
+    framesExtracted: number;
+    batchesSent: number;
+    actionsDetected: number;
+    selectorsResolved: number;
+    durationMs: number;
+  };
+}
+
+export interface VideoImportProgress {
+  phase: 'extracting' | 'analyzing' | 'replaying' | 'resolving' | 'finalizing';
+  percent: number;
+  detail?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -152,4 +183,8 @@ export const IPC = {
 
   // Playwright config
   PLAYWRIGHT_CONFIG_SAVE: 'playwright:config-save',
+
+  // Video import
+  VIDEO_IMPORT: 'video:import',
+  VIDEO_IMPORT_PROGRESS: 'video:import:progress',
 } as const;

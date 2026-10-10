@@ -26,6 +26,8 @@ const IPC = {
   LIBRARY_LOAD: 'library:load',
   LIBRARY_DELETE: 'library:delete',
   PLAYWRIGHT_CONFIG_SAVE: 'playwright:config-save',
+  VIDEO_IMPORT: 'video:import',
+  VIDEO_IMPORT_PROGRESS: 'video:import:progress',
 } as const;
 
 contextBridge.exposeInMainWorld('suziqai', {
@@ -111,4 +113,9 @@ contextBridge.exposeInMainWorld('suziqai', {
 
   // Playwright config
   savePlaywrightConfig: (config: any, projectPath: string) => ipcRenderer.invoke(IPC.PLAYWRIGHT_CONFIG_SAVE, config, projectPath),
+
+  // Video import
+  importVideo: (filePath: string) => ipcRenderer.invoke(IPC.VIDEO_IMPORT, filePath),
+  onVideoImportProgress: (callback: (progress: any) => void) =>
+    ipcRenderer.on(IPC.VIDEO_IMPORT_PROGRESS, (_event, progress) => callback(progress)),
 });

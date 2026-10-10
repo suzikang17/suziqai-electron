@@ -6,7 +6,9 @@ import type { Recorder } from './recorder';
 import type { Observer } from './observer';
 import type { TestExporter } from './test-exporter';
 import type { TestLibrary } from './test-library';
-import type { StepAction, PlaywrightConfig } from '../shared/types';
+import type { StepAction, PlaywrightConfig, VideoImportProgress } from '../shared/types';
+import { validateVideo, extractFrames, batchFrames, analyzeFrameBatch, mergeVideoSteps, cleanupFrames } from './video-analyzer';
+import { resolveSelectors } from './selector-resolver';
 
 interface Deps {
   browserManager: BrowserManager;
@@ -145,5 +147,95 @@ export function registerIpcHandlers(deps: Deps): void {
   // Playwright config
   ipcMain.handle(IPC.PLAYWRIGHT_CONFIG_SAVE, async (_event, config: PlaywrightConfig, projectPath: string) => {
     return getTestLibrary().savePlaywrightConfig(config, projectPath);
+  });
+
+  // Video import — two-pass pipeline
+  ipcMain.handle(IPC.VIDEO_IMPORT, async (_event, filePath: string) => {
+    const win = getWindow();
+    if (!win) return { success: false, error: 'No window' };
+
+    const startTime = Date.now();
+
+    const sendProgress = (progress: VideoImportProgress) => {
+      win.webContents.send(IPC.VIDEO_IMPORT_PROGRESS, progress);
+    };
+
+    let tmpDir: string | undefined;
+
+    try {
+      // Validate video file
+      await validateVideo(filePath);
+
+      // Pass 1: Extract frames
+      sendProgress({ phase: 'extracting', percent: 5, detail: 'Extracting frames from video...' });
+      const extraction = await extractFrames(filePath);
+      tmpDir = extraction.tmpDir;
+      const frames = extraction.frames;
+
+      if (frames.length === 0) {
+        return { success: false, error: 'No frames extracted from video' };
+      }
+
+      // Pass 1: Analyze frames via Claude Vision
+      sendProgress({ phase: 'analyzing', percent: 15, detail: `Analyzing ${frames.length} frames...` });
+      const batches = batchFrames(frames);
+      const batchResults = [];
+
+      for (let i = 0; i < batches.length; i++) {
+        sendProgress({
+          phase: 'analyzing',
+          percent: 15 + Math.round((i / batches.length) * 40),
+          detail: `Analyzing batch ${i + 1} of ${batches.length}...`,
+        });
+        const result = await analyzeFrameBatch(batches[i], i, batches.length);
+        batchResults.push(result);
+      }
+
+      const videoSteps = mergeVideoSteps(batchResults);
+
+      if (videoSteps.length === 0) {
+        return { success: false, error: 'No actions detected in the video' };
+      }
+
+      // Pass 2: Auto-replay + selector resolution
+      sendProgress({ phase: 'replaying', percent: 60, detail: 'Replaying actions in browser...' });
+
+      const resolveResult = await resolveSelectors(
+        videoSteps,
+        browserManager,
+        (detail, stepIndex, totalSteps) => {
+          const percent = 60 + Math.round((stepIndex / totalSteps) * 30);
+          sendProgress({ phase: 'resolving', percent, detail });
+        }
+      );
+
+      // Finalize
+      sendProgress({ phase: 'finalizing', percent: 95, detail: 'Cleaning up...' });
+      await cleanupFrames(tmpDir);
+
+      // Send steps to renderer via existing channel
+      if (resolveResult.steps.length > 0) {
+        win.webContents.send(IPC.STEPS_PROPOSED, resolveResult.steps);
+      }
+
+      sendProgress({ phase: 'finalizing', percent: 100, detail: 'Done' });
+
+      return {
+        success: true,
+        steps: resolveResult.steps,
+        unresolvedCount: resolveResult.unresolvedCount,
+        stats: {
+          framesExtracted: frames.length,
+          batchesSent: batches.length,
+          actionsDetected: videoSteps.length,
+          selectorsResolved: resolveResult.resolvedCount,
+          durationMs: Date.now() - startTime,
+        },
+      };
+
+    } catch (err) {
+      if (tmpDir) await cleanupFrames(tmpDir);
+      return { success: false, error: (err as Error).message };
+    }
   });
 }

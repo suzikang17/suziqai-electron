@@ -238,7 +238,15 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
           <StatusIcon status={step.status} hovered={hovered} />
         </span>
         <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1, lineHeight: 1.4 }}>
-          {step.label}
+          {step.label.startsWith('[needs selector]') ? (
+            <>
+              <span style={{
+                fontSize: 9, fontWeight: 600, color: '#d97706', background: '#fef3c7',
+                padding: '1px 4px', borderRadius: 3, marginRight: 4, verticalAlign: 'middle',
+              }}>FIX SELECTOR</span>
+              {step.label.replace('[needs selector] ', '')}
+            </>
+          ) : step.label}
         </span>
         {childCount != null && childCount > 0 && (
           <span style={{ color: 'var(--text-muted)', fontSize: 9, flexShrink: 0 }}>

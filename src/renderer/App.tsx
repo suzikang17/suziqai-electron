@@ -8,6 +8,7 @@ import { ChatPanel } from './components/ChatPanel';
 import { BrowserToolbar } from './components/BrowserToolbar';
 import { CodePreview } from './components/CodePreview';
 import { SelectorPopover } from './components/SelectorPopover';
+import { VideoImport } from './components/VideoImport';
 import { generateSpec, generateSpecFilename } from '@shared/utils/generateSpec';
 
 export function App() {
@@ -37,6 +38,7 @@ export function App() {
     defaultPlaywrightConfig('http://localhost:3000', './tests')
   );
   const [previewDevice, setPreviewDevice] = useState<string>('Desktop Chrome');
+  const [showVideoImport, setShowVideoImport] = useState(false);
 
   const DEVICE_VIEWPORTS: Record<string, { width: number; height: number }> = {
     'iPhone 15 Pro': { width: 393, height: 659 },
@@ -823,6 +825,19 @@ export function App() {
           }}
           onPickToggle={togglePicker}
         />
+        {/* Video import button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+          <button
+            onClick={() => setShowVideoImport(true)}
+            style={{
+              background: 'none', border: '1px solid var(--border)', borderRadius: 4,
+              padding: '3px 8px', fontSize: 11, color: 'var(--text-secondary)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            <span style={{ fontSize: 13 }}>🎬</span> Import from Video
+          </button>
+        </div>
         {/* Browser viewport area — BrowserView is positioned here by main process */}
         <div
           ref={viewportRef}
@@ -895,6 +910,9 @@ export function App() {
           />
         </div>
       </div>
+      {showVideoImport && (
+        <VideoImport onClose={() => setShowVideoImport(false)} />
+      )}
     </div>
   );
 }
