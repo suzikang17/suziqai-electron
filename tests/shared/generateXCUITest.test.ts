@@ -104,4 +104,25 @@ describe('generateXCUITest', () => {
     expect(out).toMatch(/override func tearDownWithError\(\) throws \{[\s\S]*"Reset"/);
     expect(out).toMatch(/override class func tearDown\(\) \{[\s\S]*let app = XCUIApplication\(bundleIdentifier: "x"\)[\s\S]*"Cleanup"/);
   });
+
+  it('exports enabled/disabled/checked/unchecked assertions', () => {
+    const sel = q({ type: 'button', label: 'Save', index: 0 });
+    const sw = q({ type: 'switch', label: 'Reminders', index: 0 });
+    const out = generateXCUITest({
+      ...suite,
+      tests: [{ id: 't', name: 'states', steps: [
+        { id: '1', label: 'a', action: { type: 'assert', assertionType: 'enabled', expected: '', selector: sel }, status: 'passed' },
+        { id: '2', label: 'b', action: { type: 'assert', assertionType: 'disabled', expected: '', selector: sel }, status: 'passed' },
+        { id: '3', label: 'c', action: { type: 'assert', assertionType: 'checked', expected: '', selector: sw }, status: 'passed' },
+        { id: '4', label: 'd', action: { type: 'assert', assertionType: 'unchecked', expected: '', selector: sw }, status: 'passed' },
+      ] }],
+    }, { bundleId: 'x' });
+    const el = 'app.buttons.matching(NSPredicate(format: "label == %@", "Save")).element(boundBy: 0)';
+    const swEl = 'app.switches.matching(NSPredicate(format: "label == %@", "Reminders")).element(boundBy: 0)';
+    expect(out).toContain(`XCTAssertTrue(${el}.isEnabled)`);
+    expect(out).toContain(`XCTAssertFalse(${el}.isEnabled)`);
+    expect(out).toContain(`XCTAssertEqual(${swEl}.value as? String, "1")`);
+    expect(out).toContain(`XCTAssertEqual(${swEl}.value as? String, "0")`);
+    expect(out).not.toContain('TODO');
+  });
 });
