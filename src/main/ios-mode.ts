@@ -8,6 +8,7 @@ import type { IosProjectSettings, StepAction } from '../shared/types';
 import type { JevClient } from './jev-decider';
 import { IosDriver } from './ios-driver';
 import { IosSession } from './ios-session';
+import { timed } from './timing';
 
 // iOS projects: the simulator replaces the BrowserView. Screens are pushed to the renderer as
 // screenshots after each action, and steps run through IosSession (Jev resolves elements).
@@ -161,13 +162,14 @@ export class IosMode {
   async tryStep(label: string, action: StepAction, timeout?: number): Promise<{ ok: boolean; error?: string; resolvedSelector?: string }> {
     if (!this.session) return { ok: false, error: 'iOS session not open' };
     try {
-      const { resolvedSelector } = await this.session.execute(label, action, timeout);
+      const session = this.session;
+      const { resolvedSelector } = await timed(`step:${action.type === 'assert' ? `assert-${action.assertionType}` : action.type}`, () => session.execute(label, action, timeout));
       await new Promise((r) => setTimeout(r, 300)); // let the UI settle before the screenshot
       return { ok: true, resolvedSelector };
     } catch (err) {
       return { ok: false, error: (err as Error).message };
     } finally {
-      await this.pushScreenshot().catch(() => undefined);
+      await timed('push-screenshot', () => this.pushScreenshot().catch(() => undefined));
     }
   }
 

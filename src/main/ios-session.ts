@@ -1,6 +1,7 @@
 import type { StepAction } from '../shared/types';
 import { decide, type Candidate, type JevClient } from './jev-decider';
 import { findByQuery, queryFor, readScreen, toCandidates, type IosDriver, type IosElement, type IosNode, type IosQuery } from './ios-driver';
+import { timed } from './timing';
 
 // Runs suziQai steps on an iOS app. A step's selector is either a resolved JSON query from the
 // driver ({type,id,label,index} or {alert}) or a plain description; descriptions — and saved
@@ -99,7 +100,7 @@ export class IosSession {
   }
 
   private async resolve(label: string, action: Extract<StepAction, { selector: string }>): Promise<{ target: Target; resolved?: string }> {
-    const [tree, alert] = await Promise.all([this.driver.tree(), this.driver.alert()]);
+    const [tree, alert] = await timed('ios-read', () => Promise.all([this.driver.tree(), this.driver.alert()]));
     const { all, actionable: elements } = readScreen(tree);
     const saved = parseSelector(action.selector);
 
@@ -119,7 +120,8 @@ export class IosSession {
 
     const hint = saved ? '' : ` Element: ${action.selector}.`;
     const detail = action.type === 'fill' ? ` (type "${action.value}")` : action.type === 'press' ? ` (press ${action.key})` : '';
-    const decision = await decide(this.jev, `${label}.${hint}${detail}`, candidates, { url: `ios://${this.app.bundleId}`, title: this.app.bundleId });
+    const jev = this.jev!; // narrowed above: resolving a description needs Jev
+    const decision = await timed('jev', () => decide(jev, `${label}.${hint}${detail}`, candidates, { url: `ios://${this.app.bundleId}`, title: this.app.bundleId }));
     if (!decision.confident || !decision.candidate) {
       throw new Error(`Jev is not sure which element "${label}" means (confidence ${decision.confidence.toFixed(2)})`);
     }

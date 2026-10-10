@@ -19,6 +19,7 @@ import { IosMode, IOS_CHAT_PREFIX, STEP_RESOLVED } from './ios-mode';
 import { canHeal, healSelector, isLocatorFailure } from './self-heal';
 import { runGoal, type ExecResult, type GoalDeps } from './goal-autopilot';
 import { summarizePlaywrightError } from './playwright-errors';
+import { timedDeps } from './timing';
 import { planFeature } from './feature-planner';
 import { applyReadOnlyGuard } from './read-only-guard';
 
@@ -596,7 +597,7 @@ function createWindow(): void {
     const say = (m: string) => { if (!win.isDestroyed()) win.webContents.send(IPC.CHAT_RESPONSE, m); };
     const readOnlyWeb = !iosMode.active && !!projectConfig.getConfig().readOnly;
 
-    const deps: GoalDeps = {
+    const deps: GoalDeps = timedDeps({
       freshStart,
       observe: async () => {
         const c = await currentContext();
@@ -645,7 +646,7 @@ function createWindow(): void {
           say(event.ok ? '✅ Fresh replay passed — test verified' : `⚠️ Fresh replay failed: ${event.error}`);
         }
       },
-    };
+    });
 
     claudeSession.beginGoalRun();
     try {
