@@ -305,7 +305,8 @@ ${envBlock(secrets, 'TEST_RUNNER_')}    steps:
             echo "::warning::Simulator '$WANTED' isn't on this runner; using '$DEVICE'"
           fi
           echo "DEVICE=$DEVICE" >> "$GITHUB_ENV"
-      # Failures don't stop the job here: the result bundle and summary still need to publish
+      # Failures don't stop the job here: the result bundle and summary still need to publish.
+      # Simulator runs need no signing, and the runner has no Apple account to sign with.
       - name: Run suites
         id: tests
         continue-on-error: true
@@ -314,6 +315,7 @@ ${envBlock(secrets, 'TEST_RUNNER_')}    steps:
             -scheme ${q(scheme)} \\
             -destination "platform=iOS Simulator,name=$DEVICE" \\
             -resultBundlePath TestResults.xcresult \\
+            CODE_SIGNING_ALLOWED=NO \\
             ${onlyTesting}
       - name: Upload result bundle
         if: always()

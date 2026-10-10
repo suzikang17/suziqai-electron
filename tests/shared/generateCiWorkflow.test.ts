@@ -230,6 +230,7 @@ describe('generateCiWorkflow: iOS', () => {
     expect(yaml).toContain('"-only-testing:PetHomepageUITests/CareTeamTests" "-only-testing:PetHomepageUITests/ScheduleTests"');
     expect(yaml).toContain('-destination "platform=iOS Simulator,name=$DEVICE"');
     expect(yaml).toContain('-resultBundlePath TestResults.xcresult');
+    expect(yaml).toContain('CODE_SIGNING_ALLOWED=NO');
   });
 
   it('defaults to a common simulator, overridable on dispatch, falling back to any iPhone', () => {
