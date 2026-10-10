@@ -842,7 +842,8 @@ export function App() {
             if (isRecording) {
               window.suziqai.stopRecording();
             } else {
-              window.suziqai.startRecording();
+              // Start at the current page only for an empty test; mid-test, a navigation step would reload it
+              window.suziqai.startRecording((currentBlock?.steps.length ?? 0) === 0);
             }
             setIsRecording(!isRecording);
           }}

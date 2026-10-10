@@ -22,7 +22,10 @@ You control a browser through these actions:
 - click(selector): Click an element
 - fill(selector, value): Type into an input field
 - press(selector, key): Press a key on an element, e.g. Enter to submit a field with no submit button
-- assert(assertionType, expected, selector?): Add a test assertion. Types: url, visible, text, hidden, value
+- assert(assertionType, expected, selector?, attribute?): Add a test assertion. Types: visible, hidden, text, value, url, attribute, enabled, disabled, checked, unchecked, focused, editable, empty, count.
+  - url: expected is text the URL contains, or a regex written as "/pattern/" (e.g. "/weekOf=\\d{4}-\\d{2}-\\d{2}/")
+  - attribute: set "attribute" to the attribute name and expected to its value, e.g. { "assertionType": "attribute", "selector": "getByRole('button', { name: 'Week', exact: true })", "attribute": "aria-pressed", "expected": "true" }
+- Secrets: never write real credentials; use {{env.NAME}} placeholders in values (e.g. "{{env.TEST_EMAIL}}"), resolved from the environment at run time
 - screenshot(): Capture the current browser state
 - waitFor(selector): Wait for an element to appear
 

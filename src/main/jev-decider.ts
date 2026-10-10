@@ -187,6 +187,26 @@ export async function decide(
   };
 }
 
+/**
+ * The candidate for a specific DOM element (found by CSS, e.g. a recorder tag), using the
+ * browser's own accessible role and name — or null if it isn't an actionable element.
+ */
+export async function candidateForElement(page: Page, css: string): Promise<Candidate | null> {
+  const session = await page.context().newCDPSession(page);
+  let backendNodeId: number | undefined;
+  try {
+    const { root } = (await session.send('DOM.getDocument', { depth: 0 })) as { root: { nodeId: number } };
+    const { nodeId } = (await session.send('DOM.querySelector', { nodeId: root.nodeId, selector: css })) as { nodeId: number };
+    if (!nodeId) return null;
+    ({ node: { backendNodeId } } = (await session.send('DOM.describeNode', { nodeId })) as { node: { backendNodeId: number } });
+  } catch {
+    return null;
+  } finally {
+    await session.detach().catch(() => undefined);
+  }
+  return (await snapshotCandidates(page)).find((c) => c.backendNodeId === backendNodeId) ?? null;
+}
+
 /** Read the page's accessibility tree over CDP and number its actionable elements. */
 export async function snapshotCandidates(page: Page): Promise<Candidate[]> {
   const session = await page.context().newCDPSession(page);

@@ -17,6 +17,7 @@ export function StepComposer({ onSubmit, onCancel }: StepComposerProps) {
   const [selector, setSelector] = useState('');
   const [value, setValue] = useState('');
   const [assertType, setAssertType] = useState('visible');
+  const [attribute, setAttribute] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -31,7 +32,9 @@ export function StepComposer({ onSubmit, onCancel }: StepComposerProps) {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selector.trim() && actionType !== 'navigate') return;
+    // Navigation and URL/text checks don't target an element
+    const needsSelector = actionType !== 'navigate' && !(actionType === 'assert' && (assertType === 'url' || assertType === 'text'));
+    if (needsSelector && !selector.trim()) return;
 
     let action: StepAction;
     let label: string;
@@ -54,8 +57,16 @@ export function StepComposer({ onSubmit, onCancel }: StepComposerProps) {
         label = `Navigate to ${selector.trim()}`;
         break;
       case 'assert':
-        action = { type: 'assert', assertionType: assertType as any, expected: value, selector: selector.trim() || undefined };
-        label = `Assert ${assertType}: '${value || selector.trim()}'`;
+        action = {
+          type: 'assert',
+          assertionType: assertType as any,
+          expected: value,
+          selector: selector.trim() || undefined,
+          ...(assertType === 'attribute' ? { attribute: attribute.trim() } : {}),
+        };
+        label = assertType === 'attribute'
+          ? `Assert ${attribute.trim()}="${value}" on '${selector.trim()}'`
+          : `Assert ${assertType}: '${value || selector.trim()}'`;
         break;
       case 'waitFor':
         action = { type: 'waitFor', selector: selector.trim() };
@@ -208,12 +219,27 @@ export function StepComposer({ onSubmit, onCancel }: StepComposerProps) {
                     border: '1px solid var(--border)',
                   }}
                 >
-                  <option value="visible">visible</option>
-                  <option value="text">text</option>
-                  <option value="url">url</option>
-                  <option value="hidden">hidden</option>
-                  <option value="value">value</option>
+                  {['visible', 'hidden', 'text', 'url', 'value', 'attribute', 'enabled', 'disabled', 'checked', 'unchecked', 'focused', 'editable', 'empty', 'count'].map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
                 </select>
+              )}
+              {actionType === 'assert' && assertType === 'attribute' && (
+                <input
+                  value={attribute}
+                  onChange={(e) => setAttribute(e.target.value)}
+                  placeholder="Attribute name, e.g. aria-pressed"
+                  style={{
+                    width: '100%',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    borderRadius: 4,
+                    padding: '6px 8px',
+                    fontSize: 12,
+                    fontFamily: 'var(--font-mono)',
+                    marginBottom: 4,
+                  }}
+                />
               )}
               <input
                 value={value}

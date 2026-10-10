@@ -15,7 +15,7 @@ declare global {
 
       // Mode
       changeMode: (mode: string) => Promise<void>;
-      startRecording: () => Promise<void>;
+      startRecording: (includeNavigate?: boolean) => Promise<void>;
       stopRecording: () => Promise<void>;
       onRecordEvent: (callback: (event: unknown) => void) => void;
       onObserveSuggestions: (callback: (suggestions: string) => void) => void;

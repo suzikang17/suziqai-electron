@@ -46,7 +46,7 @@ contextBridge.exposeInMainWorld('suziqai', {
 
   // Mode
   changeMode: (mode: string) => ipcRenderer.invoke(IPC.MODE_CHANGE, mode),
-  startRecording: () => ipcRenderer.invoke(IPC.RECORD_START),
+  startRecording: (includeNavigate?: boolean) => ipcRenderer.invoke(IPC.RECORD_START, includeNavigate),
   stopRecording: () => ipcRenderer.invoke(IPC.RECORD_STOP),
   onRecordEvent: (callback: (event: unknown) => void) =>
     ipcRenderer.on(IPC.RECORD_EVENT, (_event, data) => callback(data)),

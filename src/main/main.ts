@@ -12,9 +12,11 @@ import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
 import { executeActionOnView, disconnectPlaywright, connectToElectron, setExpectedUrlProvider, resolveLocator } from './browser-actions';
 import { generateSelectors } from './element-picker';
+import { candidateForElement, uniqueLocator } from './jev-decider';
 import { TypeSafeClient } from '@typesafe-ai/sdk';
 import { runJevShadow } from './jev-shadow';
-import { IosMode, IOS_CHAT_PREFIX } from './ios-mode';
+import { IosMode, IOS_CHAT_PREFIX, STEP_RESOLVED } from './ios-mode';
+import { canHeal, healSelector, isLocatorFailure } from './self-heal';
 import { applyReadOnlyGuard } from './read-only-guard';
 
 const TARGET_PARTITION = 'persist:suziqai-target';
@@ -45,6 +47,18 @@ const claudeSession = new ClaudeSession();
 // Records the target-app BrowserView; each event becomes a step in the sidebar as it happens
 const recorder = new Recorder({
   async chooseSelector(info, recId) {
+    // Best: the browser's own accessible role + name for the exact element that was used,
+    // made unique the same way Jev's picks are (exact name, then .nth)
+    if (recId) {
+      try {
+        const page = await connectToElectron();
+        const candidate = await candidateForElement(page, `[data-suziqai-rec="${recId}"]`);
+        const locator = candidate && candidate.name ? await uniqueLocator(page, candidate) : null;
+        if (locator) return locator;
+      } catch {
+        // element gone (e.g. it closed a dialog) — fall back to the captured description
+      }
+    }
     // Role selectors without a name ("getByRole('textbox')") say little; try them last
     const candidates = generateSelectors(info)
       .map((c) => c.selector)
@@ -437,8 +451,8 @@ function createWindow(): void {
 
   // Recording: capture the target app's BrowserView directly (web projects)
   ipcMain.removeHandler(IPC.RECORD_START);
-  ipcMain.handle(IPC.RECORD_START, async () => {
-    if (browserView) await recorder.start(browserView.webContents);
+  ipcMain.handle(IPC.RECORD_START, async (_event, includeNavigate: boolean = true) => {
+    if (browserView) await recorder.start(browserView.webContents, includeNavigate);
   });
   ipcMain.removeHandler(IPC.RECORD_STOP);
   ipcMain.handle(IPC.RECORD_STOP, async () => {
@@ -492,6 +506,24 @@ function createWindow(): void {
     }
   });
 
+  /**
+   * Runs a web step; if its selector no longer finds exactly one element, Jev picks the element the
+   * step means (confident picks only), the step is retried with a fresh locator, and the healed
+   * selector is saved back onto the step.
+   */
+  async function runWebStep(stepId: string, label: string, action: any, timeout?: number): Promise<void> {
+    try {
+      await executeActionOnView(browserView, action, timeout);
+    } catch (err) {
+      if (!jevClient || !canHeal(action) || !isLocatorFailure(err)) throw err;
+      const healed = await healSelector(await connectToElectron(), jevClient, label || action.selector, action).catch(() => null);
+      if (!healed) throw err;
+      await executeActionOnView(browserView, { ...action, selector: healed }, timeout);
+      mainWindow?.webContents.send(STEP_RESOLVED, stepId, healed);
+      mainWindow?.webContents.send(IPC.CHAT_RESPONSE, `🩹 Jev healed "${label || action.selector}": ${action.selector} → ${healed}`);
+    }
+  }
+
   // Override step execution to use BrowserView with visual QA
   ipcMain.removeHandler(IPC.STEP_EXECUTE);
   ipcMain.handle(IPC.STEP_EXECUTE, async (_event, stepId: string, action: any, timeout?: number, label?: string) => {
@@ -525,7 +557,7 @@ function createWindow(): void {
         return;
       }
 
-      await executeActionOnView(browserView, action, timeout);
+      await runWebStep(stepId, label ?? '', action, timeout);
       win.webContents.send(IPC.STEP_RESULT, stepId, 'passed');
       win.webContents.send(IPC.BROWSER_URL_CHANGED, browserView.webContents.getURL());
 
@@ -580,7 +612,7 @@ function createWindow(): void {
       try {
         const beforeScreenshot = await captureBrowserViewScreenshot();
 
-        await executeActionOnView(browserView, step.action, step.timeout);
+        await runWebStep(step.id, step.label ?? '', step.action, step.timeout);
         win.webContents.send(IPC.STEP_RESULT, step.id, 'passed');
 
         await new Promise(r => setTimeout(r, 500));

@@ -102,13 +102,16 @@ export class Recorder {
     return this.contents !== null;
   }
 
-  async start(contents: WebContents): Promise<void> {
+  /** includeNavigate: begin with a step that opens the current page (for an empty test). */
+  async start(contents: WebContents, includeNavigate = true): Promise<void> {
     this.stop();
     this.contents = contents;
     contents.on('console-message', this.listeners.console);
     contents.on('did-finish-load', this.listeners.load);
     contents.on('did-navigate', this.listeners.navigate);
-    this.hooks.onStep({ label: `Go to ${contents.getURL()}`, action: { type: 'navigate', url: contents.getURL() } });
+    if (includeNavigate) {
+      this.hooks.onStep({ label: `Go to ${contents.getURL()}`, action: { type: 'navigate', url: contents.getURL() } });
+    }
     await this.inject();
   }
 
