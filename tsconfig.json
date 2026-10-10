@@ -9,10 +9,18 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "src",
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"]
-    }
+      "@shared/*": [
+        "./src/shared/*"
+      ]
+    },
+    "types": [
+      "node",
+      "vite/client"
+    ]
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*"]
+  "include": [
+    "src/renderer/**/*",
+    "src/shared/**/*"
+  ]
 }

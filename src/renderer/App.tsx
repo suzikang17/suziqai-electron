@@ -193,7 +193,7 @@ export function App() {
     setSuites(prev => prev.map(s => s.id === activeSuiteId ? updater(s) : s));
   };
 
-  const log = (content: string, role: 'assistant' | 'system' = 'system' as any) => {
+  const log = (content: string, role: 'assistant' | 'system' = 'system') => {
     setMessages(prev => [...prev, {
       id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       role,
@@ -252,7 +252,7 @@ export function App() {
       if (filtered.length === 0) {
         const blockId = `block-${Date.now()}`;
         const newSuiteId = `suite-${Date.now()}`;
-        const newSuite: TestSuite = { id: newSuiteId, name: 'Untitled Suite', fileName: 'untitled-suite', beforeEach: [], tests: [{ id: blockId, name: 'Untitled Test', steps: [] }] };
+        const newSuite: TestSuite = { id: newSuiteId, name: 'Untitled Suite', fileName: 'untitled-suite', beforeAll: [], beforeEach: [], afterEach: [], afterAll: [], tests: [{ id: blockId, name: 'Untitled Test', steps: [] }], devices: [] };
         if (activeSuiteId === suiteId) {
           setActiveSuiteId(newSuiteId);
           setActiveBlockId(blockId);
@@ -730,7 +730,6 @@ export function App() {
           window.suziqai.sendChat(content);
         }
       }}
-      isLoading={isChatLoading}
     />
   );
 

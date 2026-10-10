@@ -59,7 +59,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
     const action = step.action;
     setEditLabel(step.label);
     setEditType(action.type);
-    if ('selector' in action) setEditSelector(action.selector);
+    if ('selector' in action) setEditSelector(action.selector ?? '');
     else if (action.type === 'navigate') setEditSelector(action.url);
     else setEditSelector('');
     if ('value' in action) setEditValue(action.value);

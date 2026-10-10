@@ -1,4 +1,4 @@
-import type { VideoImportProgress, VideoImportResult, IosProjectSettings, ProjectConfig, FeaturePlan } from '@shared/types';
+import type { Step, VideoImportProgress, VideoImportResult, IosProjectSettings, ProjectConfig, FeaturePlan } from '@shared/types';
 
 declare global {
   interface Window {
@@ -10,7 +10,7 @@ declare global {
       // Steps
       executeStep: (stepId: string, action?: any, timeout?: number, label?: string) => Promise<void>;
       executeAllSteps: (steps?: any[]) => Promise<void>;
-      onStepsProposed: (callback: (steps: unknown[]) => void) => void;
+      onStepsProposed: (callback: (steps: Step[]) => void) => void;
       onStepResult: (callback: (stepId: string, status: string, error?: string, screenshotPath?: string) => void) => void;
 
       // Mode

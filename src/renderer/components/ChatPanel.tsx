@@ -4,7 +4,7 @@ import type { ChatMessage as ChatMessageType, AppMode } from '@shared/types';
 
 interface PickerResult {
   selectors: Array<{ type: string; selector: string; confidence: string }>;
-  element: { tag: string; text: string; id: string | null } | null;
+  element: { tag: string; text: string; id: string | null; domContext?: string } | null;
 }
 
 interface ChatPanelProps {

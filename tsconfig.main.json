@@ -3,16 +3,21 @@
     "target": "ES2022",
     "module": "commonjs",
     "moduleResolution": "node10",
-    "ignoreDeprecations": "6.0",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "dist/main",
     "rootDir": "src",
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"]
-    }
+      "@shared/*": [
+        "./src/shared/*"
+      ]
+    },
+    "ignoreDeprecations": "6.0"
   },
-  "include": ["src/main/**/*", "src/shared/**/*", "src/preload/**/*"]
+  "include": [
+    "src/main/**/*",
+    "src/shared/**/*",
+    "src/preload/**/*"
+  ]
 }

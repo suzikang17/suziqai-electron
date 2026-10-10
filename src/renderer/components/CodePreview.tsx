@@ -1,14 +1,13 @@
 import React from 'react';
-import type { TestCase } from '@shared/types';
+import type { TestSuite } from '@shared/types';
 import { generateSpec } from '@shared/utils/generateSpec';
 
 interface CodePreviewProps {
-  test: TestCase;
-  baseUrl?: string;
+  test: TestSuite;
 }
 
-export function CodePreview({ test, baseUrl }: CodePreviewProps) {
-  const code = generateSpec(test, baseUrl);
+export function CodePreview({ test }: CodePreviewProps) {
+  const code = generateSpec(test);
 
   return (
     <div style={{
