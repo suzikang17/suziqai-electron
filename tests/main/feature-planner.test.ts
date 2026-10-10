@@ -40,6 +40,9 @@ describe('parseFeaturePlan', () => {
     // harness-provided preconditions and goals that already set themselves up are left alone
     expect(foldPreconditions('Open the board.', 'Logged in as admin')).toEqual({ goal: 'Open the board.' });
     expect(foldPreconditions('Open the board.', 'none')).toEqual({ goal: 'Open the board.' });
+    expect(foldPreconditions('Open the board.', 'Fresh app.')).toEqual({ goal: 'Open the board.' });
+    expect(foldPreconditions('Open the board.', 'Fresh app with no vets added')).toEqual({ goal: 'Open the board.' });
+    expect(foldPreconditions('Open the board.', 'Fresh app with a vet named Dr. X').goal).toMatch(/^First, /);
     expect(foldPreconditions('Add a vet named Dr. X, then edit it.', 'A vet exists')).toEqual({ goal: 'Add a vet named Dr. X, then edit it.' });
 
     const plan = parseFeaturePlan(JSON.stringify({ scenarios: [

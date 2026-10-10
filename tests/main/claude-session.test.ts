@@ -149,6 +149,14 @@ describe('ClaudeSession', () => {
       delete process.env.SUZIQAI_GOAL_MODEL;
     });
 
+    it('parses a reply that thinks out loud before its JSON', async () => {
+      mockQueryResult('I can see the sidebar is open. Actually, let me close it first.\n```json\n{ "status": "continue", "message": "Closing the sidebar", "steps": [{ "label": "Close sidebar", "action": { "type": "click", "selector": "getByRole(\'button\', { name: \'Menu\' })" } }] }\n```');
+      const plan = await session.planGoal(input);
+      expect(plan.status).toBe('continue');
+      expect(plan.message).toBe('Closing the sidebar');
+      expect(plan.steps).toHaveLength(1);
+    });
+
     it('treats a continue with no steps as stuck', async () => {
       mockQueryResult(JSON.stringify({ status: 'continue', message: 'nothing to do', steps: [] }));
       expect((await session.planGoal(input)).status).toBe('stuck');

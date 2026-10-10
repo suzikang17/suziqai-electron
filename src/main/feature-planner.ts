@@ -5,6 +5,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 // tools) to learn routes, validation, statuses, side effects and permissions.
 
 import type { FeaturePlan, Scenario } from '../shared/types';
+import { extractJson } from './json-reply';
 export type { FeaturePlan, Scenario };
 
 export interface PlanFeatureInput {
@@ -43,7 +44,7 @@ Respond with ONLY this JSON (no markdown fences):
 }`;
 
 /** Preconditions the test harness already provides (fresh start, login) — nothing to fold in. */
-const TRIVIAL_PRECONDITION = /^(none|n\/a|-|logged in|user is logged in|app (is )?open|app (is )?launched|fresh (app )?start)/i;
+const TRIVIAL_PRECONDITION = /^(none|n\/a|-|logged in|user is logged in|app (is )?open|app (is )?launched|(a )?(fresh|clean|new) (app|start|install|launch)\b(?!.*\b(with|has|containing)\b(?!\s+no\b)))/i;
 /** Goals that already begin with their own setup. */
 const SETUP_LEAD = /^(first|start by|begin by|after |having |once |add |create |set up|setup)/i;
 /** Preconditions phrased as states ("A vet exists") read better lower-cased after "First,". */
@@ -62,14 +63,8 @@ export function foldPreconditions(goal: string, preconditions: string): { goal: 
 
 /** Parses the planner's reply; throws a readable error if it isn't a plan. */
 export function parseFeaturePlan(raw: string, feature: string, readOnly: boolean): FeaturePlan {
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('The planner did not return a plan: ' + raw.slice(0, 200));
-  let parsed: { summary?: string; scenarios?: Array<Partial<Scenario>> };
-  try {
-    parsed = JSON.parse(match[0]);
-  } catch (err) {
-    throw new Error(`The planner's reply was not valid JSON (${(err as Error).message})`);
-  }
+  const parsed = extractJson<{ summary?: string; scenarios?: Array<Partial<Scenario>> }>(raw, (v) => Array.isArray(v.scenarios));
+  if (!parsed) throw new Error('The planner did not return a plan: ' + raw.slice(0, 200));
   const scenarios = (parsed.scenarios ?? [])
     .filter((s) => s && typeof s.goal === 'string' && s.goal.trim())
     .map((s, i): Scenario => {

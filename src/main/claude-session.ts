@@ -1,5 +1,6 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { StepAction, Snapshot } from '../shared/types';
+import { extractJson } from './json-reply';
 
 interface PageContext {
   url: string;
@@ -276,6 +277,8 @@ Respond with JSON: { "status": "continue" | "done" | "stuck", "message": "...", 
 
 Rules:
 - Never repeat a completed step. If the previous attempt failed, do something different (another element, another route).
+- To reach a page whose URL you can see or infer (e.g. /schedule-board), use one navigate step instead of clicking through menus.
+- If a drawer, menu or overlay covers the page (e.g. a click failed because another element "intercepts pointer events"), close it first: press Escape, or click its close control.
 - Keep labels short and human: "Tap Add", "Type Dr. Paws into Name".
 - Keep "message" to one short sentence about what you are doing next.`;
 
@@ -328,13 +331,8 @@ export class ClaudeSession {
 
     const parsed = this.parseResponse(raw);
     let status: GoalPlan['status'] = 'continue';
-    try {
-      const match = raw.match(/\{[\s\S]*\}/);
-      const s = match ? JSON.parse(match[0]).status : undefined;
-      if (s === 'done' || s === 'stuck' || s === 'continue') status = s;
-    } catch {
-      // keep 'continue'; parseResponse already handled a malformed reply
-    }
+    const s = extractJson(raw, (v) => 'status' in v)?.status;
+    if (s === 'done' || s === 'stuck' || s === 'continue') status = s;
     if (status === 'continue' && parsed.steps.length === 0) status = 'stuck';
     return { status, message: parsed.message, steps: parsed.steps };
   }
@@ -392,20 +390,14 @@ ${JSON.stringify(rawEvents, null, 2)}`;
   }
 
   private parseResponse(text: string): ClaudeResponse {
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : text;
-      const parsed: ClaudeResponse = JSON.parse(jsonStr);
-
-      return {
-        message: parsed.message,
-        steps: (parsed.steps ?? []).map((s) => ({
-          label: s.label,
-          action: s.action,
-        })),
-      };
-    } catch {
-      return { message: text, steps: [] };
-    }
+    const parsed = extractJson<ClaudeResponse>(text, (v) => 'steps' in v || 'message' in v);
+    if (!parsed) return { message: text, steps: [] };
+    return {
+      message: parsed.message,
+      steps: (Array.isArray(parsed.steps) ? parsed.steps : []).map((s) => ({
+        label: s.label,
+        action: s.action,
+      })),
+    };
   }
 }

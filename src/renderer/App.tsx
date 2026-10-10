@@ -315,7 +315,8 @@ export function App() {
     try {
       const loaded = await window.suziqai.loadFromLibrary(fileName);
       const suite = migrateToSuite(loaded);
-      const suiteId = `suite-${Date.now()}`;
+      // Keep the saved id so saving again updates the same file; only a second open copy gets a new one
+      const suiteId = suite.id && !suites.some((s) => s.id === suite.id) ? suite.id : `suite-${Date.now()}`;
       const newSuite: TestSuite = { ...suite, id: suiteId };
       // Ensure block IDs are unique
       newSuite.tests = newSuite.tests.map((b, i) => ({ ...b, id: `block-${Date.now()}-${i}` }));
@@ -616,6 +617,123 @@ export function App() {
     document.addEventListener('mouseup', onUp);
   };
 
+  // The plan panel, viewport and chat are laid out differently for web and iOS (below)
+  const planPanel = featurePlan && (
+    <FeaturePlanPanel
+      plan={featurePlan}
+      statuses={featureStatuses}
+      running={featureRunning}
+      onRun={runFeaturePlan}
+      onDiscard={() => { setFeaturePlan(null); setFeatureStatuses({}); }}
+    />
+  );
+  // Browser viewport area — the BrowserView is positioned here by the main process; iOS draws the simulator screenshot
+  const viewport = (
+    <div
+      ref={viewportRef}
+      id="browser-viewport"
+      style={{
+        flex: platform === 'ios' ? '0 0 46%' : 1,
+        background: 'var(--bg-dark)',
+        position: 'relative',
+        display: 'flex',
+        justifyContent: 'center',
+        minHeight: 0,
+      }}
+    >
+      {platform === 'ios' && iosScreen && (
+        <div style={{ position: 'relative', height: '100%', padding: 8, boxSizing: 'border-box' }}>
+          <img
+            src={`data:image/png;base64,${iosScreen}`}
+            alt="iOS simulator screen"
+            style={{ height: '100%', display: 'block' }}
+          />
+          {tapMarker && tapMarker.screen[2] > 0 && (
+            // Frames are in screen points; position as a fraction of the screen so it scales with the image
+            <div style={{
+              position: 'absolute',
+              left: `calc(8px + (100% - 16px) * ${tapMarker.frame[0] / tapMarker.screen[2]})`,
+              top: `calc(8px + (100% - 16px) * ${tapMarker.frame[1] / tapMarker.screen[3]})`,
+              width: `calc((100% - 16px) * ${tapMarker.frame[2] / tapMarker.screen[2]})`,
+              height: `calc((100% - 16px) * ${tapMarker.frame[3] / tapMarker.screen[3]})`,
+              border: '3px solid #ff3b30', borderRadius: 8, boxShadow: '0 0 0 4px rgba(255,59,48,0.25)',
+              pointerEvents: 'none',
+            }}>
+              <span style={{
+                position: 'absolute', top: -22, left: 0, whiteSpace: 'nowrap',
+                background: '#ff3b30', color: '#fff', fontSize: 11, padding: '2px 6px', borderRadius: 4,
+              }}>{tapMarker.label}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+  const chat = (
+    <ChatPanel
+      messages={messages}
+      mode={mode}
+      isLoading={isChatLoading}
+      pickerResult={pickedSelectors ? { selectors: pickedSelectors, element: pickedElement } : null}
+      onPickSelector={(selector, element) => {
+        window.suziqai.copyToClipboard(selector);
+        updateCurrentBlock(b => ({
+          ...b,
+          steps: [...b.steps, {
+            id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            label: `Click '${element?.text?.substring(0, 30) || selector}'`,
+            action: { type: 'click' as const, selector },
+            status: 'pending' as const,
+          }],
+        }));
+        setPickedSelectors(null);
+        setPickedElement(null);
+      }}
+      onDismissPicker={() => {
+        setPickedSelectors(null);
+        setPickedElement(null);
+      }}
+      onAskAiSelector={(selectors, element) => {
+        const selectorList = selectors.map((s: any) => `[${s.confidence}] ${s.selector}`).join('\n');
+        const prompt = `I picked this element and got these selector candidates. Which is the best selector for a robust, reliable Playwright test? Consider uniqueness, stability across code changes, and Playwright best practices.\n\nElement: <${element?.tag}> "${element?.text?.substring(0, 60) || ''}"\nDOM Context:\n${element?.domContext || 'N/A'}\n\nSelector candidates:\n${selectorList}\n\nRecommend the best selector and explain why in 1-2 sentences.`;
+        setIsChatLoading(true);
+        window.suziqai.sendChat(prompt);
+        setPickedSelectors(null);
+        setPickedElement(null);
+      }}
+      onSend={(content: string) => {
+        const userMsg: ChatMessage = {
+          id: Date.now().toString(),
+          role: 'user',
+          content,
+          timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, userMsg]);
+        setIsChatLoading(true);
+        if (mode === 'feature') {
+          log(`🧭 Planning tests for "${content}"… (reading the project's code)`);
+          window.suziqai.planFeature(content)
+            .then((plan) => {
+              setFeaturePlan(plan);
+              setFeatureStatuses({});
+              const sandbox = plan.scenarios.filter(s => s.runnable !== 'now').length;
+              log(`📋 Plan ready: ${plan.scenarios.length} scenarios${sandbox ? ` (${sandbox} need a sandbox)` : ''} — review above, then Run`);
+            })
+            .catch((err: Error) => log(`Planning failed: ${err.message}`))
+            .finally(() => setIsChatLoading(false));
+        } else if (mode === 'goal') {
+          setGoalRunning(true);
+          // A goal runs like a test: fresh start, then the suite's setup hooks (e.g. login)
+          const setup = currentSuite ? [...currentSuite.beforeAll, ...currentSuite.beforeEach].map(s => ({ id: s.id, label: s.label, action: s.action })) : [];
+          window.suziqai.runGoal(content, setup).finally(() => { setGoalRunning(false); setIsChatLoading(false); });
+        } else {
+          window.suziqai.sendChat(content);
+        }
+      }}
+      isLoading={isChatLoading}
+    />
+  );
+
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       {/* Left: Step Sidebar */}
@@ -881,7 +999,7 @@ export function App() {
       />
 
       {/* Right: Browser + Chat */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top: Browser Toolbar + Viewport */}
         <BrowserToolbar
           url={platform === 'ios' ? 'iOS simulator' : currentUrl}
@@ -939,56 +1057,19 @@ export function App() {
             <span style={{ fontSize: 13 }}>🎬</span> Import from Video
           </button>}
         </div>
-        {featurePlan && (
-          <FeaturePlanPanel
-            plan={featurePlan}
-            statuses={featureStatuses}
-            running={featureRunning}
-            onRun={runFeaturePlan}
-            onDiscard={() => { setFeaturePlan(null); setFeatureStatuses({}); }}
-          />
-        )}
-        {/* Browser viewport area — BrowserView is positioned here by main process */}
-        <div
-          ref={viewportRef}
-          id="browser-viewport"
-          style={{
-            flex: 1,
-            background: 'var(--bg-dark)',
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'center',
-            minHeight: 0,
-          }}
-        >
-          {platform === 'ios' && iosScreen && (
-            <div style={{ position: 'relative', height: '100%', padding: 8, boxSizing: 'border-box' }}>
-              <img
-                src={`data:image/png;base64,${iosScreen}`}
-                alt="iOS simulator screen"
-                style={{ height: '100%', display: 'block' }}
-              />
-              {tapMarker && tapMarker.screen[2] > 0 && (
-                // Frames are in screen points; position as a fraction of the screen so it scales with the image
-                <div style={{
-                  position: 'absolute',
-                  left: `calc(8px + (100% - 16px) * ${tapMarker.frame[0] / tapMarker.screen[2]})`,
-                  top: `calc(8px + (100% - 16px) * ${tapMarker.frame[1] / tapMarker.screen[3]})`,
-                  width: `calc((100% - 16px) * ${tapMarker.frame[2] / tapMarker.screen[2]})`,
-                  height: `calc((100% - 16px) * ${tapMarker.frame[3] / tapMarker.screen[3]})`,
-                  border: '3px solid #ff3b30', borderRadius: 8, boxShadow: '0 0 0 4px rgba(255,59,48,0.25)',
-                  pointerEvents: 'none',
-                }}>
-                  <span style={{
-                    position: 'absolute', top: -22, left: 0, whiteSpace: 'nowrap',
-                    background: '#ff3b30', color: '#fff', fontSize: 11, padding: '2px 6px', borderRadius: 4,
-                  }}>{tapMarker.label}</span>
-                </div>
-              )}
+        {platform === 'ios' ? (
+          /* iOS: the simulator is tall and narrow, so the plan and chat sit beside it */
+          <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+            {viewport}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, borderLeft: '1px solid var(--border)' }}>
+              {planPanel}
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>{chat}</div>
             </div>
-          )}
-        </div>
-
+          </div>
+        ) : (
+          <>
+            {planPanel}
+            {viewport}
         {/* Chat resize handle */}
         <div
           onMouseDown={startDragChat}
@@ -1001,72 +1082,10 @@ export function App() {
           onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--accent-blue, #0969da)')}
           onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--border)')}
         />
-
-        {/* Bottom: Chat Panel */}
-        <div style={{ height: chatHeight }}>
-          <ChatPanel
-            messages={messages}
-            mode={mode}
-            isLoading={isChatLoading}
-            pickerResult={pickedSelectors ? { selectors: pickedSelectors, element: pickedElement } : null}
-            onPickSelector={(selector, element) => {
-              window.suziqai.copyToClipboard(selector);
-              updateCurrentBlock(b => ({
-                ...b,
-                steps: [...b.steps, {
-                  id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                  label: `Click '${element?.text?.substring(0, 30) || selector}'`,
-                  action: { type: 'click' as const, selector },
-                  status: 'pending' as const,
-                }],
-              }));
-              setPickedSelectors(null);
-              setPickedElement(null);
-            }}
-            onDismissPicker={() => {
-              setPickedSelectors(null);
-              setPickedElement(null);
-            }}
-            onAskAiSelector={(selectors, element) => {
-              const selectorList = selectors.map((s: any) => `[${s.confidence}] ${s.selector}`).join('\n');
-              const prompt = `I picked this element and got these selector candidates. Which is the best selector for a robust, reliable Playwright test? Consider uniqueness, stability across code changes, and Playwright best practices.\n\nElement: <${element?.tag}> "${element?.text?.substring(0, 60) || ''}"\nDOM Context:\n${element?.domContext || 'N/A'}\n\nSelector candidates:\n${selectorList}\n\nRecommend the best selector and explain why in 1-2 sentences.`;
-              setIsChatLoading(true);
-              window.suziqai.sendChat(prompt);
-              setPickedSelectors(null);
-              setPickedElement(null);
-            }}
-            onSend={(content: string) => {
-              const userMsg: ChatMessage = {
-                id: Date.now().toString(),
-                role: 'user',
-                content,
-                timestamp: Date.now(),
-              };
-              setMessages(prev => [...prev, userMsg]);
-              setIsChatLoading(true);
-              if (mode === 'feature') {
-                log(`🧭 Planning tests for "${content}"… (reading the project's code)`);
-                window.suziqai.planFeature(content)
-                  .then((plan) => {
-                    setFeaturePlan(plan);
-                    setFeatureStatuses({});
-                    const sandbox = plan.scenarios.filter(s => s.runnable !== 'now').length;
-                    log(`📋 Plan ready: ${plan.scenarios.length} scenarios${sandbox ? ` (${sandbox} need a sandbox)` : ''} — review above, then Run`);
-                  })
-                  .catch((err: Error) => log(`Planning failed: ${err.message}`))
-                  .finally(() => setIsChatLoading(false));
-              } else if (mode === 'goal') {
-                setGoalRunning(true);
-                // A goal runs like a test: fresh start, then the suite's setup hooks (e.g. login)
-                const setup = currentSuite ? [...currentSuite.beforeAll, ...currentSuite.beforeEach].map(s => ({ id: s.id, label: s.label, action: s.action })) : [];
-                window.suziqai.runGoal(content, setup).finally(() => { setGoalRunning(false); setIsChatLoading(false); });
-              } else {
-                window.suziqai.sendChat(content);
-              }
-            }}
-            isLoading={isChatLoading}
-          />
-        </div>
+            {/* Bottom: Chat Panel */}
+            <div style={{ height: chatHeight }}>{chat}</div>
+          </>
+        )}
       </div>
       {showVideoImport && (
         <VideoImport onClose={() => setShowVideoImport(false)} />
