@@ -103,3 +103,20 @@ describe('importSpec', () => {
     expect(skipped[0].line).toBe(SPEC.split('\n').findIndex((l) => l.includes('/^Oct/')) + 1);
   });
 });
+
+describe('importSpec — imported constants', () => {
+  it('resolves string constants imported from relative modules', () => {
+    const spec = `
+import { test } from '@playwright/test';
+import { PROD_URL, OTHER } from './helpers/guard';
+test('opens', async ({ page }) => {
+  await page.goto(\`\${PROD_URL}/board\`);
+});
+`;
+    const modules: Record<string, string> = {
+      './helpers/guard': "export const PROD_URL = 'https://app.example.com';\nexport const OTHER = 1;",
+    };
+    const { suite } = importSpec(spec, '/repo/tests/x.spec.ts', (rel) => modules[rel] ?? null);
+    expect(suite.tests[0].steps[0].action).toEqual({ type: 'navigate', url: 'https://app.example.com/board' });
+  });
+});

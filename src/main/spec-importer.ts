@@ -37,7 +37,11 @@ function quote(s: string): string {
   return `${q}${s}${q}`;
 }
 
-export function importSpec(source: string, fileName: string): SpecImport {
+/**
+ * @param readModule returns the source of a relative import (e.g. './helpers/guard'), so string
+ *   constants defined there (like a base URL) resolve; null if unavailable.
+ */
+export function importSpec(source: string, fileName: string, readModule?: (relPath: string) => string | null): SpecImport {
   const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const skipped: SpecImport['skipped'] = [];
   const constants: Env = new Map();
@@ -295,6 +299,30 @@ export function importSpec(source: string, fileName: string): SpecImport {
   }
 
   // ── file structure ────────────────────────────────────────────────────────
+
+  // String constants imported from relative modules (one level)
+  for (const s of sf.statements) {
+    if (!readModule || !ts.isImportDeclaration(s) || !ts.isStringLiteral(s.moduleSpecifier)) continue;
+    const spec = s.moduleSpecifier.text;
+    const names = s.importClause?.namedBindings;
+    if (!spec.startsWith('.') || !names || !ts.isNamedImports(names)) continue;
+    const src = readModule(spec);
+    if (!src) continue;
+    const mod = ts.createSourceFile(spec, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const exported = new Map<string, string>();
+    for (const st of mod.statements) {
+      if (!ts.isVariableStatement(st)) continue;
+      for (const d of st.declarationList.declarations) {
+        if (ts.isIdentifier(d.name) && d.initializer && (ts.isStringLiteral(d.initializer) || ts.isNoSubstitutionTemplateLiteral(d.initializer))) {
+          exported.set(d.name.text, d.initializer.text);
+        }
+      }
+    }
+    for (const el of names.elements) {
+      const value = exported.get((el.propertyName ?? el.name).text);
+      if (value !== undefined) constants.set(el.name.text, { kind: 'string', value });
+    }
+  }
 
   for (const s of sf.statements) {
     if (ts.isFunctionDeclaration(s) && s.name) helpers.set(s.name.text, s);

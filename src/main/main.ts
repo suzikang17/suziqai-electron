@@ -199,7 +199,8 @@ function createWindow(): void {
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    // Opt-in: SUZIQAI_DEVTOOLS=1 npm run dev
+    if (process.env.SUZIQAI_DEVTOOLS) mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     mainWindow.loadFile(path.join(__dirname, '../../renderer/index.html'));
   }

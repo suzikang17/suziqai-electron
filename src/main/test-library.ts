@@ -1,4 +1,5 @@
 import { readdir, readFile, writeFile, unlink, mkdir, access } from 'fs/promises';
+import { readFileSync } from 'fs';
 import path from 'path';
 import type { TestSuite, LibraryEntry, PlaywrightConfig } from '../shared/types';
 import { generateSpec } from '../shared/utils/generateSpec';
@@ -109,7 +110,17 @@ export class TestLibrary {
     if (sidecar === null && !this.ios) {
       // Hand-written Playwright spec: import its steps
       const specPath = path.join(this.testOutputDir, `${fileName}.spec.ts`);
-      const { suite, skipped } = importSpec(await readFile(specPath, 'utf-8'), specPath);
+      const readModule = (rel: string) => {
+        for (const ext of ['.ts', '.js', '/index.ts']) {
+          try {
+            return readFileSync(path.resolve(path.dirname(specPath), rel + ext), 'utf-8');
+          } catch {
+            // try the next extension
+          }
+        }
+        return null;
+      };
+      const { suite, skipped } = importSpec(await readFile(specPath, 'utf-8'), specPath, readModule);
       return { ...suite, importNotes: skipped.map((s) => `Line ${s.line} not imported: ${s.code}`) };
     }
     if (sidecar === null) throw new Error(`No saved suite "${fileName}"`);
