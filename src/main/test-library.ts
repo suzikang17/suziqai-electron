@@ -170,11 +170,14 @@ export class TestLibrary {
       const specPath = path.join(this.testOutputDir, `${candidate}${this.ext}`);
       try {
         await access(specPath);
-        candidate = `${base}-${counter}`;
-        counter++;
       } catch {
         return candidate;
       }
+      // The suite's own earlier save: update it rather than creating base-2, base-3, …
+      const sidecar = await readFile(path.join(this.testOutputDir, `${candidate}.suziqai.json`), 'utf-8').catch(() => null);
+      if (sidecar && JSON.parse(sidecar).id === suite.id) return candidate;
+      candidate = `${base}-${counter}`;
+      counter++;
     }
   }
 

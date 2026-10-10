@@ -192,4 +192,14 @@ describe('generateSpecFilename', () => {
       expect(generateSpec(suite([step({ type: 'navigate', url: 'https://x' })]))).not.toContain('READ_ONLY_ALLOW');
     });
   });
+
+  it('numbers duplicate test titles, which Playwright would otherwise reject', () => {
+    const code = generateSpec({
+      id: 's', name: 'S', fileName: 's', beforeAll: [], beforeEach: [], afterEach: [], afterAll: [], devices: [],
+      tests: [{ id: 'a', name: 'Untitled Test', steps: [] }, { id: 'b', name: 'Untitled Test', steps: [] }, { id: 'c', name: 'Other', steps: [] }],
+    });
+    expect(code).toContain("test('Untitled Test', async");
+    expect(code).toContain("test('Untitled Test (2)', async");
+    expect(code).toContain("test('Other', async");
+  });
 });

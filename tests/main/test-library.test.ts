@@ -199,4 +199,13 @@ test.describe('Board', () => {
     expect(code).toContain('new RegExp("/auth/v1/token")');
     expect(code).toContain("await context.route('**/*'");
   });
+
+  it('saving the same suite again updates its own file instead of creating a new one', async () => {
+    const first = await library.save(mockSuite);
+    const second = await library.save({ ...mockSuite, tests: [] });
+    expect(second.fileName).toBe(first.fileName);
+    // a different suite with the same name still gets its own file
+    const other = await library.save({ ...mockSuite, id: 'suite-2' });
+    expect(other.fileName).not.toBe(first.fileName);
+  });
 });

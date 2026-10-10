@@ -142,9 +142,13 @@ function generateTestsBlock(suite: TestSuite, indent: string, opts: GenerateSpec
     code += `\n${indent}});\n\n`;
   }
 
-  // individual test blocks
+  // individual test blocks (duplicate titles numbered: Playwright rejects repeats)
+  const seen = new Map<string, number>();
   for (const block of suite.tests) {
-    const blockName = block.name.replace(/'/g, "\\'");
+    const count = (seen.get(block.name) ?? 0) + 1;
+    seen.set(block.name, count);
+    const title = count > 1 ? `${block.name} (${count})` : block.name;
+    const blockName = title.replace(/'/g, "\\'");
     const steps = block.steps
       .filter(s => s.status !== 'failed')
       .map(s => `${innerIndent}${actionToPlaywright(s.action)}`)
