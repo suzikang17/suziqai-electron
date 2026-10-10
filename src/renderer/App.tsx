@@ -315,8 +315,19 @@ export function App() {
     try {
       const loaded = await window.suziqai.loadFromLibrary(fileName);
       const suite = migrateToSuite(loaded);
-      // Keep the saved id so saving again updates the same file; only a second open copy gets a new one
-      const suiteId = suite.id && !suites.some((s) => s.id === suite.id) ? suite.id : `suite-${Date.now()}`;
+      // Keep the saved id: saving matches the file by it, so a new id would write <name>-2.spec.ts
+      const suiteId = suite.id || `suite-${Date.now()}`;
+      const open = suites.find((s) => s.id === suiteId);
+      if (open && open.fileName === suite.fileName) {
+        // Already open: switch to it rather than opening a second copy of the same file
+        setActiveSuiteId(open.id);
+        setActiveBlockId(open.tests[0]?.id || '');
+        setSidebarMode('session');
+        return;
+      }
+      // Another open suite happens to share the id (e.g. the default 'suite-1'): it gives way
+      const reId = `suite-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      if (open) setSuites(prev => prev.map(s => s.id === suiteId ? { ...s, id: reId } : s));
       const newSuite: TestSuite = { ...suite, id: suiteId };
       // Ensure block IDs are unique
       newSuite.tests = newSuite.tests.map((b, i) => ({ ...b, id: `block-${Date.now()}-${i}` }));

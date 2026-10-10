@@ -18,6 +18,7 @@ import { runJevShadow } from './jev-shadow';
 import { IosMode, IOS_CHAT_PREFIX, STEP_RESOLVED } from './ios-mode';
 import { canHeal, healSelector, isLocatorFailure } from './self-heal';
 import { runGoal, type ExecResult, type GoalDeps } from './goal-autopilot';
+import { summarizePlaywrightError } from './playwright-errors';
 import { planFeature } from './feature-planner';
 import { applyReadOnlyGuard } from './read-only-guard';
 
@@ -612,7 +613,7 @@ function createWindow(): void {
           try {
             result = { ok: true, resolvedSelector: await runWebStep(id, step.label, step.action) };
           } catch (err) {
-            result = { ok: false, error: (err as Error).message };
+            result = { ok: false, error: summarizePlaywrightError((err as Error).message) };
           }
         }
         if (phase === 'explore' && result.ok && !setup.some((s) => s.id === step.id)) {
