@@ -1,4 +1,4 @@
-import type { VideoImportProgress, VideoImportResult, IosProjectSettings, ProjectConfig } from '@shared/types';
+import type { VideoImportProgress, VideoImportResult, IosProjectSettings, ProjectConfig, FeaturePlan } from '@shared/types';
 
 declare global {
   interface Window {
@@ -85,6 +85,7 @@ declare global {
       runFresh: () => Promise<void>;
       runGoal: (goal: string, setup?: Array<{ id: string; label: string; action: unknown }>) => Promise<{ status: string; message: string; verified: boolean; steps: unknown[] } | null>;
       stopGoal: () => Promise<void>;
+      planFeature: (feature: string) => Promise<FeaturePlan>;
       onIosTapMarker: (callback: (marker: { frame: number[]; screen: number[]; label: string }) => void) => void;
     };
   }

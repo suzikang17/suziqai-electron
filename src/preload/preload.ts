@@ -126,6 +126,7 @@ contextBridge.exposeInMainWorld('suziqai', {
   runFresh: () => ipcRenderer.invoke('run:fresh'),
   runGoal: (goal: string, setup?: unknown[]) => ipcRenderer.invoke('goal:run', goal, setup),
   stopGoal: () => ipcRenderer.invoke('goal:stop'),
+  planFeature: (feature: string) => ipcRenderer.invoke('feature:plan', feature),
   onIosTapMarker: (callback: (marker: { frame: number[]; screen: number[]; label: string }) => void) =>
     ipcRenderer.on('ios:tap-marker', (_event, marker) => callback(marker)),
   onStepResolved: (callback: (stepId: string, selector: string) => void) =>

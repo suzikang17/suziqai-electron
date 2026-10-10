@@ -18,6 +18,7 @@ import { runJevShadow } from './jev-shadow';
 import { IosMode, IOS_CHAT_PREFIX, STEP_RESOLVED } from './ios-mode';
 import { canHeal, healSelector, isLocatorFailure } from './self-heal';
 import { runGoal, type ExecResult, type GoalDeps } from './goal-autopilot';
+import { planFeature } from './feature-planner';
 import { applyReadOnlyGuard } from './read-only-guard';
 
 const TARGET_PARTITION = 'persist:suziqai-target';
@@ -564,6 +565,21 @@ function createWindow(): void {
       await browserView.webContents.session.clearStorageData();
     }
   }
+
+  // Feature mode: plan the scenarios for a feature (Claude may read the project's code)
+  ipcMain.removeHandler('feature:plan');
+  ipcMain.handle('feature:plan', async (_event, feature: string) => {
+    const c = await currentContext();
+    const config = projectConfig.getConfig();
+    return planFeature({
+      feature,
+      projectPath: projectConfig.getProjectPath() || undefined,
+      platform: iosMode.active ? 'ios' : 'web',
+      readOnly: !iosMode.active && !!config.readOnly,
+      url: c.url,
+      screen: c.accessibilityTree,
+    });
+  });
 
   // Goal mode: observe → plan → act, until the goal is met; then verify with a fresh replay
   let goalAbort: AbortController | null = null;

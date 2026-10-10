@@ -78,7 +78,27 @@ export interface PlaywrightConfig {
   };
 }
 
-export type AppMode = 'command' | 'record' | 'observe' | 'goal';
+export type AppMode = 'command' | 'record' | 'observe' | 'goal' | 'feature';
+
+/** One scenario of a feature test plan: a goal the autopilot can run. */
+export interface Scenario {
+  id: string;
+  name: string;
+  kind: 'happy' | 'edge' | 'permission';
+  goal: string;
+  preconditions: string;
+  data: string;
+  expected: string;
+  writes: boolean;
+  runnable: 'now' | 'needs-sandbox';
+  notes?: string;
+}
+
+export interface FeaturePlan {
+  feature: string;
+  summary: string;
+  scenarios: Scenario[];
+}
 
 // Video import types (Pass 1 output — before selector resolution)
 export interface VideoStep {

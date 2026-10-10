@@ -11,6 +11,8 @@ import { SelectorPopover } from './components/SelectorPopover';
 import { VideoImport } from './components/VideoImport';
 import { generateSpec, generateSpecFilename } from '@shared/utils/generateSpec';
 import { buildRunSequence } from '@shared/utils/runSequence';
+import { FeaturePlanPanel, type ScenarioStatus } from './components/FeaturePlanPanel';
+import type { FeaturePlan } from '@shared/types';
 
 export function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);
@@ -20,6 +22,10 @@ export function App() {
   // Watch mode replays slowly, showing each target before acting
   const [watchMode, setWatchMode] = useState(false);
   const [goalRunning, setGoalRunning] = useState(false);
+  // Feature mode: a reviewed plan of scenarios, each run as a goal in its own test block
+  const [featurePlan, setFeaturePlan] = useState<FeaturePlan | null>(null);
+  const [featureStatuses, setFeatureStatuses] = useState<Record<string, ScenarioStatus>>({});
+  const [featureRunning, setFeatureRunning] = useState(false);
   const [tapMarker, setTapMarker] = useState<{ frame: number[]; screen: number[]; label: string } | null>(null);
   const [mode, setMode] = useState<AppMode>('command');
   const defaultBlock: TestBlock = { id: 'block-1', name: 'Untitled Test', steps: [] };
@@ -136,6 +142,45 @@ export function App() {
       })));
     });
   }, []);
+
+  /** Runs the selected scenarios one after another, each as a goal in a new test block, then reports coverage. */
+  const runFeaturePlan = async (ids: string[]) => {
+    if (!featurePlan || !currentSuite) return;
+    const suiteId = activeSuiteId;
+    const setup = [...currentSuite.beforeAll, ...currentSuite.beforeEach].map(s => ({ id: s.id, label: s.label, action: s.action }));
+    setFeatureRunning(true);
+    const results: Record<string, ScenarioStatus> = {};
+    const stepCounts: Record<string, number> = {};
+    for (const sc of featurePlan.scenarios) {
+      if (!ids.includes(sc.id)) {
+        results[sc.id] = sc.runnable === 'now' ? 'skipped' : 'needs-sandbox';
+        setFeatureStatuses({ ...results });
+        continue;
+      }
+      const blockId = `block-${Date.now()}`;
+      setSuites(prev => prev.map(s => s.id !== suiteId ? s : { ...s, tests: [...s.tests, { id: blockId, name: sc.name, steps: [] }] }));
+      setActiveBlockId(blockId);
+      results[sc.id] = 'running';
+      setFeatureStatuses({ ...results });
+      await new Promise(r => setTimeout(r, 300)); // let listeners re-register for the new block
+      log(`🧪 Scenario: ${sc.name}`);
+      const result = await window.suziqai.runGoal(sc.goal, setup).catch(() => null);
+      results[sc.id] = !result ? 'error'
+        : result.status === 'done' ? (result.verified ? 'verified' : 'unverified')
+        : result.status === 'stopped' ? 'stopped' : 'stuck';
+      stepCounts[sc.id] = result?.steps.length ?? 0;
+      setFeatureStatuses({ ...results });
+      if (result?.status === 'stopped') break;
+    }
+    const count = (st: ScenarioStatus) => Object.values(results).filter(v => v === st).length;
+    log(`📊 Feature coverage for "${featurePlan.feature}": ${count('verified')} verified, ${count('unverified')} done but not verified, ${count('stuck')} stuck, ${count('needs-sandbox')} need a sandbox, ${count('skipped')} skipped`);
+    for (const sc of featurePlan.scenarios) {
+      const st = results[sc.id] ?? 'skipped';
+      const icon = st === 'verified' ? '✅' : st === 'unverified' ? '⚠️' : st === 'stuck' || st === 'error' ? '🛑' : st === 'needs-sandbox' ? '🏖' : '–';
+      log(`  ${icon} ${sc.name}${stepCounts[sc.id] ? ` (${stepCounts[sc.id]} steps)` : ''}${st === 'needs-sandbox' ? ' — writes data; needs a sandbox' : ''}`);
+    }
+    setFeatureRunning(false);
+  };
 
   const updateCurrentBlock = (updater: (block: TestBlock) => TestBlock) => {
     setSuites(prev => prev.map(s => s.id !== activeSuiteId ? s : {
@@ -894,6 +939,15 @@ export function App() {
             <span style={{ fontSize: 13 }}>🎬</span> Import from Video
           </button>}
         </div>
+        {featurePlan && (
+          <FeaturePlanPanel
+            plan={featurePlan}
+            statuses={featureStatuses}
+            running={featureRunning}
+            onRun={runFeaturePlan}
+            onDiscard={() => { setFeaturePlan(null); setFeatureStatuses({}); }}
+          />
+        )}
         {/* Browser viewport area — BrowserView is positioned here by main process */}
         <div
           ref={viewportRef}
@@ -990,7 +1044,18 @@ export function App() {
               };
               setMessages(prev => [...prev, userMsg]);
               setIsChatLoading(true);
-              if (mode === 'goal') {
+              if (mode === 'feature') {
+                log(`🧭 Planning tests for "${content}"… (reading the project's code)`);
+                window.suziqai.planFeature(content)
+                  .then((plan) => {
+                    setFeaturePlan(plan);
+                    setFeatureStatuses({});
+                    const sandbox = plan.scenarios.filter(s => s.runnable !== 'now').length;
+                    log(`📋 Plan ready: ${plan.scenarios.length} scenarios${sandbox ? ` (${sandbox} need a sandbox)` : ''} — review above, then Run`);
+                  })
+                  .catch((err: Error) => log(`Planning failed: ${err.message}`))
+                  .finally(() => setIsChatLoading(false));
+              } else if (mode === 'goal') {
                 setGoalRunning(true);
                 // A goal runs like a test: fresh start, then the suite's setup hooks (e.g. login)
                 const setup = currentSuite ? [...currentSuite.beforeAll, ...currentSuite.beforeEach].map(s => ({ id: s.id, label: s.label, action: s.action })) : [];

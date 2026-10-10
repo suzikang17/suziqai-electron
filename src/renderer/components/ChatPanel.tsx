@@ -23,6 +23,7 @@ const modeBadge: Record<AppMode, { label: string; color: string }> = {
   record: { label: 'Recording', color: 'var(--accent-red)' },
   observe: { label: 'Observing', color: 'var(--accent-yellow)' },
   goal: { label: 'Goal', color: 'var(--accent-blue, #0969da)' },
+  feature: { label: 'Feature', color: 'var(--accent-blue, #0969da)' },
 };
 
 const typeLabels: Record<string, string> = {
@@ -178,7 +179,7 @@ export function ChatPanel({ messages, mode, isLoading, pickerResult, onSend, onP
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={mode === 'goal' ? "Describe the goal, e.g. 'Add a vet named Dr. Paws and check they appear'" : 'Describe what to test...'}
+          placeholder={mode === 'goal' ? "Describe the goal, e.g. 'Add a vet named Dr. Paws and check they appear'" : mode === 'feature' ? "Name the feature to plan tests for, e.g. 'care team' or 'job orders'" : 'Describe what to test...'}
           style={{
             flex: 1,
             background: 'var(--bg-tertiary)',
