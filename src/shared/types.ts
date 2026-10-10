@@ -5,11 +5,11 @@ export type StepAction =
   | { type: 'click'; selector: string }
   | { type: 'fill'; selector: string; value: string }
   | { type: 'press'; selector: string; key: string }
-  | { type: 'assert'; assertionType: AssertionType; expected: string; selector?: string }
+  | { type: 'assert'; assertionType: AssertionType; expected: string; selector?: string; /** for 'attribute' */ attribute?: string }
   | { type: 'screenshot' }
   | { type: 'waitFor'; selector: string };
 
-export type AssertionType = 'url' | 'visible' | 'text' | 'hidden' | 'value' | 'enabled' | 'disabled' | 'checked' | 'unchecked' | 'count' | 'focused' | 'editable' | 'empty';
+export type AssertionType = 'url' | 'visible' | 'text' | 'hidden' | 'value' | 'enabled' | 'disabled' | 'checked' | 'unchecked' | 'count' | 'focused' | 'editable' | 'empty' | 'attribute';
 
 export interface Step {
   id: string;

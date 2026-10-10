@@ -2,14 +2,19 @@ import { readdir, readFile, writeFile, unlink, mkdir, access } from 'fs/promises
 import { readFileSync } from 'fs';
 import path from 'path';
 import type { TestSuite, LibraryEntry, PlaywrightConfig } from '../shared/types';
-import { generateSpec } from '../shared/utils/generateSpec';
+import { generateSpec, type GenerateSpecOptions } from '../shared/utils/generateSpec';
 import { generatePlaywrightConfig } from '../shared/utils/generatePlaywrightConfig';
 import { generateXCUITest, type XCUITestOptions } from '../shared/utils/generateXCUITest';
 import { importSpec } from './spec-importer';
 
 export class TestLibrary {
   /** iOS projects (ios set) save XCUITest .swift files; web projects save Playwright .spec.ts. */
-  constructor(private testOutputDir: string, private ios?: XCUITestOptions) {}
+  constructor(
+    private testOutputDir: string,
+    private ios?: XCUITestOptions,
+    /** Web projects in read-only mode: exported specs get the same network guard. */
+    private specOptions: GenerateSpecOptions = {},
+  ) {}
 
   private get ext(): string {
     return this.ios ? '.swift' : '.spec.ts';
@@ -31,7 +36,7 @@ export class TestLibrary {
     }
 
     // Generate the test file — when useProjects is true, skip device wrapping
-    const specContent = this.ios ? generateXCUITest(suite, this.ios) : generateSpec(suite, useProjects);
+    const specContent = this.ios ? generateXCUITest(suite, this.ios) : generateSpec(suite, useProjects, this.specOptions);
     await writeFile(specPath, specContent, 'utf-8');
 
     // Read existing sidecar for savedAt, or use now

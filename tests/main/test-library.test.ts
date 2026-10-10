@@ -177,8 +177,8 @@ test.describe('Board', () => {
 `);
     const suite = await library.load('board');
     expect(suite.name).toBe('Board');
-    expect(suite.tests[0].steps.map((s) => s.action.type)).toEqual(['navigate', 'click']);
-    expect(suite.importNotes).toEqual(['Line 7 not imported: await expect(page).toHaveURL(/weekOf=/);']);
+    expect(suite.tests[0].steps.map((s) => s.action.type)).toEqual(['navigate', 'click', 'assert']);
+    expect(suite.importNotes).toEqual([]);
     expect((await library.list()).map((e) => e.fileName)).toContain('board');
   });
 
@@ -190,5 +190,13 @@ test.describe('Board', () => {
     await expect(library.save(imported, 'live')).rejects.toThrow(/hand-written/);
     await expect(library.delete('live')).rejects.toThrow(/hand-written/);
     expect(await readFile(path.join(testOutputDir, 'live.spec.ts'), 'utf-8')).toBe(handWritten);
+  });
+
+  it('builds the read-only guard into specs saved from read-only projects', async () => {
+    const guarded = new TestLibrary(testOutputDir, undefined, { readOnlyAllow: ['/auth/v1/token'] });
+    const result = await guarded.save({ ...mockSuite, fileName: 'guarded' });
+    const code = await readFile(result.path, 'utf-8');
+    expect(code).toContain('new RegExp("/auth/v1/token")');
+    expect(code).toContain("await context.route('**/*'");
   });
 });

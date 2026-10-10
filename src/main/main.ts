@@ -286,7 +286,11 @@ function createWindow(): void {
 
     // Re-create TestLibrary with the resolved testOutputDir for this project
     const testDir = path.join(projectPath, config.testOutputDir || 'tests');
-    testLibrary = new TestLibrary(testDir, config.platform === 'ios' ? config.ios : undefined);
+    testLibrary = new TestLibrary(
+      testDir,
+      config.platform === 'ios' ? config.ios : undefined,
+      config.readOnly ? { readOnlyAllow: config.readOnly.allow } : {},
+    );
 
     // Remove any existing BrowserView
     if (browserView && mainWindow) {

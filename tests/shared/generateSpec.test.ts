@@ -31,7 +31,7 @@ describe('generateSpec', () => {
     expect(code).toContain("test('valid login'");
     expect(code).toContain("test('invalid login'");
     expect(code).toContain("await page.getByLabel('Email').fill('test@test.com')");
-    expect(code).toContain("await expect(page).toHaveURL('/dashboard')");
+    expect(code).toContain('await expect(page).toHaveURL(/\\/dashboard/);'); // contains, like the in-app check
   });
 
   it('omits beforeEach block when empty', () => {
@@ -137,5 +137,59 @@ describe('generateSpecFilename', () => {
       devices: [],
     };
     expect(generateSpecFilename(suite)).toBe('login-feature.spec.ts');
+  });
+
+  describe('assertions, env placeholders and read-only guard', () => {
+    const step = (action: any) => ({ id: 'x', label: 'x', action, status: 'passed' as const });
+    const suite = (steps: any[], beforeEach: any[] = []): TestSuite => ({
+      id: 's', name: 'Board', fileName: 'board', beforeAll: [], beforeEach, afterEach: [], afterAll: [],
+      tests: [{ id: 'b', name: 'board', steps }], devices: [],
+    });
+    const sel = "getByRole('button', { name: 'Week' })";
+
+    it('exports every element state assertion instead of dropping it', () => {
+      const code = generateSpec(suite([
+        step({ type: 'assert', assertionType: 'disabled', expected: '', selector: sel }),
+        step({ type: 'assert', assertionType: 'enabled', expected: '', selector: sel }),
+        step({ type: 'assert', assertionType: 'checked', expected: '', selector: sel }),
+        step({ type: 'assert', assertionType: 'unchecked', expected: '', selector: sel }),
+        step({ type: 'assert', assertionType: 'focused', expected: '', selector: sel }),
+        step({ type: 'assert', assertionType: 'editable', expected: '', selector: sel }),
+        step({ type: 'assert', assertionType: 'empty', expected: '', selector: sel }),
+        step({ type: 'assert', assertionType: 'count', expected: '3', selector: sel }),
+      ]));
+      for (const m of ['toBeDisabled()', 'toBeEnabled()', 'toBeChecked()', 'not.toBeChecked()', 'toBeFocused()', 'toBeEditable()', 'toBeEmpty()', 'toHaveCount(3)']) {
+        expect(code).toContain(`await expect(page.${sel}).${m};`);
+      }
+      expect(code).not.toContain('Unknown assertion');
+    });
+
+    it('exports attribute assertions and URL patterns', () => {
+      const code = generateSpec(suite([
+        step({ type: 'assert', assertionType: 'attribute', attribute: 'aria-pressed', expected: 'true', selector: sel }),
+        step({ type: 'assert', assertionType: 'url', expected: '/weekOf=\\d{4}-\\d{2}-\\d{2}/' }),
+        step({ type: 'assert', assertionType: 'url', expected: '/dashboard' }),
+      ]));
+      expect(code).toContain(`await expect(page.${sel}).toHaveAttribute('aria-pressed', 'true');`);
+      expect(code).toContain('await expect(page).toHaveURL(/weekOf=\\d{4}-\\d{2}-\\d{2}/);');
+      expect(code).toContain("await expect(page).toHaveURL(/\\/dashboard/);");
+    });
+
+    it('reads {{env.NAME}} placeholders from process.env so secrets stay out of the file', () => {
+      const code = generateSpec(suite([], [
+        step({ type: 'navigate', url: 'https://app.example.com/auth' }),
+        step({ type: 'fill', selector: "getByRole('textbox', { name: 'Email' })", value: '{{env.TPS_TEST_EMAIL}}' }),
+      ]));
+      expect(code).toContain("await page.getByRole('textbox', { name: 'Email' }).fill(process.env.TPS_TEST_EMAIL ?? '');");
+      expect(code).not.toContain('{{env');
+    });
+
+    it('builds the read-only network guard into specs from read-only projects', () => {
+      const code = generateSpec(suite([step({ type: 'navigate', url: 'https://x' })]), false, { readOnlyAllow: ['/auth/v1/token\\?grant_type=password'] });
+      expect(code).toContain('READ_ONLY_ALLOW');
+      expect(code).toContain("await context.route('**/*'");
+      expect(code).toMatch(/blocked write/);
+      expect(generateSpec(suite([step({ type: 'navigate', url: 'https://x' })]))).not.toContain('READ_ONLY_ALLOW');
+    });
   });
 });

@@ -162,6 +162,23 @@ describe('press steps', () => {
   });
 });
 
+describe('executeOnPage assertions and placeholders', () => {
+  it('checks attributes, URL patterns and counts, and fills {{env.NAME}} from the environment', async () => {
+    const { executeOnPage } = await import('../../src/main/browser-actions');
+    await page.setContent(`<button aria-pressed="true">Week</button><input aria-label="Email">`);
+    await executeOnPage(page, { type: 'assert', assertionType: 'attribute', attribute: 'aria-pressed', expected: 'true', selector: "getByRole('button', { name: 'Week' })" });
+    await expect(executeOnPage(page, { type: 'assert', assertionType: 'attribute', attribute: 'aria-pressed', expected: 'false', selector: "getByRole('button', { name: 'Week' })" }, 500)).rejects.toThrow();
+
+    await executeOnPage(page, { type: 'assert', assertionType: 'url', expected: '/^about:blank$/' });
+    await expect(executeOnPage(page, { type: 'assert', assertionType: 'url', expected: '/^https:/' })).rejects.toThrow(/URL/);
+    await executeOnPage(page, { type: 'assert', assertionType: 'count', expected: '1', selector: "getByRole('button')" });
+
+    process.env.SUZIQAI_TEST_EMAIL = 'qa@example.com';
+    await executeOnPage(page, { type: 'fill', selector: "getByLabel('Email')", value: '{{env.SUZIQAI_TEST_EMAIL}}' });
+    expect(await page.getByLabel('Email').inputValue()).toBe('qa@example.com');
+  });
+});
+
 describe('safety guards', () => {
   it('rejects a Claude fallback selector that matches nothing on the page', async () => {
     const claudeResolve = vi.fn(async () => "getByRole('link', { name: 'Active' })");

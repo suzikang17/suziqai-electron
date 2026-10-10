@@ -65,6 +65,8 @@ export function importSpec(source: string, fileName: string, readModule?: (relPa
     e = unwrap(e);
     if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return e.text;
     if (ts.isNumericLiteral(e)) return e.text;
+    // process.env.NAME → {{env.NAME}}, resolved at run time so secrets stay out of saved steps
+    if (ts.isPropertyAccessExpression(e) && e.expression.getText(sf) === 'process.env') return `{{env.${e.name.text}}}`;
     if (ts.isIdentifier(e)) {
       const v = env.get(e.text) ?? constants.get(e.text);
       return v?.kind === 'string' ? v.value : null;
@@ -207,8 +209,19 @@ export function importSpec(source: string, fileName: string, readModule?: (relPa
       const subject = expectCall.arguments[0];
       if (!subject) return false;
 
+      if (method === 'toHaveAttribute' && !negated && call.arguments.length === 2) {
+        const sel = selectorOf(subject, env);
+        const name = stringOf(call.arguments[0], env);
+        const value = stringOf(call.arguments[1], env);
+        if (!sel || name === null || value === null) return false;
+        out.push(step(`Expect ${sel} ${name}="${value}"`, { type: 'assert', assertionType: 'attribute', attribute: name, expected: value, selector: sel }));
+        return true;
+      }
+
       if (method === 'toHaveURL' && !negated) {
-        const expected = call.arguments[0] && stringOf(call.arguments[0], env);
+        const arg = call.arguments[0] && unwrap(call.arguments[0]);
+        // A regex literal is kept as "/pattern/flags", which URL checks treat as a pattern
+        const expected = arg && (ts.isRegularExpressionLiteral(arg) ? arg.text : stringOf(arg, env));
         if (expected === null || expected === undefined) return false;
         out.push(step(`URL is ${expected}`, { type: 'assert', assertionType: 'url', expected }));
         return true;

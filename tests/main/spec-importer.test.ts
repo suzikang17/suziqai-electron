@@ -120,3 +120,23 @@ test('opens', async ({ page }) => {
     expect(suite.tests[0].steps[0].action).toEqual({ type: 'navigate', url: 'https://app.example.com/board' });
   });
 });
+
+describe('importSpec — attributes, URL patterns, env', () => {
+  it('imports toHaveAttribute, regex toHaveURL and process.env values', () => {
+    const spec = `
+import { test, expect } from '@playwright/test';
+test('t', async ({ page }) => {
+  await expect(page.getByRole('button', { name: 'Week' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page).toHaveURL(/weekOf=\\d{4}/);
+  await page.getByRole('textbox', { name: 'Email' }).fill(process.env.TPS_TEST_EMAIL!);
+});
+`;
+    const { suite, skipped } = importSpec(spec, 't.spec.ts');
+    expect(suite.tests[0].steps.map((s) => s.action)).toEqual([
+      { type: 'assert', assertionType: 'attribute', attribute: 'aria-pressed', expected: 'true', selector: "getByRole('button', { name: 'Week' })" },
+      { type: 'assert', assertionType: 'url', expected: '/weekOf=\\d{4}/' },
+      { type: 'fill', selector: "getByRole('textbox', { name: 'Email' })", value: '{{env.TPS_TEST_EMAIL}}' },
+    ]);
+    expect(skipped).toEqual([]);
+  });
+});

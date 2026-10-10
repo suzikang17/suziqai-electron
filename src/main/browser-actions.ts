@@ -121,11 +121,17 @@ export async function executeActionOnView(_view: any, action: any, timeout: numb
   await executeOnPage(await connectToElectron(), action, timeout, _view);
 }
 
+/** {{env.NAME}} placeholders keep secrets out of saved steps; resolved from the environment at run time. */
+export function resolveEnv(value: string): string {
+  return value.replace(/\{\{env\.([A-Za-z_][A-Za-z0-9_]*)\}\}/g, (_, name) => process.env[name] ?? '');
+}
+
 export async function executeOnPage(p: Page, action: any, timeout: number = 5000, _view?: any): Promise<void> {
 
   switch (action.type) {
     case 'navigate': {
-      const url = action.url.startsWith('http') ? action.url : 'http://' + action.url;
+      const target = resolveEnv(action.url);
+      const url = target.startsWith('http') ? target : 'http://' + target;
       await p.goto(url, { waitUntil: 'domcontentloaded', timeout });
       break;
     }
@@ -143,7 +149,7 @@ export async function executeOnPage(p: Page, action: any, timeout: number = 5000
 
     case 'fill': {
       const locator = resolveLocator(p, action.selector);
-      await locator.fill(action.value || '', { timeout });
+      await locator.fill(resolveEnv(action.value || ''), { timeout });
       break;
     }
 
@@ -156,8 +162,18 @@ export async function executeOnPage(p: Page, action: any, timeout: number = 5000
     case 'assert':
       if (action.assertionType === 'url') {
         const currentUrl = p.url();
-        if (!currentUrl.includes(action.expected)) {
+        // "/pattern/flags" is a regex; anything else means "URL contains this text"
+        const pattern = action.expected.match(/^\/(.+)\/([a-z]*)$/);
+        const ok = pattern ? new RegExp(pattern[1], pattern[2]).test(currentUrl) : currentUrl.includes(action.expected);
+        if (!ok) {
           throw new Error('URL assertion failed: expected "' + action.expected + '" in "' + currentUrl + '"');
+        }
+      } else if (action.assertionType === 'attribute') {
+        const locator = resolveLocator(p, action.selector || '');
+        await locator.waitFor({ state: 'attached', timeout });
+        const actual = await locator.getAttribute(action.attribute || '');
+        if (actual !== action.expected) {
+          throw new Error(`Attribute ${action.attribute} expected "${action.expected}", got "${actual}"`);
         }
       } else if (action.assertionType === 'visible') {
         const locator = resolveLocator(p, action.selector || '');
