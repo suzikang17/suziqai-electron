@@ -194,8 +194,9 @@ export class IosDriver {
     return this.send('alert', tap ? { tap } : {}) as Promise<{ present: boolean; title?: string; buttons?: string[]; tapped?: string }>;
   }
 
-  type(text: string, query?: IosQuery) {
-    return this.send('type', { text, ...(query ? { query } : {}) });
+  /** Types into the element; `replace` clears its current value first (fill semantics). */
+  type(text: string, query?: IosQuery, replace = false) {
+    return this.send('type', { text, ...(query ? { query } : {}), ...(replace ? { replace } : {}) });
   }
 
   private async send(command: string, body: object = {}): Promise<unknown> {

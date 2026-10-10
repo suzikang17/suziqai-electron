@@ -82,7 +82,7 @@ export class IosSession {
         const [x, y, w, h] = target.element.frame;
         await this.driver.tapAt(x + w / 2, y + h / 2);
       } else if (action.type === 'fill') {
-        await this.driver.type(action.value, query);
+        await this.driver.type(action.value, query, true);
       } else if (action.type === 'press') {
         if (action.key !== 'Enter') throw new Error(`Key "${action.key}" isn't supported on iOS yet`);
         await this.driver.type('\n', query);

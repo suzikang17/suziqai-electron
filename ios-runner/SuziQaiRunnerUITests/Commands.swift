@@ -36,8 +36,16 @@ final class Commands {
             guard let text = body["text"] as? String else { throw RunnerError("type needs text") }
             if let query = body["query"] as? [String: Any] {
                 let element = try find(query)
-                element.tap()
-                element.typeText(text)
+                if body["replace"] as? Bool == true {
+                    // fill semantics: replace the value. Tap the trailing edge so the cursor lands after it.
+                    element.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+                    if let current = element.value as? String, !current.isEmpty, current != element.placeholderValue {
+                        element.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
+                    }
+                } else {
+                    element.tap()
+                }
+                if !text.isEmpty { element.typeText(text) }
             } else {
                 try currentApp().typeText(text)
             }

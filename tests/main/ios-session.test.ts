@@ -58,7 +58,7 @@ describe('IosSession.execute', () => {
     const selector = JSON.stringify({ type: 'textField', label: 'Name', index: 0 });
     const result = await session.execute('Enter name', { type: 'fill', selector, value: 'Dr. Paws' });
 
-    expect(driver.type).toHaveBeenCalledWith('Dr. Paws', { type: 'textField', label: 'Name', index: 0 });
+    expect(driver.type).toHaveBeenCalledWith('Dr. Paws', { type: 'textField', label: 'Name', index: 0 }, true); // fill replaces the value
     expect(jev.systemOne).not.toHaveBeenCalled();
     expect(result.resolvedSelector).toBeUndefined();
   });

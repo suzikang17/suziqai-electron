@@ -74,9 +74,17 @@ describe('generateXCUITest', () => {
   it('turns steps into waits, taps, typing and assertions', () => {
     expect(code).toContain('XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "Care Team")).element(boundBy: 0).waitForExistence(timeout: 5))');
     expect(code).toMatch(/\.tap\(\)/);
-    expect(code).toContain('.typeText("Dr. Paws")');
+    // fill replaces the value like Playwright, via a file-private helper
+    expect(code).toContain('.replaceText("Dr. Paws")');
+    expect(code).toContain('fileprivate extension XCUIElement {');
+    expect(code).toContain('XCUIKeyboardKey.delete.rawValue');
     expect(code).toContain('.typeText("\\n")');
     expect(code).toContain('XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label == %@", "Dr. Paws")).element(boundBy: 0).waitForExistence(timeout: 5))');
+  });
+
+  it('only adds the replaceText helper when a step fills', () => {
+    const noFill = { ...suite, tests: [{ id: 't', name: 'Tap', steps: suite.tests[0].steps.filter((st) => st.action.type !== 'fill') }] };
+    expect(generateXCUITest(noFill, { bundleId: 'x' })).not.toContain('replaceText');
   });
 
   it('flags unresolved steps and skips failed ones', () => {
