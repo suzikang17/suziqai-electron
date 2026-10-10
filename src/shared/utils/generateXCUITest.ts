@@ -32,9 +32,10 @@ const REPLACE_TEXT_HELPER = `
 fileprivate extension XCUIElement {
     /// Replaces the field's text (typeText alone appends to it).
     func replaceText(_ text: String) {
-        // Tap the trailing edge so the cursor lands after the existing text
-        coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        tap() // scrolls the field into view and focuses it
         if let current = value as? String, !current.isEmpty, current != placeholderValue {
+            // Tap the trailing edge so the cursor lands after the existing text
+            coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
             typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
         }
         if !text.isEmpty { typeText(text) }
