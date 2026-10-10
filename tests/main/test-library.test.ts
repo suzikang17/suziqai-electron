@@ -145,4 +145,22 @@ describe('TestLibrary', () => {
       await expect(library.delete('nonexistent')).resolves.not.toThrow();
     });
   });
+
+  it('saves iOS suites as XCUITest .swift files and lists them', async () => {
+    const ios = new TestLibrary(testOutputDir, { bundleId: 'pet.homepage.PetHomepage', launchArgs: ['--uitest'] });
+    const iosSuite: TestSuite = {
+      ...mockSuite, beforeEach: [],
+      tests: [{ id: 'b', name: 'tap schedule', steps: [
+        { id: 's', label: 'Open Schedule', action: { type: 'click', selector: JSON.stringify({ type: 'button', label: 'Schedule', index: 0 }) }, status: 'passed' },
+      ]}],
+    };
+
+    const result = await ios.save(iosSuite);
+
+    expect(result.path.endsWith('login-flow.swift')).toBe(true);
+    const swift = await readFile(result.path, 'utf-8');
+    expect(swift).toContain('XCUIApplication(bundleIdentifier: "pet.homepage.PetHomepage")');
+    expect((await ios.list()).map((e) => e.fileName)).toEqual(['login-flow']);
+    expect(await library.list()).toEqual([]); // web library ignores .swift
+  });
 });

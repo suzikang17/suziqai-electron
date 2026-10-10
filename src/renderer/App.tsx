@@ -13,6 +13,9 @@ import { generateSpec, generateSpecFilename } from '@shared/utils/generateSpec';
 
 export function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);
+  // 'ios' projects show simulator screenshots in place of the BrowserView
+  const [platform, setPlatform] = useState<'web' | 'ios'>('web');
+  const [iosScreen, setIosScreen] = useState('');
   const [mode, setMode] = useState<AppMode>('command');
   const defaultBlock: TestBlock = { id: 'block-1', name: 'Untitled Test', steps: [] };
   const defaultSuite: TestSuite = { id: 'suite-1', name: 'Untitled Suite', fileName: 'untitled-suite', beforeAll: [], beforeEach: [], afterEach: [], afterAll: [], tests: [defaultBlock], devices: [] };
@@ -100,7 +103,8 @@ export function App() {
           if (parsed.path) {
             const url = parsed.url || 'http://localhost:3000';
             setBaseUrl(url);
-            await window.suziqai.openProject(parsed.path, parsed.url);
+            const config = await window.suziqai.openProject(parsed.path, parsed.url, parsed.ios);
+            setPlatform(config?.platform ?? 'web');
             setProjectPath(parsed.path);
             // Initialize playwright config with project's base URL and test dir
             setPlaywrightConfig(prev => ({ ...prev, baseURL: url }));
@@ -110,6 +114,20 @@ export function App() {
         }
       }
       setIsAutoLoading(false);
+    });
+  }, []);
+
+  // iOS: live simulator screen, and selectors Jev resolved while running steps
+  useEffect(() => {
+    window.suziqai.onIosScreenshot((png) => setIosScreen(png));
+    window.suziqai.onStepResolved((stepId, selector) => {
+      const withSelector = (steps: Step[]) => steps.map(st =>
+        st.id === stepId && 'selector' in st.action ? { ...st, action: { ...st.action, selector } as Step['action'] } : st);
+      setSuites(prev => prev.map(s => ({
+        ...s,
+        beforeEach: withSelector(s.beforeEach),
+        tests: s.tests.map(b => ({ ...b, steps: withSelector(b.steps) })),
+      })));
     });
   }, []);
 
@@ -317,7 +335,7 @@ export function App() {
       if (autopilotRef.current) {
         const executableSteps = (steps as any[]).filter((s: any) => !s._fromVisualQA);
         if (executableSteps.length > 0) {
-          const stepsToRun = executableSteps.map((s: any) => ({ id: s.id, action: s.action }));
+          const stepsToRun = executableSteps.map((s: any) => ({ id: s.id, action: s.action, label: s.label }));
           log(`⚡ Autopilot: running ${stepsToRun.length} step(s)...`);
           window.suziqai.executeAllSteps(stepsToRun);
         }
@@ -500,7 +518,8 @@ export function App() {
   }
 
   if (!projectPath) {
-    return <ProjectSetup onProjectOpened={(path, url) => {
+    return <ProjectSetup onProjectOpened={(path, url, openedPlatform) => {
+      setPlatform(openedPlatform ?? 'web');
       setBaseUrl(url || 'http://localhost:3000');
       setProjectPath(path);
     }} />;
@@ -669,11 +688,11 @@ export function App() {
                 }
               }
               log(`▶ Running: ${step.label} + ${group.length - 1} assertion(s)`);
-              window.suziqai.executeAllSteps(group.map(s => ({ id: s.id, action: s.action, timeout: s.timeout })));
+              window.suziqai.executeAllSteps(group.map(s => ({ id: s.id, action: s.action, timeout: s.timeout, label: s.label })));
             } else {
               // Single assertion — just run it
               log(`▶ Running: ${step.label}`);
-              window.suziqai.executeStep(stepId, step.action, step.timeout);
+              window.suziqai.executeStep(stepId, step.action, step.timeout, step.label);
             }
           }}
           onDenyStep={(stepId: string) => {
@@ -724,7 +743,7 @@ export function App() {
               .filter(s => (s.status === 'pending' || s.status === 'passed') && s.action.type !== 'assert' && s.action.type !== 'waitFor');
             const assertions = currentBlock.steps
               .filter(s => (s.status === 'pending' || s.status === 'passed') && (s.action.type === 'assert' || s.action.type === 'waitFor'));
-            const ordered = [...actions, ...assertions].map(s => ({ id: s.id, action: s.action, timeout: s.timeout }));
+            const ordered = [...actions, ...assertions].map(s => ({ id: s.id, action: s.action, timeout: s.timeout, label: s.label }));
             log(`▶▶ Act & Assert: ${actions.length} action(s), then ${assertions.length} assertion(s)`);
             window.suziqai.executeAllSteps(ordered);
           }}
@@ -732,7 +751,7 @@ export function App() {
             if (!currentBlock) return;
             const stepsToRun = currentBlock.steps
               .filter(s => stepIds.includes(s.id))
-              .map(s => ({ id: s.id, action: s.action, timeout: s.timeout }));
+              .map(s => ({ id: s.id, action: s.action, timeout: s.timeout, label: s.label }));
             log(`▶▶ Act & Assert: running ${stepsToRun.length} step(s)`);
             window.suziqai.executeAllSteps(stepsToRun);
           }}
@@ -758,7 +777,7 @@ export function App() {
             if (!currentBlock) return;
             const pendingSteps = currentBlock.steps
               .filter(s => s.status === 'pending' || s.status === 'passed')
-              .map(s => ({ id: s.id, action: s.action, timeout: s.timeout }));
+              .map(s => ({ id: s.id, action: s.action, timeout: s.timeout, label: s.label }));
             log(`▶▶ Running all ${pendingSteps.length} steps...`);
             window.suziqai.executeAllSteps(pendingSteps);
           }}
@@ -804,7 +823,7 @@ export function App() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Top: Browser Toolbar + Viewport */}
         <BrowserToolbar
-          url={currentUrl}
+          url={platform === 'ios' ? 'iOS simulator' : currentUrl}
           mode={mode}
           isRecording={isRecording}
           isPicking={isPicking}
@@ -825,8 +844,8 @@ export function App() {
           }}
           onPickToggle={togglePicker}
         />
-        {/* Video import button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+        {/* Video import button (web only) */}
+        {platform === 'web' && <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
           <button
             onClick={() => setShowVideoImport(true)}
             style={{
@@ -837,7 +856,7 @@ export function App() {
           >
             <span style={{ fontSize: 13 }}>🎬</span> Import from Video
           </button>
-        </div>
+        </div>}
         {/* Browser viewport area — BrowserView is positioned here by main process */}
         <div
           ref={viewportRef}
@@ -846,8 +865,19 @@ export function App() {
             flex: 1,
             background: 'var(--bg-dark)',
             position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            minHeight: 0,
           }}
-        />
+        >
+          {platform === 'ios' && iosScreen && (
+            <img
+              src={`data:image/png;base64,${iosScreen}`}
+              alt="iOS simulator screen"
+              style={{ height: '100%', objectFit: 'contain', padding: 8, boxSizing: 'border-box' }}
+            />
+          )}
+        </div>
 
         {/* Chat resize handle */}
         <div

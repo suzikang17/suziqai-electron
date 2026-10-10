@@ -43,6 +43,38 @@ final class Commands {
             }
             return ["typed": text.count]
 
+        case "tapAt":
+            // Coordinate tap from a frame we already have: skips the element query's existence wait
+            guard let x = body["x"] as? Double, let y = body["y"] as? Double else { throw RunnerError("tapAt needs x and y") }
+            try currentApp().coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y)).tap()
+            return ["tapped": true]
+
+        case "swipe":
+            let target: XCUIElement = try (body["query"] as? [String: Any]).map(find) ?? currentApp()
+            switch body["direction"] as? String {
+            case "up": target.swipeUp()
+            case "down": target.swipeDown()
+            case "left": target.swipeLeft()
+            case "right": target.swipeRight()
+            default: throw RunnerError("swipe needs direction up|down|left|right")
+            }
+            return ["swiped": true]
+
+        case "screenshot":
+            return ["png": XCUIScreen.main.screenshot().pngRepresentation.base64EncodedString()]
+
+        case "alert":
+            // System alerts (permissions etc.) belong to SpringBoard, not the app under test
+            let alert = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+            guard alert.exists else { return ["present": false] }
+            let buttons = alert.buttons.allElementsBoundByIndex.map(\.label)
+            if let label = body["tap"] as? String {
+                guard buttons.contains(label) else { throw RunnerError("alert has no button \(label); has \(buttons)") }
+                alert.buttons[label].tap()
+                return ["present": true, "tapped": label]
+            }
+            return ["present": true, "title": alert.label, "buttons": buttons]
+
         default:
             throw RunnerError("unknown command: \(command)")
         }
@@ -60,6 +92,8 @@ final class Commands {
         var predicates: [NSPredicate] = []
         if let id = query["id"] as? String { predicates.append(NSPredicate(format: "identifier == %@", id)) }
         if let label = query["label"] as? String { predicates.append(NSPredicate(format: "label == %@", label)) }
+        if let contains = query["labelContains"] as? String { predicates.append(NSPredicate(format: "label CONTAINS %@", contains)) }
+        if let placeholder = query["placeholder"] as? String { predicates.append(NSPredicate(format: "placeholderValue == %@", placeholder)) }
 
         let matches = app.descendants(matching: type)
             .matching(NSCompoundPredicate(andPredicateWithSubpredicates: predicates))

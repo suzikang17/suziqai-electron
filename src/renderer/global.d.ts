@@ -1,4 +1,4 @@
-import type { VideoImportProgress, VideoImportResult } from '@shared/types';
+import type { VideoImportProgress, VideoImportResult, IosProjectSettings, ProjectConfig } from '@shared/types';
 
 declare global {
   interface Window {
@@ -8,7 +8,7 @@ declare global {
       onChatResponse: (callback: (message: string) => void) => void;
 
       // Steps
-      executeStep: (stepId: string, action?: any, timeout?: number) => Promise<void>;
+      executeStep: (stepId: string, action?: any, timeout?: number, label?: string) => Promise<void>;
       executeAllSteps: (steps?: any[]) => Promise<void>;
       onStepsProposed: (callback: (steps: unknown[]) => void) => void;
       onStepResult: (callback: (stepId: string, status: string, error?: string, screenshotPath?: string) => void) => void;
@@ -28,7 +28,7 @@ declare global {
       onUrlChanged: (callback: (url: string) => void) => void;
 
       // Project
-      openProject: (path: string, baseUrl?: string) => Promise<void>;
+      openProject: (path: string, baseUrl?: string, ios?: IosProjectSettings) => Promise<ProjectConfig>;
       onProjectConfig: (callback: (config: unknown) => void) => void;
 
       // Export
@@ -79,6 +79,8 @@ declare global {
       // Video import
       importVideo: (filePath: string) => Promise<VideoImportResult>;
       onVideoImportProgress: (callback: (progress: VideoImportProgress) => void) => void;
+      onIosScreenshot: (callback: (pngBase64: string) => void) => void;
+      onStepResolved: (callback: (stepId: string, selector: string) => void) => void;
     };
   }
 }

@@ -37,7 +37,7 @@ contextBridge.exposeInMainWorld('suziqai', {
     ipcRenderer.on(IPC.CHAT_RESPONSE, (_event, message) => callback(message)),
 
   // Steps
-  executeStep: (stepId: string, action?: any, timeout?: number) => ipcRenderer.invoke(IPC.STEP_EXECUTE, stepId, action, timeout),
+  executeStep: (stepId: string, action?: any, timeout?: number, label?: string) => ipcRenderer.invoke(IPC.STEP_EXECUTE, stepId, action, timeout, label),
   executeAllSteps: (steps?: any[]) => ipcRenderer.invoke(IPC.STEP_EXECUTE_ALL, steps),
   onStepsProposed: (callback: (steps: unknown[]) => void) =>
     ipcRenderer.on(IPC.STEPS_PROPOSED, (_event, steps) => callback(steps)),
@@ -62,7 +62,7 @@ contextBridge.exposeInMainWorld('suziqai', {
     ipcRenderer.on(IPC.BROWSER_URL_CHANGED, (_event, url) => callback(url)),
 
   // Project
-  openProject: (path: string, baseUrl?: string) => ipcRenderer.invoke(IPC.PROJECT_OPEN, path, baseUrl),
+  openProject: (path: string, baseUrl?: string, ios?: any) => ipcRenderer.invoke(IPC.PROJECT_OPEN, path, baseUrl, ios),
   onProjectConfig: (callback: (config: unknown) => void) =>
     ipcRenderer.on(IPC.PROJECT_CONFIG, (_event, config) => callback(config)),
 
@@ -118,4 +118,10 @@ contextBridge.exposeInMainWorld('suziqai', {
   importVideo: (filePath: string) => ipcRenderer.invoke(IPC.VIDEO_IMPORT, filePath),
   onVideoImportProgress: (callback: (progress: any) => void) =>
     ipcRenderer.on(IPC.VIDEO_IMPORT_PROGRESS, (_event, progress) => callback(progress)),
+
+  // iOS projects (channel names match src/main/ios-mode.ts)
+  onIosScreenshot: (callback: (pngBase64: string) => void) =>
+    ipcRenderer.on('ios:screenshot', (_event, png) => callback(png)),
+  onStepResolved: (callback: (stepId: string, selector: string) => void) =>
+    ipcRenderer.on('step:resolved', (_event, stepId, selector) => callback(stepId, selector)),
 });

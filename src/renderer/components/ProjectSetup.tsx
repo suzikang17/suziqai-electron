@@ -7,12 +7,15 @@ interface DirEntry {
 }
 
 interface ProjectSetupProps {
-  onProjectOpened: (path: string, baseUrl: string) => void;
+  onProjectOpened: (path: string, baseUrl: string, platform?: 'web' | 'ios') => void;
 }
 
 export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
   const [query, setQuery] = useState('');
   const [baseUrl, setBaseUrl] = useState('http://localhost:3000');
+  const [platform, setPlatform] = useState<'web' | 'ios'>('web');
+  const [bundleId, setBundleId] = useState('');
+  const [launchArgs, setLaunchArgs] = useState('');
   const [results, setResults] = useState<DirEntry[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -145,9 +148,16 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
   const handleOpen = async (dirPath: string) => {
     setStatus('loading');
     try {
-      await window.suziqai.openProject(dirPath, baseUrl);
-      await window.suziqai.setLastProject(JSON.stringify({ path: dirPath, url: baseUrl }));
-      onProjectOpened(dirPath, baseUrl);
+      if (platform === 'ios') {
+        if (!bundleId.trim()) throw new Error('Enter the app\'s bundle ID');
+        const ios = { bundleId: bundleId.trim(), launchArgs: launchArgs.split(/\s+/).filter(Boolean) };
+        await window.suziqai.openProject(dirPath, undefined, ios);
+        await window.suziqai.setLastProject(JSON.stringify({ path: dirPath, ios }));
+      } else {
+        await window.suziqai.openProject(dirPath, baseUrl);
+        await window.suziqai.setLastProject(JSON.stringify({ path: dirPath, url: baseUrl }));
+      }
+      onProjectOpened(dirPath, baseUrl, platform);
     } catch (err) {
       setStatus('error');
       setError((err as Error).message);
@@ -325,15 +335,31 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
               Open Project
             </button>
           </div>
-          <div>
-            <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
-              App URL
-            </span>
-            <input
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="http://localhost:3000"
-              style={{
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['web', 'ios'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPlatform(p)}
+                style={{
+                  background: platform === p ? 'var(--accent-blue, #0969da)' : 'var(--bg-tertiary)',
+                  color: platform === p ? '#ffffff' : 'var(--text-secondary)',
+                  borderRadius: 4,
+                  padding: '4px 12px',
+                  fontSize: 11,
+                }}
+              >
+                {p === 'web' ? 'Web app' : 'iOS app'}
+              </button>
+            ))}
+          </div>
+          {platform === 'web' ? (
+            <div>
+              <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>App URL</span>
+              <input
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="http://localhost:3000"
+                style={{
                 display: 'block',
                 width: '100%',
                 marginTop: 4,
@@ -344,8 +370,50 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
                 fontSize: 13,
                 fontFamily: 'monospace',
               }}
-            />
-          </div>
+              />
+            </div>
+          ) : (
+            <>
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Bundle ID</span>
+                <input
+                  value={bundleId}
+                  onChange={(e) => setBundleId(e.target.value)}
+                  placeholder="com.example.MyApp (installed on the simulator)"
+                  style={{
+                display: 'block',
+                width: '100%',
+                marginTop: 4,
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                borderRadius: 4,
+                padding: '6px 10px',
+                fontSize: 13,
+                fontFamily: 'monospace',
+              }}
+                />
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Launch arguments</span>
+                <input
+                  value={launchArgs}
+                  onChange={(e) => setLaunchArgs(e.target.value)}
+                  placeholder="--uitest"
+                  style={{
+                display: 'block',
+                width: '100%',
+                marginTop: 4,
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                borderRadius: 4,
+                padding: '6px 10px',
+                fontSize: 13,
+                fontFamily: 'monospace',
+              }}
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 

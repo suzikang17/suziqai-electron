@@ -13,6 +13,8 @@ import { IPC } from '../shared/types';
 import { executeActionOnView, disconnectPlaywright, connectToElectron, setExpectedUrlProvider } from './browser-actions';
 import { TypeSafeClient } from '@typesafe-ai/sdk';
 import { runJevShadow } from './jev-shadow';
+import { IosMode, IOS_CHAT_PREFIX } from './ios-mode';
+import type { IosProjectSettings } from '../shared/types';
 
 // Local secrets (e.g. TYPESAFE_API_KEY) — gitignored, optional
 try {
@@ -25,6 +27,9 @@ try {
 setExpectedUrlProvider(() => browserView?.webContents.getURL() || undefined);
 
 const jevClient = process.env.TYPESAFE_API_KEY ? new TypeSafeClient({ defaultModel: 'jev-1.13.0' }) : null;
+
+// iOS projects drive a simulator instead of the BrowserView
+const iosMode = new IosMode(app.getAppPath(), () => mainWindow, jevClient);
 
 let mainWindow: BrowserWindow | null = null;
 let browserView: BrowserView | null = null;
@@ -230,15 +235,17 @@ function createWindow(): void {
 
   // Project open handler
   ipcMain.removeHandler(IPC.PROJECT_OPEN);
-  ipcMain.handle(IPC.PROJECT_OPEN, async (_event, projectPath: string, baseUrl?: string) => {
-    const config = await projectConfig.load(projectPath);
-    if (baseUrl) {
-      config.baseUrl = baseUrl;
-      await projectConfig.update({ baseUrl });
+  ipcMain.handle(IPC.PROJECT_OPEN, async (_event, projectPath: string, baseUrl?: string, ios?: IosProjectSettings) => {
+    let config = await projectConfig.load(projectPath);
+    if (ios) {
+      config = await projectConfig.update({ platform: 'ios', ios });
+    } else if (baseUrl) {
+      config = await projectConfig.update({ platform: 'web', baseUrl });
     }
 
     // Re-create TestLibrary with the resolved testOutputDir for this project
-    testLibrary = new TestLibrary(path.join(projectPath, config.testOutputDir || 'tests'));
+    const testDir = path.join(projectPath, config.testOutputDir || 'tests');
+    testLibrary = new TestLibrary(testDir, config.platform === 'ios' ? config.ios : undefined);
 
     // Remove any existing BrowserView
     if (browserView && mainWindow) {
@@ -248,6 +255,14 @@ function createWindow(): void {
       browserView = null;
       await disconnectPlaywright();
     }
+
+    if (config.platform === 'ios' && config.ios) {
+      const udid = await iosMode.open(config.ios);
+      if (udid !== config.ios.udid) config = await projectConfig.update({ ios: { ...config.ios, udid } });
+      mainWindow?.webContents.send(IPC.PROJECT_CONFIG, config);
+      return config;
+    }
+    await iosMode.close();
 
     // Create BrowserView for the target app
     browserView = new BrowserView({
@@ -291,6 +306,7 @@ function createWindow(): void {
     if (mainWindow) {
       mainWindow.webContents.send(IPC.PROJECT_CONFIG, config);
     }
+    return config;
   });
 
   // Dialog handlers
@@ -375,17 +391,19 @@ function createWindow(): void {
     const win = mainWindow;
     if (!win) return;
 
-    const context = {
-      url: browserView ? browserView.webContents.getURL() : '',
-      accessibilityTree: await getAccessibilityContext(),
-      screenshot: await captureBrowserViewScreenshot(),
-    };
+    const context = iosMode.active
+      ? await iosMode.chatContext()
+      : {
+          url: browserView ? browserView.webContents.getURL() : '',
+          accessibilityTree: await getAccessibilityContext(),
+          screenshot: await captureBrowserViewScreenshot(),
+        };
 
     try {
-      const response = await claudeSession.send(message, context);
+      const response = await claudeSession.send(iosMode.active ? `${IOS_CHAT_PREFIX}\n${message}` : message, context);
       win.webContents.send(IPC.CHAT_RESPONSE, response.message);
 
-      if (jevClient && response.steps.length > 0) {
+      if (jevClient && !iosMode.active && response.steps.length > 0) {
         connectToElectron()
           .then((page) =>
             runJevShadow({
@@ -416,7 +434,11 @@ function createWindow(): void {
 
   // Override step execution to use BrowserView with visual QA
   ipcMain.removeHandler(IPC.STEP_EXECUTE);
-  ipcMain.handle(IPC.STEP_EXECUTE, async (_event, stepId: string, action: any, timeout?: number) => {
+  ipcMain.handle(IPC.STEP_EXECUTE, async (_event, stepId: string, action: any, timeout?: number, label?: string) => {
+    if (iosMode.active) {
+      await iosMode.executeStep(stepId, label ?? '', action, timeout);
+      return;
+    }
     const win = mainWindow;
     if (!win || !browserView) return;
 
@@ -481,7 +503,13 @@ function createWindow(): void {
   });
 
   ipcMain.removeHandler(IPC.STEP_EXECUTE_ALL);
-  ipcMain.handle(IPC.STEP_EXECUTE_ALL, async (_event, steps: Array<{ id: string; action: any; timeout?: number }>) => {
+  ipcMain.handle(IPC.STEP_EXECUTE_ALL, async (_event, steps: Array<{ id: string; action: any; timeout?: number; label?: string }>) => {
+    if (iosMode.active) {
+      for (const step of steps) {
+        if (!(await iosMode.executeStep(step.id, step.label ?? '', step.action, step.timeout))) break;
+      }
+      return;
+    }
     const win = mainWindow;
     if (!win || !browserView) return;
 
@@ -534,6 +562,7 @@ function createWindow(): void {
 
   mainWindow.on('closed', async () => {
     await disconnectPlaywright();
+    await iosMode.close();
     mainWindow = null;
   });
 }
@@ -544,6 +573,11 @@ export const CDP_PORT = parseInt(process.env.SUZIQAI_CDP_PORT || '9222', 10);
 app.commandLine.appendSwitch('remote-debugging-port', String(CDP_PORT));
 
 app.whenReady().then(createWindow);
+
+// Stop the iOS runner on quit; its xcodebuild process would otherwise outlive the app
+app.on('before-quit', () => {
+  void iosMode.close();
+});
 
 app.on('window-all-closed', () => {
   app.quit();

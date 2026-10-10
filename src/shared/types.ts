@@ -119,7 +119,17 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export interface IosProjectSettings {
+  bundleId: string;
+  launchArgs?: string[];
+  /** Simulator to use; picked automatically when empty. */
+  udid?: string;
+}
+
 export interface ProjectConfig {
+  /** 'web' (default) drives the BrowserView; 'ios' drives a simulator through ios-runner. */
+  platform?: 'web' | 'ios';
+  ios?: IosProjectSettings;
   baseUrl: string;
   browser: 'chromium' | 'firefox' | 'webkit';
   testOutputDir: string;

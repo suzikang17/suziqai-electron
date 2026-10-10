@@ -3,19 +3,25 @@ import path from 'path';
 import type { TestSuite, LibraryEntry, PlaywrightConfig } from '../shared/types';
 import { generateSpec } from '../shared/utils/generateSpec';
 import { generatePlaywrightConfig } from '../shared/utils/generatePlaywrightConfig';
+import { generateXCUITest, type XCUITestOptions } from '../shared/utils/generateXCUITest';
 
 export class TestLibrary {
-  constructor(private testOutputDir: string) {}
+  /** iOS projects (ios set) save XCUITest .swift files; web projects save Playwright .spec.ts. */
+  constructor(private testOutputDir: string, private ios?: XCUITestOptions) {}
+
+  private get ext(): string {
+    return this.ios ? '.swift' : '.spec.ts';
+  }
 
   async save(suite: TestSuite, fileName?: string, useProjects: boolean = false): Promise<{ fileName: string; path: string }> {
     await mkdir(this.testOutputDir, { recursive: true });
 
     const resolvedName = fileName || await this.resolveFileName(suite, suite.fileName);
-    const specPath = path.join(this.testOutputDir, `${resolvedName}.spec.ts`);
+    const specPath = path.join(this.testOutputDir, `${resolvedName}${this.ext}`);
     const sidecarPath = path.join(this.testOutputDir, `${resolvedName}.suziqai.json`);
 
-    // Generate spec file — when useProjects is true, skip device wrapping
-    const specContent = generateSpec(suite, useProjects);
+    // Generate the test file — when useProjects is true, skip device wrapping
+    const specContent = this.ios ? generateXCUITest(suite, this.ios) : generateSpec(suite, useProjects);
     await writeFile(specPath, specContent, 'utf-8');
 
     // Read existing sidecar for savedAt, or use now
@@ -51,11 +57,11 @@ export class TestLibrary {
     }
 
     const files = await readdir(this.testOutputDir);
-    const specFiles = files.filter(f => f.endsWith('.spec.ts'));
+    const specFiles = files.filter(f => f.endsWith(this.ext));
     const entries: LibraryEntry[] = [];
 
     for (const specFile of specFiles) {
-      const fileName = specFile.replace('.spec.ts', '');
+      const fileName = specFile.slice(0, -this.ext.length);
       const sidecarPath = path.join(this.testOutputDir, `${fileName}.suziqai.json`);
 
       try {
@@ -111,7 +117,7 @@ export class TestLibrary {
   }
 
   async delete(fileName: string): Promise<void> {
-    const specPath = path.join(this.testOutputDir, `${fileName}.spec.ts`);
+    const specPath = path.join(this.testOutputDir, `${fileName}${this.ext}`);
     const sidecarPath = path.join(this.testOutputDir, `${fileName}.suziqai.json`);
 
     await unlink(specPath).catch(() => {});
@@ -124,7 +130,7 @@ export class TestLibrary {
     let counter = 2;
 
     while (true) {
-      const specPath = path.join(this.testOutputDir, `${candidate}.spec.ts`);
+      const specPath = path.join(this.testOutputDir, `${candidate}${this.ext}`);
       try {
         await access(specPath);
         candidate = `${base}-${counter}`;
