@@ -21,7 +21,7 @@ export function VideoImport({ onClose }: VideoImportProps) {
   const [file, setFile] = useState<{ name: string; path: string; size: number } | null>(null);
   const [status, setStatus] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');
   const [progress, setProgress] = useState<VideoImportProgress | null>(null);
-  const [result, setResult] = useState<{ actionsDetected: number; selectorsResolved: number; unresolvedCount: number } | null>(null);
+  const [result, setResult] = useState<{ actionsDetected: number; selectorsResolved: number; selectorsByJev: number; unresolvedCount: number } | null>(null);
   const [error, setError] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +85,7 @@ export function VideoImport({ onClose }: VideoImportProps) {
         setResult({
           actionsDetected: res.stats?.actionsDetected ?? 0,
           selectorsResolved: res.stats?.selectorsResolved ?? 0,
+          selectorsByJev: res.stats?.selectorsByJev ?? 0,
           unresolvedCount: res.unresolvedCount ?? 0,
         });
       } else {
@@ -201,7 +202,8 @@ export function VideoImport({ onClose }: VideoImportProps) {
             </div>
             <div style={{ fontSize: 13, color: '#6b7280', marginTop: 8, lineHeight: 1.6 }}>
               {result.actionsDetected} actions detected<br />
-              {result.selectorsResolved} selectors auto-resolved<br />
+              {result.selectorsResolved} selectors auto-resolved
+              {result.selectorsByJev > 0 && ` (${result.selectorsByJev} by Jev)`}<br />
               {result.unresolvedCount > 0 && (
                 <span style={{ color: '#d97706' }}>
                   {result.unresolvedCount} need manual refinement

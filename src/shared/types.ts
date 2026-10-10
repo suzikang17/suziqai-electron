@@ -98,6 +98,8 @@ export interface VideoImportResult {
     batchesSent: number;
     actionsDetected: number;
     selectorsResolved: number;
+    selectorsByJev?: number;
+    selectorsByClaude?: number;
     durationMs: number;
   };
 }

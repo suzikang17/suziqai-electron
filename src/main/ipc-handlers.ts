@@ -8,7 +8,7 @@ import type { TestExporter } from './test-exporter';
 import type { TestLibrary } from './test-library';
 import type { StepAction, PlaywrightConfig, VideoImportProgress } from '../shared/types';
 import { validateVideo, extractFrames, batchFrames, analyzeFrameBatch, mergeVideoSteps, cleanupFrames } from './video-analyzer';
-import { resolveSelectors } from './selector-resolver';
+import { resolveSelectors, type ResolverDeps } from './selector-resolver';
 
 interface Deps {
   browserManager: BrowserManager;
@@ -19,6 +19,8 @@ interface Deps {
   getTestLibrary: () => TestLibrary;
   getWindow: () => BrowserWindow | null;
   getProjectPath?: () => string;
+  /** Browser + Jev access for video import's selector resolution; defaults to browserManager. */
+  resolverDeps?: ResolverDeps;
 }
 
 export function registerIpcHandlers(deps: Deps): void {
@@ -202,7 +204,14 @@ export function registerIpcHandlers(deps: Deps): void {
 
       const resolveResult = await resolveSelectors(
         videoSteps,
-        browserManager,
+        deps.resolverDeps ?? {
+          getPage: async () => {
+            const page = browserManager.getPage();
+            if (!page) throw new Error('Browser not launched');
+            return page;
+          },
+          executeAction: (action) => browserManager.executeAction(action),
+        },
         (detail, stepIndex, totalSteps) => {
           const percent = 60 + Math.round((stepIndex / totalSteps) * 30);
           sendProgress({ phase: 'resolving', percent, detail });
@@ -229,6 +238,8 @@ export function registerIpcHandlers(deps: Deps): void {
           batchesSent: batches.length,
           actionsDetected: videoSteps.length,
           selectorsResolved: resolveResult.resolvedCount,
+          selectorsByJev: resolveResult.resolvedByJev,
+          selectorsByClaude: resolveResult.resolvedByClaude,
           durationMs: Date.now() - startTime,
         },
       };

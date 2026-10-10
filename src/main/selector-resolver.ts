@@ -1,7 +1,8 @@
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
-import type { BrowserManager } from './browser-manager';
+import type { Page } from 'playwright';
 import type { Step, StepAction, VideoStep } from '../shared/types';
+import { decide, snapshotCandidates, uniqueLocator, type JevClient } from './jev-decider';
 
 const RESOLVE_PROMPT = `You are a Playwright selector expert. Given an accessibility tree (ARIA snapshot) of a web page and a visual description of an element, return the single best Playwright selector for that element.
 
@@ -50,7 +51,7 @@ function invokeClaudeCli(prompt: string): Promise<string> {
   });
 }
 
-async function resolveSelector(
+export async function claudeResolveSelector(
   elementHint: string,
   a11yTree: string
 ): Promise<string | null> {
@@ -63,18 +64,26 @@ Element to find: ${elementHint}`;
 
   try {
     const selector = await invokeClaudeCli(prompt);
-    // Basic validation — should look like a Playwright selector
-    if (selector && (
-      selector.startsWith('getBy') ||
-      selector.startsWith('locator(') ||
-      selector.match(/^[a-z#.\[]/i) // CSS selector
-    )) {
-      return selector;
-    }
+    if (isSelectorLike(selector)) return selector;
     return null;
   } catch {
     return null;
   }
+}
+
+/** Rejects prose (e.g. "The element ... is not present") that the model returns instead of a selector. */
+export function isSelectorLike(text: string): boolean {
+  const s = text.trim();
+  if (!s || s.includes('\n') || s.length > 200) return false;
+  if (/^getBy(Role|Label|Placeholder|Text|TestId)\(.*\)(\.(first|last)\(\)|\.nth\(\d+\))?$/.test(s)) return true;
+  // CSS: a lone tag, or something with CSS syntax and no sentence punctuation
+  if (/^[a-z][a-z0-9-]*$/i.test(s)) return true;
+  return /[#.[\]>:]/.test(s) && !/[.!?]$/.test(s) && !/[a-z]{2,}\s+[a-z]{2,}\s+[a-z]{2,}/i.test(s.replace(/\[[^\]]*\]|"[^"]*"|'[^']*'/g, ''));
+}
+
+/** Navigations we can't replay: no URL, or a blank/internal page the video showed no address for. */
+function hasRealUrl(url?: string): boolean {
+  return !!url && !/^(about|data|chrome|javascript):/i.test(url.trim());
 }
 
 function videoStepToAction(step: VideoStep, selector?: string): StepAction {
@@ -92,20 +101,44 @@ export interface ResolveResult {
   steps: Step[];
   resolvedCount: number;
   unresolvedCount: number;
+  resolvedByJev: number;
+  resolvedByClaude: number;
 }
 
 export interface ProgressCallback {
   (detail: string, stepIndex: number, totalSteps: number): void;
 }
 
+export interface ResolverDeps {
+  getPage: () => Promise<Page>;
+  executeAction: (action: StepAction) => Promise<void>;
+  /** When set, Jev picks the element first; Claude is the fallback for unsure picks. */
+  jev?: JevClient | null;
+  claudeResolve?: (elementHint: string, a11yTree: string) => Promise<string | null>;
+}
+
+/** Ask Jev for the element; returns a unique locator only for confident picks. */
+async function jevResolveSelector(jev: JevClient, page: Page, vs: VideoStep): Promise<string | null> {
+  const candidates = await snapshotCandidates(page);
+  if (candidates.length === 0) return null;
+  const instruction =
+    `${vs.label}. Element: ${vs.elementHint}` + (vs.actionType === 'fill' ? ` (type "${vs.value ?? ''}")` : '');
+  const decision = await decide(jev, instruction, candidates, { url: page.url(), title: await page.title() });
+  if (!decision.confident || !decision.candidate) return null;
+  return uniqueLocator(page, decision.candidate);
+}
+
 export async function resolveSelectors(
   videoSteps: VideoStep[],
-  browserManager: BrowserManager,
+  deps: ResolverDeps,
   onProgress?: ProgressCallback
 ): Promise<ResolveResult> {
+  const { getPage, executeAction, jev, claudeResolve = claudeResolveSelector } = deps;
   const steps: Step[] = [];
   let resolvedCount = 0;
   let unresolvedCount = 0;
+  let resolvedByJev = 0;
+  let resolvedByClaude = 0;
 
   for (let i = 0; i < videoSteps.length; i++) {
     const vs = videoSteps[i];
@@ -113,6 +146,7 @@ export async function resolveSelectors(
 
     // Navigate actions don't need selector resolution
     if (vs.actionType === 'navigate') {
+      if (!hasRealUrl(vs.url)) continue;
       const action = videoStepToAction(vs);
       steps.push({
         id: randomUUID(),
@@ -124,7 +158,7 @@ export async function resolveSelectors(
 
       // Execute the navigation to advance browser state
       try {
-        await browserManager.executeAction(action);
+        await executeAction(action);
         // Wait for page to settle
         await new Promise(r => setTimeout(r, 1000));
       } catch {
@@ -133,16 +167,30 @@ export async function resolveSelectors(
       continue;
     }
 
-    // For click/fill: capture a11y tree and resolve selector
+    // For click/fill: Jev first, then Claude on the a11y tree
     let selector: string | null = null;
-    let needsRefinement = false;
 
     if (vs.elementHint) {
       try {
-        const a11yTree = await browserManager.getAccessibilityTree();
-        selector = await resolveSelector(vs.elementHint, a11yTree);
+        const page = await getPage();
+        if (jev) {
+          selector = await jevResolveSelector(jev, page, vs).catch((err) => {
+            console.warn('[selector-resolver] Jev failed, falling back to Claude:', (err as Error).message);
+            return null;
+          });
+          if (selector) {
+            resolvedByJev++;
+            console.log(`[selector-resolver] jev: "${vs.label}" → ${selector}`);
+          }
+        }
+        if (!selector) {
+          const claudeSelector = await claudeResolve(vs.elementHint, await page.locator('body').ariaSnapshot());
+          selector = claudeSelector && isSelectorLike(claudeSelector) ? claudeSelector : null;
+          if (selector) console.log(`[selector-resolver] claude: "${vs.label}" → ${selector}`);
+          if (selector) resolvedByClaude++;
+        }
       } catch {
-        // a11y tree capture failed — keep hint
+        // page or a11y tree unavailable — keep hint
       }
     }
 
@@ -150,22 +198,20 @@ export async function resolveSelectors(
       resolvedCount++;
     } else {
       unresolvedCount++;
-      needsRefinement = true;
     }
 
     const action = videoStepToAction(vs, selector ?? undefined);
-    const step: Step = {
+    steps.push({
       id: randomUUID(),
-      label: needsRefinement ? `[needs selector] ${vs.label}` : vs.label,
+      label: selector ? vs.label : `[needs selector] ${vs.label}`,
       action,
       status: 'pending',
-    };
-    steps.push(step);
+    });
 
     // Execute the resolved action to advance browser state for next step
-    if (selector && !needsRefinement) {
+    if (selector) {
       try {
-        await browserManager.executeAction(action);
+        await executeAction(action);
         await new Promise(r => setTimeout(r, 500));
       } catch {
         // Action failed — browser state may be off, but continue
@@ -173,5 +219,5 @@ export async function resolveSelectors(
     }
   }
 
-  return { steps, resolvedCount, unresolvedCount };
+  return { steps, resolvedCount, unresolvedCount, resolvedByJev, resolvedByClaude };
 }

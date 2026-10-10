@@ -3,7 +3,7 @@ import type { Page } from 'playwright';
 import type { StepAction } from '../shared/types';
 import type { QueryStats } from './claude-session';
 import { resolveLocator } from './browser-actions';
-import { decide, snapshotCandidates, type JevClient, type JevDecision } from './jev-decider';
+import { decide, snapshotCandidates, withMarkedElement, type JevClient, type JevDecision } from './jev-decider';
 
 // Spike: shadow-run Jev against each step Claude proposes and log how they compare.
 // Claude's steps still drive the app; this only observes.
@@ -37,25 +37,10 @@ export function instructionFor(label: string, action: StepAction): string {
 }
 
 /** Does Claude's selector resolve to the same DOM node as Jev's pick? */
-async function sameElement(page: Page, claudeSelector: string, backendNodeId: number): Promise<boolean> {
-  const session = await page.context().newCDPSession(page);
-  try {
-    const { object } = (await session.send('DOM.resolveNode', { backendNodeId })) as { object: { objectId: string } };
-    await session.send('Runtime.callFunctionOn', {
-      objectId: object.objectId,
-      functionDeclaration: 'function() { this.setAttribute("data-jev-pick", ""); }',
-    });
-    try {
-      return await resolveLocator(page, claudeSelector).first().evaluate((el) => el.hasAttribute('data-jev-pick'));
-    } finally {
-      await session.send('Runtime.callFunctionOn', {
-        objectId: object.objectId,
-        functionDeclaration: 'function() { this.removeAttribute("data-jev-pick"); }',
-      });
-    }
-  } finally {
-    await session.detach().catch(() => undefined);
-  }
+function sameElement(page: Page, claudeSelector: string, backendNodeId: number): Promise<boolean> {
+  return withMarkedElement(page, backendNodeId, () =>
+    resolveLocator(page, claudeSelector).first().evaluate((el) => el.hasAttribute('data-jev-pick')),
+  );
 }
 
 export async function runJevShadow(opts: {

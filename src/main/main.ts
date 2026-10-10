@@ -10,7 +10,7 @@ import { ProjectConfigManager } from './project-config';
 import { TestLibrary } from './test-library';
 import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
-import { executeActionOnView, disconnectPlaywright, connectToElectron } from './browser-actions';
+import { executeActionOnView, disconnectPlaywright, connectToElectron, setExpectedUrlProvider } from './browser-actions';
 import { TypeSafeClient } from '@typesafe-ai/sdk';
 import { runJevShadow } from './jev-shadow';
 
@@ -22,6 +22,8 @@ try {
 }
 
 // Jev shadow spike: compares Jev's element picks against Claude's when a key is set
+setExpectedUrlProvider(() => browserView?.webContents.getURL() || undefined);
+
 const jevClient = process.env.TYPESAFE_API_KEY ? new TypeSafeClient({ defaultModel: 'jev-1.13.0' }) : null;
 
 let mainWindow: BrowserWindow | null = null;
@@ -71,6 +73,8 @@ function registerAllIpcHandlers(): void {
   const lastProjectFile = path.join(os.homedir(), '.suziqai-last-project');
 
   ipcMain.handle('project:get-last', async () => {
+    // Automation runs set this so the app doesn't reopen a real project on launch
+    if (process.env.SUZIQAI_NO_RESTORE) return null;
     try {
       const { readFile } = await import('fs/promises');
       return (await readFile(lastProjectFile, 'utf-8')).trim();
@@ -171,6 +175,11 @@ function createWindow(): void {
       testExporter,
       getTestLibrary: () => testLibrary,
       getWindow: () => mainWindow,
+      resolverDeps: {
+        getPage: connectToElectron,
+        executeAction: (action) => executeActionOnView(browserView, action),
+        jev: jevClient,
+      },
     });
   }
 
@@ -234,7 +243,10 @@ function createWindow(): void {
     // Remove any existing BrowserView
     if (browserView && mainWindow) {
       mainWindow.removeBrowserView(browserView);
+      // Destroy it too, or its page lingers as a CDP target that actions can land on
+      browserView.webContents.close();
       browserView = null;
+      await disconnectPlaywright();
     }
 
     // Create BrowserView for the target app

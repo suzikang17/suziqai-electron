@@ -1,4 +1,5 @@
 import type { Page } from 'playwright';
+import { resolveLocator } from './browser-actions';
 import type { ChoiceResponse, SystemOneRequest, Usage } from '@typesafe-ai/sdk';
 
 // Element-picking with TypeSafe's Jev decision model. Approach adapted from
@@ -83,10 +84,10 @@ export function extractCandidates(nodes: AXNode[]): Candidate[] {
   return candidates;
 }
 
-export function buildLocator(role: string, name: string): string {
+export function buildLocator(role: string, name: string, exact = false): string {
   if (!name) return `getByRole('${role}')`;
   const q = name.includes("'") ? '"' : "'";
-  return `getByRole('${role}', { name: ${q}${name}${q} })`;
+  return `getByRole('${role}', { name: ${q}${name}${q}${exact ? ', exact: true' : ''} })`;
 }
 
 function describe(c: Candidate): string {
@@ -196,4 +197,39 @@ export async function snapshotCandidates(page: Page): Promise<Candidate[]> {
   } finally {
     await session.detach().catch(() => undefined);
   }
+}
+
+/** Temporarily tag the DOM node behind a CDP backendNodeId with `data-jev-pick` while `fn` runs. */
+export async function withMarkedElement<T>(page: Page, backendNodeId: number, fn: () => Promise<T>): Promise<T> {
+  const session = await page.context().newCDPSession(page);
+  try {
+    const { object } = (await session.send('DOM.resolveNode', { backendNodeId })) as { object: { objectId: string } };
+    const setMark = (fnBody: string) =>
+      session.send('Runtime.callFunctionOn', { objectId: object.objectId, functionDeclaration: `function() { ${fnBody} }` });
+    await setMark('this.setAttribute("data-jev-pick", "");');
+    try {
+      return await fn();
+    } finally {
+      await setMark('this.removeAttribute("data-jev-pick");');
+    }
+  } finally {
+    await session.detach().catch(() => undefined);
+  }
+}
+
+/**
+ * A locator string that matches exactly the candidate's element: the plain getByRole
+ * locator if unique, else with exact: true, else with .nth(i). Null if it can't be pinned.
+ */
+export async function uniqueLocator(page: Page, candidate: Candidate): Promise<string | null> {
+  if ((await resolveLocator(page, candidate.locator).count()) === 1) return candidate.locator;
+
+  const exact = candidate.name ? buildLocator(candidate.role, candidate.name, true) : candidate.locator;
+  if (exact !== candidate.locator && (await resolveLocator(page, exact).count()) === 1) return exact;
+
+  if (candidate.backendNodeId === undefined) return null;
+  const index = await withMarkedElement(page, candidate.backendNodeId, () =>
+    resolveLocator(page, exact).evaluateAll((els) => els.findIndex((el) => el.hasAttribute('data-jev-pick'))),
+  );
+  return index >= 0 ? `${exact}.nth(${index})` : null;
 }

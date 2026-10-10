@@ -1,4 +1,4 @@
-import type { Browser, Page } from 'playwright';
+import type { Browser, Locator, Page } from 'playwright';
 
 const CDP_PORT = parseInt(process.env.SUZIQAI_CDP_PORT || '9222', 10);
 
@@ -10,28 +10,37 @@ async function getChromium() {
   return pw.chromium;
 }
 
+function isAppPage(url: string): boolean {
+  return (
+    url.includes('localhost:5173') ||
+    url.startsWith('file://') ||
+    url.startsWith('devtools://') ||
+    url.startsWith('chrome://')
+  );
+}
+
+/**
+ * The BrowserView's page among all CDP pages: never the app UI or devtools.
+ * Prefers `expectedUrl` when given, then a non-blank page.
+ */
+export function pickTargetPage<P extends { url(): string }>(pages: P[], expectedUrl?: string): P | null {
+  const views = pages.filter((p) => !isAppPage(p.url()));
+  if (expectedUrl) {
+    const match = views.find((p) => p.url() === expectedUrl);
+    if (match) return match;
+  }
+  return views.find((p) => p.url() !== 'about:blank') ?? views[views.length - 1] ?? null;
+}
+
+let expectedUrlProvider: (() => string | undefined) | null = null;
+
+/** Lets main.ts report the active BrowserView's URL so the right CDP page is chosen. */
+export function setExpectedUrlProvider(fn: () => string | undefined): void {
+  expectedUrlProvider = fn;
+}
+
 function findTargetPage(b: Browser): Page | null {
-  const allPages: Page[] = [];
-  for (const ctx of b.contexts()) {
-    for (const p of ctx.pages()) {
-      allPages.push(p);
-    }
-  }
-
-  for (const p of allPages) {
-    const url = p.url();
-    if (
-      !url.includes('localhost:5173') &&
-      !url.startsWith('file://') &&
-      !url.startsWith('devtools://') &&
-      !url.startsWith('chrome://') &&
-      url !== 'about:blank'
-    ) {
-      return p;
-    }
-  }
-
-  return allPages[allPages.length - 1] ?? null;
+  return pickTargetPage(b.contexts().flatMap((c) => c.pages()), expectedUrlProvider?.());
 }
 
 let cachedPage: Page | null = null;
@@ -52,7 +61,11 @@ export async function connectToElectron(): Promise<Page> {
 
 async function _connectToElectron(): Promise<Page> {
   // Reuse if connection and page are still alive
-  if (browser && browser.isConnected() && cachedPage && !cachedPage.isClosed()) {
+  const expectedUrl = expectedUrlProvider?.();
+  if (
+    browser && browser.isConnected() && cachedPage && !cachedPage.isClosed() &&
+    (!expectedUrl || cachedPage.url() === expectedUrl)
+  ) {
     return cachedPage;
   }
 
@@ -221,7 +234,16 @@ export async function executeActionOnView(_view: any, action: any, timeout: numb
  * Resolve a Playwright-style selector string into a Playwright Locator.
  * Supports: getByText, getByRole, getByLabel, getByTestId, getByPlaceholder, and CSS selectors.
  */
-export function resolveLocator(page: Page, selector: string) {
+export function resolveLocator(page: Page, selector: string): Locator {
+  // Trailing .first() / .last() / .nth(n)
+  const chain = selector.match(/^(.+)\.(first|last)\(\)$/) ?? selector.match(/^(.+)\.nth\((\d+)\)$/);
+  if (chain) {
+    const base = resolveLocator(page, chain[1]);
+    if (chain[2] === 'first') return base.first();
+    if (chain[2] === 'last') return base.last();
+    return base.nth(Number(chain[2]));
+  }
+
   let m: RegExpMatchArray | null;
 
   // getByText('...')
@@ -229,10 +251,10 @@ export function resolveLocator(page: Page, selector: string) {
   if (m) return page.getByText(m[1]);
 
   // getByRole('role', { name: '...' })
-  m = selector.match(/^getByRole\(['"](.+?)['"](?:,\s*\{\s*name:\s*['"](.+?)['"]\s*\})?\)$/);
+  m = selector.match(/^getByRole\(['"](.+?)['"](?:,\s*\{\s*name:\s*(['"])(.+?)\2(,\s*exact:\s*true)?\s*\})?\)$/);
   if (m) {
     const role = m[1] as Parameters<Page['getByRole']>[0];
-    return m[2] ? page.getByRole(role, { name: m[2] }) : page.getByRole(role);
+    return m[3] ? page.getByRole(role, { name: m[3], exact: !!m[4] }) : page.getByRole(role);
   }
 
   // getByLabel('...')
