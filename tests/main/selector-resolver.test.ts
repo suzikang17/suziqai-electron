@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 import { chromium, type Browser, type Page } from 'playwright';
-import { resolveLocator, pickTargetPage } from '../../src/main/browser-actions';
+import { resolveLocator, pickTargetPage, resolveNavigationUrl } from '../../src/main/browser-actions';
+import { parseLocatorChain } from '../../src/main/locator-parser';
 import { snapshotCandidates, uniqueLocator, type JevClient } from '../../src/main/jev-decider';
 import { resolveSelectors, isSelectorLike, type ResolverDeps } from '../../src/main/selector-resolver';
 import type { VideoStep } from '../../src/shared/types';
@@ -67,6 +68,49 @@ describe('resolveLocator chains', () => {
   it('supports exact: true on getByRole', async () => {
     expect(await resolveLocator(page, "getByRole('link', { name: 'new' })").count()).toBe(2);
     expect(await resolveLocator(page, "getByRole('link', { name: 'new', exact: true })").count()).toBe(1);
+  });
+});
+
+describe('resolveLocator expressions', () => {
+  it('replays chained locators, regex names and page. prefixes', async () => {
+    expect(await resolveLocator(page, "locator('nav').getByRole('link', { name: 'new', exact: true })").count()).toBe(1);
+    expect(await resolveLocator(page, "page.getByRole('link', { name: /^new/ })").count()).toBe(2);
+    expect(await resolveLocator(page, "getByRole('link', { name: /PAST/i })").count()).toBe(1);
+    expect(await resolveLocator(page, 'locator("form").getByRole("checkbox").nth(2)').getAttribute('id')).toBe('c2');
+    expect(await resolveLocator(page, "getByRole('link').filter({ hasText: 'newest' })").count()).toBe(1);
+  });
+
+  it('treats anything that is not a locator chain as CSS', async () => {
+    expect(await resolveLocator(page, 'input#c1').count()).toBe(1);
+    expect(await resolveLocator(page, 'nav a').count()).toBe(3);
+    expect(await resolveLocator(page, 'text=Save').count()).toBe(1);
+  });
+});
+
+describe('parseLocatorChain', () => {
+  it('parses calls, strings with quotes, regexes and options', () => {
+    expect(parseLocatorChain("getByRole('button', { name: \"It's\", exact: true }).first()")).toEqual([
+      { method: 'getByRole', args: ['button', { name: "It's", exact: true }] },
+      { method: 'first', args: [] },
+    ]);
+    const [call] = parseLocatorChain("getByText(/week of [0-9]+\\/2026/i)")!;
+    expect(call.args[0]).toEqual(/week of [0-9]+\/2026/i);
+  });
+
+  it('rejects unknown methods and CSS', () => {
+    expect(parseLocatorChain('evaluate(1)')).toBeNull();
+    expect(parseLocatorChain('button.primary')).toBeNull();
+    expect(parseLocatorChain("getByRole('button'")).toBeNull();
+  });
+});
+
+describe('resolveNavigationUrl', () => {
+  it('resolves paths against the current page like page.goto with baseURL', () => {
+    expect(resolveNavigationUrl('/schedule-board', 'https://app.example.com/dashboard?x=1')).toBe('https://app.example.com/schedule-board');
+    expect(resolveNavigationUrl('/schedule-board?weekOf=2026-10-05', 'https://app.example.com/auth')).toBe('https://app.example.com/schedule-board?weekOf=2026-10-05');
+    expect(resolveNavigationUrl('https://other.example/x', 'https://app.example.com/')).toBe('https://other.example/x');
+    expect(resolveNavigationUrl('localhost:3000/login', 'about:blank')).toBe('http://localhost:3000/login');
+    expect(() => resolveNavigationUrl('/x', 'about:blank')).toThrow(/no page is open/);
   });
 });
 

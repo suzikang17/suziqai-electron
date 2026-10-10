@@ -1,5 +1,6 @@
 import type { Browser, Locator, Page } from 'playwright';
 import { swipeVector } from '../shared/utils/swipe';
+import { parseLocatorChain } from './locator-parser';
 
 const CDP_PORT = parseInt(process.env.SUZIQAI_CDP_PORT || '9222', 10);
 
@@ -122,6 +123,19 @@ export async function executeActionOnView(_view: any, action: any, timeout: numb
   await executeOnPage(await connectToElectron(), action, timeout, _view);
 }
 
+/**
+ * Where a navigate step goes. Paths ("/schedule-board") resolve against the current page, as
+ * Playwright's page.goto resolves them against baseURL; a bare host ("example.com/x") gets http://.
+ */
+export function resolveNavigationUrl(target: string, currentUrl: string): string {
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(target) || /^(about|data|file):/i.test(target)) return target;
+  if (target.startsWith('/') || target.startsWith('.') || target.startsWith('?')) {
+    if (!/^https?:/.test(currentUrl)) throw new Error(`Can't open "${target}": no page is open to resolve the path against`);
+    return new URL(target, currentUrl).toString();
+  }
+  return 'http://' + target;
+}
+
 /** {{env.NAME}} placeholders keep secrets out of saved steps; resolved from the environment at run time. */
 export function resolveEnv(value: string): string {
   return value.replace(/\{\{env\.([A-Za-z_][A-Za-z0-9_]*)\}\}/g, (_, name) => process.env[name] ?? '');
@@ -131,8 +145,7 @@ export async function executeOnPage(p: Page, action: any, timeout: number = 5000
 
   switch (action.type) {
     case 'navigate': {
-      const target = resolveEnv(action.url);
-      const url = target.startsWith('http') ? target : 'http://' + target;
+      const url = resolveNavigationUrl(resolveEnv(action.url), p.url());
       await p.goto(url, { waitUntil: 'domcontentloaded', timeout });
       break;
     }
@@ -282,40 +295,13 @@ async function assertCondition(p: Page, action: any, timeout: number): Promise<v
  * Supports: getByText, getByRole, getByLabel, getByTestId, getByPlaceholder, and CSS selectors.
  */
 export function resolveLocator(page: Page, selector: string): Locator {
-  // Trailing .first() / .last() / .nth(n)
-  const chain = selector.match(/^(.+)\.(first|last)\(\)$/) ?? selector.match(/^(.+)\.nth\((\d+)\)$/);
-  if (chain) {
-    const base = resolveLocator(page, chain[1]);
-    if (chain[2] === 'first') return base.first();
-    if (chain[2] === 'last') return base.last();
-    return base.nth(Number(chain[2]));
+  // A Playwright locator expression (getByRole(…), chains, regex names, .first()/.nth(n)) is
+  // replayed call by call; anything else is a CSS / selector-engine string.
+  const calls = parseLocatorChain(selector);
+  if (!calls) return page.locator(selector);
+  let target: Page | Locator = page;
+  for (const { method, args } of calls) {
+    target = (target as unknown as Record<string, (...a: unknown[]) => Page | Locator>)[method](...args);
   }
-
-  let m: RegExpMatchArray | null;
-
-  // getByText('...')
-  m = selector.match(/^getByText\(['"](.+?)['"]\)$/);
-  if (m) return page.getByText(m[1]);
-
-  // getByRole('role', { name: '...' })
-  m = selector.match(/^getByRole\(['"](.+?)['"](?:,\s*\{\s*name:\s*(['"])(.+?)\2(,\s*exact:\s*true)?\s*\})?\)$/);
-  if (m) {
-    const role = m[1] as Parameters<Page['getByRole']>[0];
-    return m[3] ? page.getByRole(role, { name: m[3], exact: !!m[4] }) : page.getByRole(role);
-  }
-
-  // getByLabel('...')
-  m = selector.match(/^getByLabel\(['"](.+?)['"]\)$/);
-  if (m) return page.getByLabel(m[1]);
-
-  // getByTestId('...')
-  m = selector.match(/^getByTestId\(['"](.+?)['"]\)$/);
-  if (m) return page.getByTestId(m[1]);
-
-  // getByPlaceholder('...')
-  m = selector.match(/^getByPlaceholder\(['"](.+?)['"]\)$/);
-  if (m) return page.getByPlaceholder(m[1]);
-
-  // CSS selector fallback
-  return page.locator(selector);
+  return target as Locator;
 }
