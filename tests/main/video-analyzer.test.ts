@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { batchFrames, mergeVideoSteps, analysisMaxTurns } from '../../src/main/video-analyzer';
+import { execFileSync } from 'child_process';
+import { mkdtemp, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { batchFrames, mergeVideoSteps, extractFrames, buildFrameContent } from '../../src/main/video-analyzer';
 import type { VideoStep } from '../../src/shared/types';
 
 describe('batchFrames', () => {
@@ -107,9 +111,53 @@ describe('mergeVideoSteps', () => {
   });
 });
 
-describe('analysisMaxTurns', () => {
-  it('allows a turn per frame plus headroom, so sequential reads cannot exhaust it', () => {
-    expect(analysisMaxTurns(10)).toBeGreaterThan(10);
-    expect(analysisMaxTurns(20)).toBeGreaterThan(20);
+describe('extractFrames', () => {
+  it('drops near-duplicate frames and writes downscaled JPEGs', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'va-test-'));
+    const video = join(dir, 'in.mp4');
+    // 6s of a static white screen, then 4s of a changing test pattern
+    execFileSync(require('ffmpeg-static'), [
+      '-loglevel', 'error',
+      '-f', 'lavfi', '-i', 'color=c=white:s=1920x1080:d=6:r=10',
+      '-f', 'lavfi', '-i', 'testsrc=s=1920x1080:d=4:r=10',
+      '-filter_complex', '[0:v][1:v]concat=n=2:v=1:a=0', video,
+    ]);
+
+    const { frames, tmpDir } = await extractFrames(video, join(dir, 'frames'));
+
+    expect(frames.length).toBeGreaterThanOrEqual(4);
+    expect(frames.length).toBeLessThan(8); // 10 at 1fps without dedupe
+    expect(frames.every((f) => f.endsWith('.jpg'))).toBe(true);
+    // ffmpeg -i with no output exits non-zero and prints stream info to stderr
+    let info = '';
+    try {
+      execFileSync(require('ffmpeg-static'), ['-i', frames[0]], { stdio: 'pipe' });
+    } catch (err) {
+      info = String((err as { stderr: Buffer }).stderr);
+    }
+    expect(info).toMatch(/1280x720/);
+    await rm(tmpDir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true });
+  }, 30000);
+});
+
+describe('buildFrameContent', () => {
+  it('sends every frame as a base64 JPEG image block, in order, followed by the prompt', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'va-test-'));
+    const a = join(dir, 'a.jpg');
+    const b = join(dir, 'b.jpg');
+    await writeFile(a, Buffer.from('frame-a'));
+    await writeFile(b, Buffer.from('frame-b'));
+
+    const content = await buildFrameContent([a, b], 'analyze these');
+
+    expect(content.map((c) => c.type)).toEqual(['text', 'image', 'text', 'image', 'text']);
+    expect(content[1]).toEqual({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: Buffer.from('frame-a').toString('base64') },
+    });
+    expect(content[0]).toEqual({ type: 'text', text: 'Frame 1:' });
+    expect(content[4]).toEqual({ type: 'text', text: 'analyze these' });
+    await rm(dir, { recursive: true, force: true });
   });
 });

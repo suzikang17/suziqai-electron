@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
-import { mkdir, readdir, rm, stat } from 'fs/promises';
+import { mkdir, readdir, readFile, rm, stat } from 'fs/promises';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
@@ -23,7 +24,7 @@ function getFfmpegPath(): string {
 }
 
 const VIDEO_ANALYSIS_PROMPT = `You are analyzing a screen recording of a QA specialist manually testing a web application.
-I will provide sequential screenshot frames extracted at ~1 second intervals.
+I will provide sequential screenshot frames, sampled about once a second with unchanged frames removed.
 
 For each user action you detect between consecutive frames, output:
 - label: human-readable description of the action
@@ -93,36 +94,6 @@ export async function validateVideo(videoPath: string): Promise<void> {
   }
 }
 
-function invokeClaudeCli(prompt: string, maxTurns = 5): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const args = [
-      '--print', prompt,
-      '--output-format', 'text',
-      '--max-turns', String(maxTurns),
-      '--model', 'sonnet',
-      '--allowedTools', 'Read',
-    ];
-
-    const proc = spawn('claude', args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env },
-    });
-
-    let stdout = '';
-    let stderr = '';
-    proc.stdout.on('data', (d) => { stdout += d.toString(); });
-    proc.stderr.on('data', (d) => { stderr += d.toString(); });
-
-    proc.on('close', (code) => {
-      if (code !== 0) reject(new Error(`claude CLI exited ${code}: ${stderr}`));
-      else resolve(stdout.trim());
-    });
-    proc.on('error', (err) => {
-      reject(new Error(`Failed to spawn claude CLI: ${err.message}`));
-    });
-  });
-}
-
 export async function extractFrames(
   videoPath: string,
   outputDir?: string
@@ -130,34 +101,19 @@ export async function extractFrames(
   const dir = outputDir ?? join(tmpdir(), `suziqai-frames-${randomUUID()}`);
   await mkdir(dir, { recursive: true });
 
-  // Extract at 1fps
+  // 1fps, drop frames that barely differ from the last kept one (mpdecimate),
+  // and downscale: the model gains nothing from >1280px and payloads stay small
   await runFfmpeg([
     '-i', videoPath,
-    '-vf', 'fps=1',
-    '-q:v', '2',
-    join(dir, 'frame_%04d.png'),
+    '-vf', "fps=1,mpdecimate,scale='min(1280,iw)':-2",
+    '-fps_mode', 'vfr',
+    '-q:v', '3',
+    join(dir, 'frame_%04d.jpg'),
     '-y',
   ]);
 
-  // Also extract scene-change frames
-  const sceneDir = join(dir, 'scene');
-  await mkdir(sceneDir, { recursive: true });
-  try {
-    await runFfmpeg([
-      '-i', videoPath,
-      '-vf', 'select=gt(scene\\,0.3),showinfo',
-      '-vsync', 'vfr',
-      '-q:v', '2',
-      join(sceneDir, 'scene_%04d.png'),
-      '-y',
-    ]);
-  } catch {
-    // Scene detection is best-effort — continue without it
-  }
-
-  // Collect all frame files, sorted
   const fpsFrames = (await readdir(dir))
-    .filter(f => f.startsWith('frame_') && f.endsWith('.png'))
+    .filter(f => f.startsWith('frame_') && f.endsWith('.jpg'))
     .sort()
     .map(f => join(dir, f));
 
@@ -188,13 +144,43 @@ export function batchFrames(framePaths: string[]): string[][] {
   return batches;
 }
 
-/**
- * Turn budget for a frame batch: one Read per frame (if the model reads them one at a time),
- * plus headroom for the answer. A fixed cap of 5 made the CLI stop with "Reached max turns"
- * and no JSON whenever it read frames sequentially.
- */
-export function analysisMaxTurns(frameCount: number): number {
-  return frameCount + 3;
+type FrameContent =
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg'; data: string } };
+
+/** All frames as labelled image blocks plus the prompt — one request instead of a Read per frame. */
+export async function buildFrameContent(framePaths: string[], prompt: string): Promise<FrameContent[]> {
+  const content: FrameContent[] = [];
+  for (let i = 0; i < framePaths.length; i++) {
+    content.push({ type: 'text', text: `Frame ${i + 1}:` });
+    content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: (await readFile(framePaths[i])).toString('base64') },
+    });
+  }
+  content.push({ type: 'text', text: prompt });
+  return content;
+}
+
+async function queryWithFrames(content: FrameContent[]): Promise<string> {
+  let result = '';
+  for await (const message of query({
+    prompt: (async function* () {
+      yield {
+        type: 'user' as const,
+        message: { role: 'user' as const, content },
+        parent_tool_use_id: null,
+        session_id: '',
+      };
+    })(),
+    options: { model: 'sonnet', maxTurns: 1, allowedTools: [] },
+  })) {
+    if (message.type === 'result') {
+      if (message.subtype !== 'success') throw new Error(`Frame analysis failed: ${message.subtype}`);
+      result = message.result;
+    }
+  }
+  return result;
 }
 
 export async function analyzeFrameBatch(
@@ -202,18 +188,15 @@ export async function analyzeFrameBatch(
   batchIndex: number,
   totalBatches: number
 ): Promise<VideoStep[]> {
-  const frameList = framePaths.map((p, i) => `Frame ${i + 1}: ${p}`).join('\n');
-
   const batchContext = totalBatches > 1
     ? `\n\nThis is batch ${batchIndex + 1} of ${totalBatches}. ${batchIndex > 0 ? 'The first 2 frames overlap with the previous batch for continuity — do not re-report actions from those frames unless they span the boundary.' : ''}`
     : '';
 
   const prompt = `${VIDEO_ANALYSIS_PROMPT}${batchContext}
 
-Read all of these frame images (issue the Read calls together, in one turn), then analyze them in order:
-${frameList}`;
+The frames above are in order. Analyze them.`;
 
-  const raw = await invokeClaudeCli(prompt, analysisMaxTurns(framePaths.length));
+  const raw = await queryWithFrames(await buildFrameContent(framePaths, prompt));
 
   // Extract JSON from response (strip markdown fences if present)
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
