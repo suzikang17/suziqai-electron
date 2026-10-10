@@ -122,6 +122,9 @@ contextBridge.exposeInMainWorld('suziqai', {
   // iOS projects (channel names match src/main/ios-mode.ts)
   onIosScreenshot: (callback: (pngBase64: string) => void) =>
     ipcRenderer.on('ios:screenshot', (_event, png) => callback(png)),
+  setWatchMode: (on: boolean) => ipcRenderer.invoke('replay:watch', on),
+  onIosTapMarker: (callback: (marker: { frame: number[]; screen: number[]; label: string }) => void) =>
+    ipcRenderer.on('ios:tap-marker', (_event, marker) => callback(marker)),
   onStepResolved: (callback: (stepId: string, selector: string) => void) =>
     ipcRenderer.on('step:resolved', (_event, stepId, selector) => callback(stepId, selector)),
 });

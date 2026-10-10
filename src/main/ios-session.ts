@@ -13,6 +13,9 @@ export interface IosAppConfig {
   launchArgs?: string[];
 }
 
+/** Called before acting on an element (Watch mode shows where it will tap, then pauses). */
+export type BeforeAct = (element: IosElement, screen: IosNode['frame'], label: string) => Promise<void>;
+
 export interface IosStepResult {
   /** Set when the step's element was (re)resolved; save it back onto the step. */
   resolvedSelector?: string;
@@ -34,6 +37,8 @@ function allLabels(n: IosNode): string[] {
 }
 
 export class IosSession {
+  beforeAct: BeforeAct | null = null;
+
   constructor(
     private readonly driver: DriverLike,
     private readonly jev: JevClient | null,
@@ -72,6 +77,7 @@ export class IosSession {
       await this.driver.alert(target.button);
     } else {
       const query = queryFor(target.element, target.all);
+      await this.beforeAct?.(target.element, target.all[0]?.frame ?? [0, 0, 0, 0], label);
       if (action.type === 'click') {
         const [x, y, w, h] = target.element.frame;
         await this.driver.tapAt(x + w / 2, y + h / 2);

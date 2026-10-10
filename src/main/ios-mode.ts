@@ -16,6 +16,7 @@ const exec = promisify(execFile);
 
 export const IOS_SCREENSHOT = 'ios:screenshot';
 export const STEP_RESOLVED = 'step:resolved';
+export const IOS_TAP_MARKER = 'ios:tap-marker';
 
 interface SimDevice {
   udid: string;
@@ -89,6 +90,18 @@ export class IosMode {
     private readonly jev: JevClient | null,
   ) {}
 
+  /** Watch mode: show each tap target on the screenshot and pause before acting. */
+  setWatch(watch: boolean): void {
+    this.watch = watch;
+    if (this.session) this.session.beforeAct = watch ? this.showTarget : null;
+  }
+  private watch = false;
+  private readonly showTarget = async (element: { frame: [number, number, number, number] }, screen: [number, number, number, number], label: string) => {
+    await this.pushScreenshot().catch(() => undefined);
+    this.getWindow()?.webContents.send(IOS_TAP_MARKER, { frame: element.frame, screen, label });
+    await new Promise((r) => setTimeout(r, 800));
+  };
+
   get active(): boolean {
     return this.session !== null;
   }
@@ -107,6 +120,7 @@ export class IosMode {
     this.driver = new IosDriver({ udid, xctestrun: await findXctestrun(this.appRoot) });
     await this.driver.start();
     this.session = new IosSession(this.driver, this.jev, settings);
+    this.session.beforeAct = this.watch ? this.showTarget : null;
     this.settings = { ...settings, udid };
     await this.session.launch();
     await this.pushScreenshot();

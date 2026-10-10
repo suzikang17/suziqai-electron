@@ -81,6 +81,8 @@ declare global {
       onVideoImportProgress: (callback: (progress: VideoImportProgress) => void) => void;
       onIosScreenshot: (callback: (pngBase64: string) => void) => void;
       onStepResolved: (callback: (stepId: string, selector: string) => void) => void;
+      setWatchMode: (on: boolean) => Promise<void>;
+      onIosTapMarker: (callback: (marker: { frame: number[]; screen: number[]; label: string }) => void) => void;
     };
   }
 }

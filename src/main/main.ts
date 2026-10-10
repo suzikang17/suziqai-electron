@@ -39,6 +39,13 @@ const jevClient = process.env.TYPESAFE_API_KEY ? new TypeSafeClient({ defaultMod
 // iOS projects drive a simulator instead of the BrowserView
 const iosMode = new IosMode(app.getAppPath(), () => mainWindow, jevClient);
 
+// Watch mode: replay slowly, showing each target before acting
+let watchMode = false;
+ipcMain.handle('replay:watch', (_event, on: boolean) => {
+  watchMode = on;
+  iosMode.setWatch(on);
+});
+
 let mainWindow: BrowserWindow | null = null;
 let browserView: BrowserView | null = null;
 let autopilotEnabled = false;
@@ -512,6 +519,19 @@ function createWindow(): void {
    * selector is saved back onto the step.
    */
   async function runWebStep(stepId: string, label: string, action: any, timeout?: number): Promise<void> {
+    if (watchMode && action?.selector) {
+      // Watch mode: show the target (Playwright's highlight overlay), pause, then act
+      try {
+        const target = resolveLocator(await connectToElectron(), action.selector).first();
+        await target.scrollIntoViewIfNeeded({ timeout: 2000 });
+        await target.highlight();
+      } catch {
+        // not found yet — the step itself will report (or heal) that
+      }
+      await new Promise((r) => setTimeout(r, 700));
+    } else if (watchMode) {
+      await new Promise((r) => setTimeout(r, 400));
+    }
     try {
       await executeActionOnView(browserView, action, timeout);
     } catch (err) {

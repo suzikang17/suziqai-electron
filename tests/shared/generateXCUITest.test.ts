@@ -83,4 +83,13 @@ describe('generateXCUITest', () => {
     expect(code).toContain('// TODO: unresolved step "Tap save" (the save button) — run it in suziQai to resolve');
     expect(code).not.toContain('"X"');
   });
+
+  it('numbers duplicate test names so the Swift methods compile', () => {
+    const dup: TestSuite = { ...suite, tests: [
+      { id: 'a', name: 'Untitled Test', steps: [] }, { id: 'b', name: 'Untitled Test', steps: [] },
+    ] };
+    const out = generateXCUITest(dup, { bundleId: 'x' });
+    expect(out).toContain('func testUntitledTest() throws');
+    expect(out).toContain('func testUntitledTest2() throws');
+  });
 });

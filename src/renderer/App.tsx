@@ -16,6 +16,9 @@ export function App() {
   // 'ios' projects show simulator screenshots in place of the BrowserView
   const [platform, setPlatform] = useState<'web' | 'ios'>('web');
   const [iosScreen, setIosScreen] = useState('');
+  // Watch mode replays slowly, showing each target before acting
+  const [watchMode, setWatchMode] = useState(false);
+  const [tapMarker, setTapMarker] = useState<{ frame: number[]; screen: number[]; label: string } | null>(null);
   const [mode, setMode] = useState<AppMode>('command');
   const defaultBlock: TestBlock = { id: 'block-1', name: 'Untitled Test', steps: [] };
   const defaultSuite: TestSuite = { id: 'suite-1', name: 'Untitled Suite', fileName: 'untitled-suite', beforeAll: [], beforeEach: [], afterEach: [], afterAll: [], tests: [defaultBlock], devices: [] };
@@ -119,7 +122,8 @@ export function App() {
 
   // iOS: live simulator screen, and selectors Jev resolved while running steps
   useEffect(() => {
-    window.suziqai.onIosScreenshot((png) => setIosScreen(png));
+    window.suziqai.onIosScreenshot((png) => { setIosScreen(png); setTapMarker(null); });
+    window.suziqai.onIosTapMarker((marker) => setTapMarker(marker));
     window.suziqai.onStepResolved((stepId, selector) => {
       const withSelector = (steps: Step[]) => steps.map(st =>
         st.id === stepId && 'selector' in st.action ? { ...st, action: { ...st.action, selector } as Step['action'] } : st);
@@ -849,9 +853,21 @@ export function App() {
           }}
           onPickToggle={togglePicker}
         />
-        {/* Video import button (web only) */}
-        {platform === 'web' && <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+        {/* Replay speed + video import (web only) */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
           <button
+            onClick={() => { const on = !watchMode; setWatchMode(on); window.suziqai.setWatchMode(on); }}
+            title="Watch: replay slowly, highlighting each target before acting"
+            style={{
+              background: watchMode ? 'var(--accent-blue, #0969da)' : 'none',
+              color: watchMode ? '#ffffff' : 'var(--text-secondary)',
+              border: '1px solid var(--border)', borderRadius: 4,
+              padding: '3px 8px', fontSize: 11, cursor: 'pointer', marginRight: 'auto',
+            }}
+          >
+            {watchMode ? '👀 Watching' : '⚡ Fast'}
+          </button>
+          {platform === 'web' && <button
             onClick={() => setShowVideoImport(true)}
             style={{
               background: 'none', border: '1px solid var(--border)', borderRadius: 4,
@@ -860,8 +876,8 @@ export function App() {
             }}
           >
             <span style={{ fontSize: 13 }}>🎬</span> Import from Video
-          </button>
-        </div>}
+          </button>}
+        </div>
         {/* Browser viewport area — BrowserView is positioned here by main process */}
         <div
           ref={viewportRef}
@@ -876,11 +892,30 @@ export function App() {
           }}
         >
           {platform === 'ios' && iosScreen && (
-            <img
-              src={`data:image/png;base64,${iosScreen}`}
-              alt="iOS simulator screen"
-              style={{ height: '100%', objectFit: 'contain', padding: 8, boxSizing: 'border-box' }}
-            />
+            <div style={{ position: 'relative', height: '100%', padding: 8, boxSizing: 'border-box' }}>
+              <img
+                src={`data:image/png;base64,${iosScreen}`}
+                alt="iOS simulator screen"
+                style={{ height: '100%', display: 'block' }}
+              />
+              {tapMarker && tapMarker.screen[2] > 0 && (
+                // Frames are in screen points; position as a fraction of the screen so it scales with the image
+                <div style={{
+                  position: 'absolute',
+                  left: `calc(8px + (100% - 16px) * ${tapMarker.frame[0] / tapMarker.screen[2]})`,
+                  top: `calc(8px + (100% - 16px) * ${tapMarker.frame[1] / tapMarker.screen[3]})`,
+                  width: `calc((100% - 16px) * ${tapMarker.frame[2] / tapMarker.screen[2]})`,
+                  height: `calc((100% - 16px) * ${tapMarker.frame[3] / tapMarker.screen[3]})`,
+                  border: '3px solid #ff3b30', borderRadius: 8, boxShadow: '0 0 0 4px rgba(255,59,48,0.25)',
+                  pointerEvents: 'none',
+                }}>
+                  <span style={{
+                    position: 'absolute', top: -22, left: 0, whiteSpace: 'nowrap',
+                    background: '#ff3b30', color: '#fff', fontSize: 11, padding: '2px 6px', borderRadius: 4,
+                  }}>{tapMarker.label}</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
