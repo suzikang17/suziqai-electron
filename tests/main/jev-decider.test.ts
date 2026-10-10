@@ -47,6 +47,11 @@ describe('extractCandidates', () => {
     expect(extractCandidates(nodes).map((c) => c.name)).toEqual(['Home']);
   });
 
+  it('strips icon-font glyphs from names', () => {
+    const [c] = extractCandidates([ax('1', 'button', '\uF090 Login')]);
+    expect(c.name).toBe('Login');
+  });
+
   it('records the current value of fields', () => {
     const [c] = extractCandidates([ax('1', 'textbox', 'Email', { value: { value: 'a@b.co' } })]);
     expect(c.value).toBe('a@b.co');

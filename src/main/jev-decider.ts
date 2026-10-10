@@ -68,7 +68,8 @@ export function extractCandidates(nodes: AXNode[]): Candidate[] {
     const disabled = node.properties?.some((p) => p.name === 'disabled' && p.value?.value === true);
     if (disabled) continue;
 
-    const name = String(node.name?.value ?? '').trim();
+    // Icon fonts put private-use glyphs in accessible names (e.g. Font Awesome U+F090)
+    const name = String(node.name?.value ?? '').replace(/[\uE000-\uF8FF]/g, '').trim();
     const value = node.value?.value;
     candidates.push({
       n: candidates.length + 1,
