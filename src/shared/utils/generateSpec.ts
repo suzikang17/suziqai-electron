@@ -1,4 +1,4 @@
-import type { TestSuite, StepAction, DeviceConfig } from '@shared/types';
+import type { TestSuite, Step, StepAction, DeviceConfig } from '@shared/types';
 
 export interface GenerateSpecOptions {
   /** Read-only projects: URL regexes the built-in network guard lets through (all else non-GET is blocked). */
@@ -98,8 +98,7 @@ ${patterns}
 ${indent}];
 ${indent}const blockedWrites: string[] = [];
 
-${indent}test.beforeEach(async ({ context }) => {
-${indent}  blockedWrites.length = 0;
+${indent}async function guard(context: BrowserContext) {
 ${indent}  await context.route('**/*', (route) => {
 ${indent}    const request = route.request();
 ${indent}    if (['GET', 'HEAD', 'OPTIONS'].includes(request.method()) || READ_ONLY_ALLOW.some((re) => re.test(request.url()))) {
@@ -111,6 +110,11 @@ ${indent}      blockedWrites.push(\`\${request.method()} \${request.url().split(
 ${indent}    }
 ${indent}    return route.abort('blockedbyclient');
 ${indent}  });
+${indent}}
+
+${indent}test.beforeEach(async ({ context }) => {
+${indent}  blockedWrites.length = 0;
+${indent}  await guard(context);
 ${indent}});
 
 ${indent}test.afterEach(() => {
@@ -127,9 +131,26 @@ function generateDeviceUse(device: DeviceConfig, innerIndent: string): string {
   return `${innerIndent}test.use({ ...devices['${device.name}'] });\n`;
 }
 
+function stepLines(steps: Step[], indent: string): string {
+  return steps.filter((s) => s.status !== 'failed').map((s) => `${indent}${actionToPlaywright(s.action)}`).join('\n');
+}
+
+/** beforeAll/afterAll get no page fixture in Playwright: open one (guarded in read-only projects). */
+function suiteHook(name: 'beforeAll' | 'afterAll', steps: Step[], indent: string, guarded: boolean): string {
+  const inner = indent + '    ';
+  const open = guarded
+    ? `${inner}const context = await browser.newContext();\n${inner}await guard(context);\n${inner}const page = await context.newPage();\n`
+    : `${inner}const page = await browser.newPage();\n`;
+  const close = guarded ? `${inner}await context.close();` : `${inner}await page.close();`;
+  return `${indent}test.${name}(async ({ browser }) => {\n${open}${stepLines(steps, inner)}\n${close}\n${indent}});\n\n`;
+}
+
 function generateTestsBlock(suite: TestSuite, indent: string, opts: GenerateSpecOptions): string {
-  let code = opts.readOnlyAllow ? readOnlyGuard(opts.readOnlyAllow, indent) : '';
+  const guarded = !!opts.readOnlyAllow;
+  let code = guarded ? readOnlyGuard(opts.readOnlyAllow!, indent) : '';
   const innerIndent = indent + '    ';
+
+  if (suite.beforeAll.length > 0) code += suiteHook('beforeAll', suite.beforeAll, indent, guarded);
 
   // beforeEach block (only if there are steps)
   if (suite.beforeEach.length > 0) {
@@ -141,6 +162,10 @@ function generateTestsBlock(suite: TestSuite, indent: string, opts: GenerateSpec
     code += beforeSteps || `${innerIndent}// No steps yet`;
     code += `\n${indent}});\n\n`;
   }
+  if (suite.afterEach.length > 0) {
+    code += `${indent}test.afterEach(async ({ page }) => {\n${stepLines(suite.afterEach, innerIndent)}\n${indent}});\n\n`;
+  }
+  if (suite.afterAll.length > 0) code += suiteHook('afterAll', suite.afterAll, indent, guarded);
 
   // individual test blocks (duplicate titles numbered: Playwright rejects repeats)
   const seen = new Map<string, number>();
@@ -168,9 +193,8 @@ export function generateSpec(suite: TestSuite, useProjects: boolean = false, opt
   // so we skip the per-device describe wrapping even if devices are present.
   const wrapDevices = hasDevices && !useProjects;
 
-  const importLine = wrapDevices
-    ? `import { test, expect, devices } from '@playwright/test';\n\n`
-    : `import { test, expect } from '@playwright/test';\n\n`;
+  const names = ['test', 'expect', ...(wrapDevices ? ['devices'] : []), ...(opts.readOnlyAllow ? ['type BrowserContext'] : [])];
+  const importLine = `import { ${names.join(', ')} } from '@playwright/test';\n\n`;
 
   let code = importLine;
   code += `test.describe('${suiteName}', () => {\n`;

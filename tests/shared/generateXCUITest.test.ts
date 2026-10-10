@@ -92,4 +92,16 @@ describe('generateXCUITest', () => {
     expect(out).toContain('func testUntitledTest() throws');
     expect(out).toContain('func testUntitledTest2() throws');
   });
+
+  it('exports beforeAll once, afterEach in tearDown and afterAll in class tearDown', () => {
+    const tap = (label: string, l: string) => ({ id: label, label, action: { type: 'click' as const, selector: q({ type: 'button', label: l, index: 0 }) }, status: 'passed' as const });
+    const out = generateXCUITest({
+      ...suite, beforeAll: [tap('a', 'Seed')], afterEach: [tap('b', 'Reset')], afterAll: [tap('c', 'Cleanup')],
+      tests: [{ id: 't', name: 'one', steps: [] }],
+    }, { bundleId: 'x', launchArgs: ['--uitest'] });
+    expect(out).toContain('private static var didRunBeforeAll = false');
+    expect(out).toMatch(/if !Self\.didRunBeforeAll \{\n\s+Self\.didRunBeforeAll = true\n[\s\S]*"Seed"/);
+    expect(out).toMatch(/override func tearDownWithError\(\) throws \{[\s\S]*"Reset"/);
+    expect(out).toMatch(/override class func tearDown\(\) \{[\s\S]*let app = XCUIApplication\(bundleIdentifier: "x"\)[\s\S]*"Cleanup"/);
+  });
 });

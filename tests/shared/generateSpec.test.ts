@@ -202,4 +202,31 @@ describe('generateSpecFilename', () => {
     expect(code).toContain("test('Untitled Test (2)', async");
     expect(code).toContain("test('Other', async");
   });
+
+  describe('hooks', () => {
+    const step = (label: string, action: any) => ({ id: label, label, action, status: 'passed' as const });
+    const hooked: TestSuite = {
+      id: 's', name: 'Hooks', fileName: 'hooks', devices: [],
+      beforeAll: [step('seed', { type: 'navigate', url: 'https://x/seed' })],
+      beforeEach: [step('open', { type: 'navigate', url: 'https://x/' })],
+      afterEach: [step('logout', { type: 'click', selector: "getByRole('button', { name: 'Log out' })" })],
+      afterAll: [step('cleanup', { type: 'navigate', url: 'https://x/cleanup' })],
+      tests: [{ id: 'b', name: 't', steps: [step('go', { type: 'click', selector: "getByRole('button', { name: 'Go' })" })] }],
+    };
+
+    it('exports all four hooks in Playwright order, giving beforeAll/afterAll their own page', () => {
+      const code = generateSpec(hooked);
+      const at = (s: string) => code.indexOf(s);
+      expect(code).toMatch(/test\.beforeAll\(async \(\{ browser \}\) => \{\n\s+const page = await browser\.newPage\(\);\n\s+await page\.goto\('https:\/\/x\/seed'\);\n\s+await page\.close\(\);/);
+      expect(code).toContain("test.afterEach(async ({ page }) => {");
+      expect(code).toContain("await page.getByRole('button', { name: 'Log out' }).click();");
+      expect(code).toMatch(/test\.afterAll\(async \(\{ browser \}\) => \{\n\s+const page = await browser\.newPage\(\);\n\s+await page\.goto\('https:\/\/x\/cleanup'\);/);
+      expect(at('test.beforeAll')).toBeLessThan(at("test('t'"));
+    });
+
+    it('guards the beforeAll/afterAll pages in read-only projects too', () => {
+      const code = generateSpec(hooked, false, { readOnlyAllow: ['/auth'] });
+      expect(code).toMatch(/test\.beforeAll\(async \(\{ browser \}\) => \{\n\s+const context = await browser\.newContext\(\);\n\s+await guard\(context\);\n\s+const page = await context\.newPage\(\);/);
+    });
+  });
 });

@@ -456,6 +456,16 @@ function createWindow(): void {
     }
   }
 
+  // Fresh run (like CI): clear the target app's storage, or relaunch the iOS app
+  ipcMain.removeHandler('run:fresh');
+  ipcMain.handle('run:fresh', async () => {
+    if (iosMode.active) {
+      await iosMode.relaunch();
+    } else if (browserView) {
+      await browserView.webContents.session.clearStorageData();
+    }
+  });
+
   // Recording: capture the target app's BrowserView directly (web projects)
   ipcMain.removeHandler(IPC.RECORD_START);
   ipcMain.handle(IPC.RECORD_START, async (_event, includeNavigate: boolean = true) => {

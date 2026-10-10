@@ -10,6 +10,7 @@ import { CodePreview } from './components/CodePreview';
 import { SelectorPopover } from './components/SelectorPopover';
 import { VideoImport } from './components/VideoImport';
 import { generateSpec, generateSpecFilename } from '@shared/utils/generateSpec';
+import { buildRunSequence } from '@shared/utils/runSequence';
 
 export function App() {
   const [projectPath, setProjectPath] = useState<string | null>(null);
@@ -352,19 +353,23 @@ export function App() {
 
     window.suziqai.onStepResult((stepId, status, error, screenshotPath) => {
       setSuites(prev => {
+        const withResult = (steps: Step[]) => steps.map(st =>
+          st.id === stepId ? { ...st, status: status as any, error, ...(screenshotPath ? { screenshotPath } : {}) } : st
+        );
+        // Hook steps run as part of a test (fresh run), so they get results too
         const updated = prev.map(s => s.id !== activeSuiteId ? s : {
           ...s,
-          tests: s.tests.map(b => b.id !== activeBlockId ? b : {
-            ...b,
-            steps: b.steps.map(st =>
-              st.id === stepId ? { ...st, status: status as any, error, ...(screenshotPath ? { screenshotPath } : {}) } : st
-            ),
-          }),
+          beforeAll: withResult(s.beforeAll),
+          beforeEach: withResult(s.beforeEach),
+          afterEach: withResult(s.afterEach),
+          afterAll: withResult(s.afterAll),
+          tests: s.tests.map(b => b.id !== activeBlockId ? b : { ...b, steps: withResult(b.steps) }),
         });
         // Log the result
         const suite = updated.find(s => s.id === activeSuiteId);
         const block = suite?.tests.find(b => b.id === activeBlockId);
-        const step = block?.steps.find(s => s.id === stepId);
+        const hookSteps = suite ? [...suite.beforeAll, ...suite.beforeEach, ...suite.afterEach, ...suite.afterAll] : [];
+        const step = block?.steps.find(s => s.id === stepId) ?? hookSteps.find(s => s.id === stepId);
         if (step) {
           const icon = status === 'passed' ? '✓' : status === 'failed' ? '✗' : '●';
           const msg = `${icon} ${step.label}` + (error ? ` — ${error}` : '');
@@ -781,13 +786,15 @@ export function App() {
               return { ...b, steps };
             });
           }}
-          onRunAll={() => {
-            if (!currentBlock) return;
-            const pendingSteps = currentBlock.steps
-              .filter(s => s.status === 'pending' || s.status === 'passed')
+          onRunAll={async () => {
+            if (!currentBlock || !currentSuite) return;
+            // Like CI: a fresh session (or relaunched app), then hooks around the test's steps
+            const sequence = buildRunSequence(currentSuite, currentBlock)
               .map(s => ({ id: s.id, action: s.action, timeout: s.timeout, label: s.label }));
-            log(`▶▶ Running all ${pendingSteps.length} steps...`);
-            window.suziqai.executeAllSteps(pendingSteps);
+            const hooks = sequence.length - currentBlock.steps.length;
+            log(`▶▶ Fresh run (like CI): ${currentBlock.steps.length} step(s)${hooks ? ` + ${hooks} hook step(s)` : ''}...`);
+            await window.suziqai.runFresh();
+            window.suziqai.executeAllSteps(sequence);
           }}
           onExport={() => {
             if (!currentSuite) return;

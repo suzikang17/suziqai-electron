@@ -127,6 +127,12 @@ export class IosMode {
     return udid;
   }
 
+  /** Relaunches the app under test (a fresh start, like each XCUITest's setUp). */
+  async relaunch(): Promise<void> {
+    await this.session?.launch();
+    await this.pushScreenshot().catch(() => undefined);
+  }
+
   async close(): Promise<void> {
     await this.driver?.stop();
     this.driver = null;
