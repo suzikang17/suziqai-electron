@@ -1,4 +1,5 @@
 import type { Browser, Locator, Page } from 'playwright';
+import { swipeVector } from '../shared/utils/swipe';
 
 const CDP_PORT = parseInt(process.env.SUZIQAI_CDP_PORT || '9222', 10);
 
@@ -162,6 +163,25 @@ export async function executeOnPage(p: Page, action: any, timeout: number = 5000
     case 'assert':
       await assertCondition(p, action, timeout);
       break;
+
+    case 'swipe': {
+      const [dx, dy] = swipeVector(action.direction);
+      if (!action.selector) {
+        // Swiping the screen scrolls: a finger moving up reveals content further down
+        await p.mouse.wheel(-dx * 600, -dy * 600);
+        break;
+      }
+      const locator = resolveLocator(p, action.selector);
+      await locator.scrollIntoViewIfNeeded({ timeout });
+      const box = await locator.boundingBox({ timeout });
+      if (!box) throw new Error(`Can't swipe "${action.selector}": it has no size on screen`);
+      const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+      await p.mouse.move(cx - dx * box.width * 0.35, cy - dy * box.height * 0.35);
+      await p.mouse.down();
+      await p.mouse.move(cx + dx * box.width * 0.35, cy + dy * box.height * 0.35, { steps: 10 });
+      await p.mouse.up();
+      break;
+    }
 
     case 'waitFor': {
       const locator = resolveLocator(p, action.selector);

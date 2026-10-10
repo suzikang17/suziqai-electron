@@ -7,7 +7,11 @@ export type StepAction =
   | { type: 'press'; selector: string; key: string }
   | { type: 'assert'; assertionType: AssertionType; expected: string; selector?: string; /** for 'attribute' */ attribute?: string }
   | { type: 'screenshot' }
+  /** Finger direction. With a selector, swipe on that element (e.g. left on a row to reveal Delete); without one, swipe the screen (scroll). */
+  | { type: 'swipe'; direction: SwipeDirection; selector?: string }
   | { type: 'waitFor'; selector: string };
+
+export type SwipeDirection = 'up' | 'down' | 'left' | 'right';
 
 export type AssertionType = 'url' | 'visible' | 'text' | 'hidden' | 'value' | 'enabled' | 'disabled' | 'checked' | 'unchecked' | 'count' | 'focused' | 'editable' | 'empty' | 'attribute';
 

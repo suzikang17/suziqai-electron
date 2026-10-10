@@ -427,5 +427,6 @@ function formatAction(action: Step['action']): string {
     }
     case 'screenshot': return 'screenshot()';
     case 'waitFor': return `waitFor('${action.selector}')`;
+    case 'swipe': return action.selector ? `swipe('${action.selector}', '${action.direction}')` : `swipe('${action.direction}')`;
   }
 }

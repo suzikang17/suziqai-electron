@@ -87,6 +87,15 @@ describe('generateXCUITest', () => {
     expect(generateXCUITest(noFill, { bundleId: 'x' })).not.toContain('replaceText');
   });
 
+  it('swipes on an element or on the whole screen', () => {
+    const swipes = generateXCUITest({ ...suite, tests: [{ id: 't', name: 'Swipe', steps: [
+      { id: 'a', label: 'Swipe left on the row', action: { type: 'swipe', direction: 'left', selector: '{"type":"button","labelContains":"Dr. Paws","index":0}' }, status: 'passed' },
+      { id: 'b', label: 'Scroll down', action: { type: 'swipe', direction: 'up' }, status: 'passed' },
+    ] }] }, { bundleId: 'x' });
+    expect(swipes).toContain('app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Dr. Paws")).element(boundBy: 0).swipeLeft()');
+    expect(swipes).toContain('app.swipeUp()');
+  });
+
   it('flags unresolved steps and skips failed ones', () => {
     expect(code).toContain('// TODO: unresolved step "Tap save" (the save button) — run it in suziQai to resolve');
     expect(code).not.toContain('"X"');

@@ -27,6 +27,7 @@ You control a browser through these actions:
   - url: expected is text the URL contains, or a regex written as "/pattern/" (e.g. "/weekOf=\\d{4}-\\d{2}-\\d{2}/")
   - attribute: set "attribute" to the attribute name and expected to its value, e.g. { "assertionType": "attribute", "selector": "getByRole('button', { name: 'Week', exact: true })", "attribute": "aria-pressed", "expected": "true" }
 - Secrets: never write real credentials; use {{env.NAME}} placeholders in values (e.g. "{{env.TEST_EMAIL}}"), resolved from the environment at run time
+- swipe(direction, selector?): Swipe up/down/left/right (the finger's direction). With a selector, swipe on that element (e.g. left on a list row to reveal its Delete action); without one, swipe the screen to scroll ("up" reveals content further down)
 - screenshot(): Capture the current browser state
 - waitFor(selector): Wait for an element to appear
 

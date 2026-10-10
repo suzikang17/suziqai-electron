@@ -1,4 +1,5 @@
 import type { TestSuite, Step, StepAction, DeviceConfig } from '@shared/types';
+import { swipeVector } from './swipe';
 
 export interface GenerateSpecOptions {
   /** Read-only projects: URL regexes the built-in network guard lets through (all else non-GET is blocked). */
@@ -22,6 +23,11 @@ function jsString(value: string): string {
 function urlMatcher(expected: string): string {
   if (/^\/.+\/[a-z]*$/.test(expected) && !/^\/[^/]*$/.test(expected)) return expected;
   return `/${expected.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}/`;
+}
+
+/** Indents every line of a (possibly multi-line) statement. */
+function indented(code: string, indent: string): string {
+  return code.split('\n').map((line) => indent + line).join('\n');
 }
 
 function actionToPlaywright(action: StepAction): string {
@@ -72,6 +78,24 @@ function actionToPlaywright(action: StepAction): string {
     }
     case 'waitFor':
       return `await ${selectorToPlaywright(action.selector)}.waitFor();`;
+    case 'swipe': {
+      const [dx, dy] = swipeVector(action.direction);
+      if (!action.selector) return `await page.mouse.wheel(${-dx * 600}, ${-dy * 600}); // swipe ${action.direction}`;
+      // Playwright has no swipe: drag across the element with the mouse
+      const sel = selectorToPlaywright(action.selector);
+      const from = (v: number, axis: 'width' | 'height', c: string) => v === 0 ? c : `${c} ${v < 0 ? '+' : '-'} box.${axis} * 0.35`;
+      const to = (v: number, axis: 'width' | 'height', c: string) => v === 0 ? c : `${c} ${v < 0 ? '-' : '+'} box.${axis} * 0.35`;
+      return [
+        `{ // swipe ${action.direction}`,
+        `  const box = (await ${sel}.boundingBox())!;`,
+        `  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;`,
+        `  await page.mouse.move(${from(dx, 'width', 'cx')}, ${from(dy, 'height', 'cy')});`,
+        `  await page.mouse.down();`,
+        `  await page.mouse.move(${to(dx, 'width', 'cx')}, ${to(dy, 'height', 'cy')}, { steps: 10 });`,
+        `  await page.mouse.up();`,
+        `}`,
+      ].join('\n');
+    }
     case 'screenshot':
       return `await page.screenshot();`;
     default:
@@ -132,7 +156,7 @@ function generateDeviceUse(device: DeviceConfig, innerIndent: string): string {
 }
 
 function stepLines(steps: Step[], indent: string): string {
-  return steps.filter((s) => s.status !== 'failed').map((s) => `${indent}${actionToPlaywright(s.action)}`).join('\n');
+  return steps.filter((s) => s.status !== 'failed').map((s) => indented(actionToPlaywright(s.action), indent)).join('\n');
 }
 
 /** beforeAll/afterAll get no page fixture in Playwright: open one (guarded in read-only projects). */
@@ -156,7 +180,7 @@ function generateTestsBlock(suite: TestSuite, indent: string, opts: GenerateSpec
   if (suite.beforeEach.length > 0) {
     const beforeSteps = suite.beforeEach
       .filter(s => s.status !== 'failed')
-      .map(s => `${innerIndent}${actionToPlaywright(s.action)}`)
+      .map(s => indented(actionToPlaywright(s.action), innerIndent))
       .join('\n');
     code += `${indent}test.beforeEach(async ({ page }) => {\n`;
     code += beforeSteps || `${innerIndent}// No steps yet`;
@@ -176,7 +200,7 @@ function generateTestsBlock(suite: TestSuite, indent: string, opts: GenerateSpec
     const blockName = title.replace(/'/g, "\\'");
     const steps = block.steps
       .filter(s => s.status !== 'failed')
-      .map(s => `${innerIndent}${actionToPlaywright(s.action)}`)
+      .map(s => indented(actionToPlaywright(s.action), innerIndent))
       .join('\n');
     code += `${indent}test('${blockName}', async ({ page }) => {\n`;
     code += steps || `${innerIndent}// No steps yet`;

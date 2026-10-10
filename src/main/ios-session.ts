@@ -6,7 +6,7 @@ import { findByQuery, queryFor, readScreen, toCandidates, type IosDriver, type I
 // driver ({type,id,label,index} or {alert}) or a plain description; descriptions — and saved
 // queries that no longer match the screen — are resolved with Jev at run time.
 
-export type DriverLike = Pick<IosDriver, 'tree' | 'tapAt' | 'type' | 'launch' | 'alert'>;
+export type DriverLike = Pick<IosDriver, 'tree' | 'tapAt' | 'type' | 'launch' | 'alert' | 'swipe'>;
 
 export interface IosAppConfig {
   bundleId: string;
@@ -69,9 +69,14 @@ export class IosSession {
         return this.assert(label, action);
       case 'waitFor':
         return this.waitFor(label, action.selector, timeoutMs);
+      case 'swipe':
+        if (!action.selector) {
+          await this.driver.swipe(action.direction);
+          return {};
+        }
     }
 
-    const { target, resolved } = await this.resolve(label, action);
+    const { target, resolved } = await this.resolve(label, action as Extract<StepAction, { selector: string }>);
     if (target.kind === 'alert') {
       if (action.type !== 'click') throw new Error(`Only taps work on system alerts ("${label}")`);
       await this.driver.alert(target.button);
@@ -83,6 +88,8 @@ export class IosSession {
         await this.driver.tapAt(x + w / 2, y + h / 2);
       } else if (action.type === 'fill') {
         await this.driver.type(action.value, query, true);
+      } else if (action.type === 'swipe') {
+        await this.driver.swipe(action.direction, query);
       } else if (action.type === 'press') {
         if (action.key !== 'Enter') throw new Error(`Key "${action.key}" isn't supported on iOS yet`);
         await this.driver.type('\n', query);

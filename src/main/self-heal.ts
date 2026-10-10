@@ -16,7 +16,7 @@ export function isLocatorFailure(err: unknown): boolean {
 export function canHeal(action: StepAction): action is Extract<StepAction, { selector?: string }> & { selector: string } {
   if (!('selector' in action) || !action.selector) return false;
   if (action.type === 'assert') return action.assertionType !== 'hidden' && action.assertionType !== 'url';
-  return ['click', 'fill', 'press', 'waitFor'].includes(action.type);
+  return ['click', 'fill', 'press', 'waitFor'].includes(action.type) || (action.type === 'swipe' && !!action.selector);
 }
 
 function instruction(label: string, action: StepAction): string {

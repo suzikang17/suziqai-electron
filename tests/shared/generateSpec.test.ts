@@ -61,6 +61,25 @@ describe('generateSpec', () => {
     expect(generateSpec(suite)).toContain("await page.getByPlaceholder('What needs to be done?').press('Enter');");
   });
 
+  it('exports swipes as a mouse drag on the element, or a wheel scroll for the screen', () => {
+    const suite: TestSuite = {
+      id: 'suite-1', name: 'Todos', fileName: 'todos',
+      beforeAll: [], beforeEach: [], afterEach: [], afterAll: [],
+      tests: [{ id: 'b1', name: 'swipe', steps: [
+        { id: 's1', label: 'Swipe left on the row', action: { type: 'swipe', direction: 'left', selector: "getByText('Buy milk')" }, status: 'passed' },
+        { id: 's2', label: 'Scroll down', action: { type: 'swipe', direction: 'up' }, status: 'passed' },
+      ]}],
+      devices: [],
+    };
+    const code = generateSpec(suite);
+    expect(code).toContain("const box = (await page.getByText('Buy milk').boundingBox())!;");
+    expect(code).toContain('await page.mouse.move(cx + box.width * 0.35, cy);');
+    expect(code).toContain('await page.mouse.move(cx - box.width * 0.35, cy, { steps: 10 });');
+    expect(code).toContain('await page.mouse.wheel(0, 600); // swipe up');
+    // multi-line statements stay indented inside the test
+    expect(code).toMatch(/\n( +)\{ \/\/ swipe left\n\1 {2}const box/);
+  });
+
   it('skips failed steps', () => {
     const suite: TestSuite = {
       id: 'suite-1', name: 'Test', fileName: 'test',

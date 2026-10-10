@@ -23,6 +23,7 @@ function fakeDriver(alert: { present: boolean; buttons?: string[] } = { present:
     type: vi.fn(async () => ({})),
     launch: vi.fn(async () => ({})),
     alert: vi.fn(async (tap?: string) => (tap ? { present: true, tapped: tap } : alert)),
+    swipe: vi.fn(async () => ({})),
   };
 }
 
@@ -83,6 +84,16 @@ describe('IosSession.execute', () => {
 
     expect(driver.alert).toHaveBeenCalledWith('Allow');
     expect(JSON.parse(result.resolvedSelector!)).toEqual({ alert: 'Allow' });
+  });
+
+  it('swipes on an element, or on the screen when there is no selector', async () => {
+    const session = new IosSession(driver, fakeJev(null), app);
+    const selector = JSON.stringify({ type: 'button', id: 'scheduleRow.Breakfast', index: 0 });
+    await session.execute('Swipe left on Breakfast', { type: 'swipe', direction: 'left', selector });
+    expect(driver.swipe).toHaveBeenCalledWith('left', { type: 'button', id: 'scheduleRow.Breakfast', index: 0 });
+    await session.execute('Scroll down', { type: 'swipe', direction: 'up' });
+    expect(driver.swipe).toHaveBeenLastCalledWith('up');
+    expect(driver.tree).toHaveBeenCalledTimes(1); // the screen swipe needs no element
   });
 
   it('presses Enter by typing a newline into the element', async () => {

@@ -85,6 +85,8 @@ function stepLines(step: Step): string[] {
 
   if (a.type === 'navigate') return [comment, 'app.launch()'];
   if (a.type === 'screenshot') return [comment, 'add(XCTAttachment(screenshot: app.screenshot()))'];
+  const swipe = (d: string) => `swipe${d[0].toUpperCase()}${d.slice(1)}()`;
+  if (a.type === 'swipe' && !a.selector) return [comment, `app.${swipe(a.direction)}`];
 
   const selector = 'selector' in a ? a.selector ?? '' : '';
   const el = xcuiElement(selector);
@@ -93,6 +95,8 @@ function stepLines(step: Step): string[] {
   switch (a.type) {
     case 'click':
       return [comment, waitFor(el), `${el}.tap()`];
+    case 'swipe':
+      return [comment, waitFor(el), `${el}.${swipe(a.direction)}`];
     case 'fill':
       return [comment, waitFor(el), `${el}.replaceText(${swiftString(a.value)})`];
     case 'press':
