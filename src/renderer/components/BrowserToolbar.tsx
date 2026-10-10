@@ -146,6 +146,7 @@ export function BrowserToolbar({
         <option value="command">Command</option>
         <option value="record">Record</option>
         <option value="observe">Observe</option>
+        <option value="goal">Goal</option>
       </select>
     </div>
   );

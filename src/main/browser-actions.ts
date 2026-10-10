@@ -160,83 +160,7 @@ export async function executeOnPage(p: Page, action: any, timeout: number = 5000
     }
 
     case 'assert':
-      if (action.assertionType === 'url') {
-        const currentUrl = p.url();
-        // "/pattern/flags" is a regex; anything else means "URL contains this text"
-        const pattern = action.expected.match(/^\/(.+)\/([a-z]*)$/);
-        const ok = pattern ? new RegExp(pattern[1], pattern[2]).test(currentUrl) : currentUrl.includes(action.expected);
-        if (!ok) {
-          throw new Error('URL assertion failed: expected "' + action.expected + '" in "' + currentUrl + '"');
-        }
-      } else if (action.assertionType === 'attribute') {
-        const locator = resolveLocator(p, action.selector || '');
-        await locator.waitFor({ state: 'attached', timeout });
-        const actual = await locator.getAttribute(action.attribute || '');
-        if (actual !== action.expected) {
-          throw new Error(`Attribute ${action.attribute} expected "${action.expected}", got "${actual}"`);
-        }
-      } else if (action.assertionType === 'visible') {
-        const locator = resolveLocator(p, action.selector || '');
-        await locator.waitFor({ state: 'visible', timeout });
-      } else if (action.assertionType === 'text') {
-        const bodyText = await p.locator('body').innerText();
-        if (!bodyText.includes(action.expected)) {
-          throw new Error('Text "' + action.expected + '" not found on page');
-        }
-      } else if (action.assertionType === 'hidden') {
-        const locator = resolveLocator(p, action.selector || '');
-        await locator.waitFor({ state: 'hidden', timeout });
-      } else if (action.assertionType === 'value') {
-        const locator = resolveLocator(p, action.selector || '');
-        const val = await locator.inputValue();
-        if (val !== action.expected) {
-          throw new Error('Value assertion failed: expected "' + action.expected + '", got "' + val + '"');
-        }
-      } else if (action.assertionType === 'enabled') {
-        const locator = resolveLocator(p, action.selector || '');
-        if (!await locator.isEnabled({ timeout })) {
-          throw new Error('Element is not enabled: ' + action.selector);
-        }
-      } else if (action.assertionType === 'disabled') {
-        const locator = resolveLocator(p, action.selector || '');
-        if (!await locator.isDisabled({ timeout })) {
-          throw new Error('Element is not disabled: ' + action.selector);
-        }
-      } else if (action.assertionType === 'checked') {
-        const locator = resolveLocator(p, action.selector || '');
-        if (!await locator.isChecked({ timeout })) {
-          throw new Error('Element is not checked: ' + action.selector);
-        }
-      } else if (action.assertionType === 'unchecked') {
-        const locator = resolveLocator(p, action.selector || '');
-        if (await locator.isChecked({ timeout })) {
-          throw new Error('Element is checked (expected unchecked): ' + action.selector);
-        }
-      } else if (action.assertionType === 'count') {
-        const locator = resolveLocator(p, action.selector || '');
-        const count = await locator.count();
-        const expected = parseInt(action.expected);
-        if (count !== expected) {
-          throw new Error('Count assertion failed: expected ' + expected + ', got ' + count);
-        }
-      } else if (action.assertionType === 'focused') {
-        const locator = resolveLocator(p, action.selector || '');
-        const isFocused = await locator.evaluate(el => document.activeElement === el);
-        if (!isFocused) {
-          throw new Error('Element is not focused: ' + action.selector);
-        }
-      } else if (action.assertionType === 'editable') {
-        const locator = resolveLocator(p, action.selector || '');
-        if (!await locator.isEditable({ timeout })) {
-          throw new Error('Element is not editable: ' + action.selector);
-        }
-      } else if (action.assertionType === 'empty') {
-        const locator = resolveLocator(p, action.selector || '');
-        const text = await locator.textContent();
-        if (text && text.trim().length > 0) {
-          throw new Error('Element is not empty, contains: "' + text.trim().substring(0, 50) + '"');
-        }
-      }
+      await assertCondition(p, action, timeout);
       break;
 
     case 'waitFor': {
@@ -252,6 +176,84 @@ export async function executeOnPage(p: Page, action: any, timeout: number = 5000
         await _view.webContents.capturePage();
       }
       break;
+  }
+}
+
+/** Retries `check` until it passes or the timeout elapses — like Playwright's auto-retrying expect. */
+async function expectEventually(check: () => Promise<void>, timeout: number): Promise<void> {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    try {
+      await check();
+      return;
+    } catch (err) {
+      if (Date.now() >= deadline) throw err;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+}
+
+async function assertCondition(p: Page, action: any, timeout: number): Promise<void> {
+  const sel: string = action.selector || '';
+  const locator = () => resolveLocator(p, sel);
+  const fail = (message: string): never => { throw new Error(message); };
+  const attempt = { timeout: Math.min(1000, timeout) };
+
+  switch (action.assertionType) {
+    case 'visible':
+      return locator().waitFor({ state: 'visible', timeout });
+    case 'hidden':
+      return locator().waitFor({ state: 'hidden', timeout });
+    case 'url':
+      return expectEventually(async () => {
+        const currentUrl = p.url();
+        // "/pattern/flags" is a regex; anything else means "URL contains this text"
+        const pattern = String(action.expected).match(/^\/(.+)\/([a-z]*)$/);
+        const ok = pattern ? new RegExp(pattern[1], pattern[2]).test(currentUrl) : currentUrl.includes(action.expected);
+        if (!ok) fail('URL assertion failed: expected "' + action.expected + '" in "' + currentUrl + '"');
+      }, timeout);
+    case 'text':
+      return expectEventually(async () => {
+        const text = sel ? await locator().innerText(attempt) : await p.locator('body').innerText();
+        if (!text.includes(action.expected)) fail('Text "' + action.expected + '" not found' + (sel ? ' in ' + sel : ' on page'));
+      }, timeout);
+    case 'value':
+      return expectEventually(async () => {
+        const val = await locator().inputValue(attempt);
+        if (val !== action.expected) fail('Value assertion failed: expected "' + action.expected + '", got "' + val + '"');
+      }, timeout);
+    case 'attribute':
+      return expectEventually(async () => {
+        const actual = await locator().getAttribute(action.attribute || '', attempt);
+        if (actual !== action.expected) fail(`Attribute ${action.attribute} expected "${action.expected}", got "${actual}"`);
+      }, timeout);
+    case 'enabled':
+      return expectEventually(async () => { if (!(await locator().isEnabled(attempt))) fail('Element is not enabled: ' + sel); }, timeout);
+    case 'disabled':
+      return expectEventually(async () => { if (!(await locator().isDisabled(attempt))) fail('Element is not disabled: ' + sel); }, timeout);
+    case 'checked':
+      return expectEventually(async () => { if (!(await locator().isChecked(attempt))) fail('Element is not checked: ' + sel); }, timeout);
+    case 'unchecked':
+      return expectEventually(async () => { if (await locator().isChecked(attempt)) fail('Element is checked (expected unchecked): ' + sel); }, timeout);
+    case 'editable':
+      return expectEventually(async () => { if (!(await locator().isEditable(attempt))) fail('Element is not editable: ' + sel); }, timeout);
+    case 'count':
+      return expectEventually(async () => {
+        const count = await locator().count();
+        const expected = parseInt(action.expected, 10);
+        if (count !== expected) fail('Count assertion failed: expected ' + expected + ', got ' + count);
+      }, timeout);
+    case 'focused':
+      return expectEventually(async () => {
+        if (!(await locator().evaluate((el) => document.activeElement === el, undefined, attempt))) fail('Element is not focused: ' + sel);
+      }, timeout);
+    case 'empty':
+      return expectEventually(async () => {
+        const text = await locator().textContent(attempt);
+        if (text && text.trim().length > 0) fail('Element is not empty, contains: "' + text.trim().substring(0, 50) + '"');
+      }, timeout);
+    default:
+      fail('Unsupported assertion type: ' + action.assertionType);
   }
 }
 

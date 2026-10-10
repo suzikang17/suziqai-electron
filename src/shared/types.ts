@@ -78,7 +78,7 @@ export interface PlaywrightConfig {
   };
 }
 
-export type AppMode = 'command' | 'record' | 'observe';
+export type AppMode = 'command' | 'record' | 'observe' | 'goal';
 
 // Video import types (Pass 1 output — before selector resolution)
 export interface VideoStep {

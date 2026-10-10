@@ -157,22 +157,28 @@ export class IosMode {
   }
 
   /** Runs one step and reports status (and any newly resolved selector) to the renderer. */
+  /** Runs one step and returns the outcome (no renderer messages). */
+  async tryStep(label: string, action: StepAction, timeout?: number): Promise<{ ok: boolean; error?: string; resolvedSelector?: string }> {
+    if (!this.session) return { ok: false, error: 'iOS session not open' };
+    try {
+      const { resolvedSelector } = await this.session.execute(label, action, timeout);
+      await new Promise((r) => setTimeout(r, 300)); // let the UI settle before the screenshot
+      return { ok: true, resolvedSelector };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    } finally {
+      await this.pushScreenshot().catch(() => undefined);
+    }
+  }
+
   async executeStep(stepId: string, label: string, action: StepAction, timeout?: number): Promise<boolean> {
     const win = this.getWindow();
     if (!this.session || !win) return false;
     win.webContents.send('step:result', stepId, 'running');
-    try {
-      const { resolvedSelector } = await this.session.execute(label, action, timeout);
-      if (resolvedSelector) win.webContents.send(STEP_RESOLVED, stepId, resolvedSelector);
-      await new Promise((r) => setTimeout(r, 300)); // let the UI settle before the screenshot
-      win.webContents.send('step:result', stepId, 'passed');
-      return true;
-    } catch (err) {
-      win.webContents.send('step:result', stepId, 'failed', (err as Error).message);
-      return false;
-    } finally {
-      await this.pushScreenshot().catch(() => undefined);
-    }
+    const result = await this.tryStep(label, action, timeout);
+    if (result.resolvedSelector) win.webContents.send(STEP_RESOLVED, stepId, result.resolvedSelector);
+    win.webContents.send('step:result', stepId, result.ok ? 'passed' : 'failed', result.error);
+    return result.ok;
   }
 }
 

@@ -17,6 +17,7 @@ import { TypeSafeClient } from '@typesafe-ai/sdk';
 import { runJevShadow } from './jev-shadow';
 import { IosMode, IOS_CHAT_PREFIX, STEP_RESOLVED } from './ios-mode';
 import { canHeal, healSelector, isLocatorFailure } from './self-heal';
+import { runGoal, type ExecResult, type GoalDeps } from './goal-autopilot';
 import { applyReadOnlyGuard } from './read-only-guard';
 
 const TARGET_PARTITION = 'persist:suziqai-target';
@@ -458,13 +459,7 @@ function createWindow(): void {
 
   // Fresh run (like CI): clear the target app's storage, or relaunch the iOS app
   ipcMain.removeHandler('run:fresh');
-  ipcMain.handle('run:fresh', async () => {
-    if (iosMode.active) {
-      await iosMode.relaunch();
-    } else if (browserView) {
-      await browserView.webContents.session.clearStorageData();
-    }
-  });
+  ipcMain.handle('run:fresh', freshStart);
 
   // Recording: capture the target app's BrowserView directly (web projects)
   ipcMain.removeHandler(IPC.RECORD_START);
@@ -482,13 +477,7 @@ function createWindow(): void {
     const win = mainWindow;
     if (!win) return;
 
-    const context = iosMode.active
-      ? await iosMode.chatContext()
-      : {
-          url: browserView ? browserView.webContents.getURL() : '',
-          accessibilityTree: await getAccessibilityContext(),
-          screenshot: await captureBrowserViewScreenshot(),
-        };
+    const context = await currentContext();
 
     try {
       const response = await claudeSession.send(iosMode.active ? `${IOS_CHAT_PREFIX}\n${message}` : message, context);
@@ -528,7 +517,7 @@ function createWindow(): void {
    * step means (confident picks only), the step is retried with a fresh locator, and the healed
    * selector is saved back onto the step.
    */
-  async function runWebStep(stepId: string, label: string, action: any, timeout?: number): Promise<void> {
+  async function runWebStep(stepId: string, label: string, action: any, timeout?: number): Promise<string | undefined> {
     if (watchMode && action?.selector) {
       // Watch mode: show the target (Playwright's highlight overlay), pause, then act
       try {
@@ -544,6 +533,7 @@ function createWindow(): void {
     }
     try {
       await executeActionOnView(browserView, action, timeout);
+      return undefined;
     } catch (err) {
       if (!jevClient || !canHeal(action) || !isLocatorFailure(err)) throw err;
       const healed = await healSelector(await connectToElectron(), jevClient, label || action.selector, action).catch(() => null);
@@ -551,8 +541,108 @@ function createWindow(): void {
       await executeActionOnView(browserView, { ...action, selector: healed }, timeout);
       mainWindow?.webContents.send(STEP_RESOLVED, stepId, healed);
       mainWindow?.webContents.send(IPC.CHAT_RESPONSE, `🩹 Jev healed "${label || action.selector}": ${action.selector} → ${healed}`);
+      return healed;
     }
   }
+
+  /** What Claude sees: the current page/screen as text plus a screenshot. */
+  async function currentContext() {
+    return iosMode.active
+      ? await iosMode.chatContext()
+      : {
+          url: browserView ? browserView.webContents.getURL() : '',
+          accessibilityTree: await getAccessibilityContext(),
+          screenshot: await captureBrowserViewScreenshot(),
+        };
+  }
+
+  /** Fresh start (like CI): clear the target app's storage, or relaunch the iOS app. */
+  async function freshStart() {
+    if (iosMode.active) {
+      await iosMode.relaunch();
+    } else if (browserView) {
+      await browserView.webContents.session.clearStorageData();
+    }
+  }
+
+  // Goal mode: observe → plan → act, until the goal is met; then verify with a fresh replay
+  let goalAbort: AbortController | null = null;
+  ipcMain.removeHandler('goal:stop');
+  ipcMain.handle('goal:stop', () => goalAbort?.abort());
+  ipcMain.removeHandler('goal:run');
+  ipcMain.handle('goal:run', async (_event, goal: string, setup: Array<{ id: string; label: string; action: any }> = []) => {
+    const win = mainWindow;
+    if (!win) return null;
+    goalAbort?.abort();
+    const controller = new AbortController();
+    goalAbort = controller;
+    const say = (m: string) => { if (!win.isDestroyed()) win.webContents.send(IPC.CHAT_RESPONSE, m); };
+    const readOnlyWeb = !iosMode.active && !!projectConfig.getConfig().readOnly;
+
+    const deps: GoalDeps = {
+      freshStart,
+      observe: async () => {
+        const c = await currentContext();
+        return { url: c.url, screen: c.accessibilityTree, screenshot: c.screenshot };
+      },
+      plan: (input) => claudeSession.planGoal({ ...input, platformHint: iosMode.active ? IOS_CHAT_PREFIX : undefined }),
+      execute: async (step, phase) => {
+        const id = step.id ?? `goal-${Date.now()}`;
+        if (phase === 'verify') win.webContents.send(IPC.STEP_RESULT, id, 'running');
+        let result: ExecResult;
+        if (iosMode.active) {
+          result = await iosMode.tryStep(step.label, step.action);
+        } else {
+          try {
+            result = { ok: true, resolvedSelector: await runWebStep(id, step.label, step.action) };
+          } catch (err) {
+            result = { ok: false, error: (err as Error).message };
+          }
+        }
+        if (phase === 'explore' && result.ok && !setup.some((s) => s.id === step.id)) {
+          // Successful steps appear in the sidebar as the goal progresses
+          const action = result.resolvedSelector && 'selector' in step.action ? { ...step.action, selector: result.resolvedSelector } : step.action;
+          win.webContents.send(IPC.STEPS_PROPOSED, [{ id, label: step.label, action, status: 'passed' }]);
+        }
+        if (phase === 'verify') win.webContents.send(IPC.STEP_RESULT, id, result.ok ? 'passed' : 'failed', result.error);
+        return result;
+      },
+      approve: async (step) => {
+        if (process.env.SUZIQAI_AUTO_APPROVE) return true; // unattended runs (automation, CI)
+        const { response } = await dialog.showMessageBox(win, {
+          type: 'question',
+          buttons: ['Allow', 'Stop'],
+          defaultId: 1,
+          cancelId: 1,
+          message: `Autopilot wants to: ${step.label}`,
+          detail: `This looks like it changes data.\n${'selector' in step.action ? step.action.selector : ''}`,
+        });
+        return response === 0;
+      },
+      emit: (event) => {
+        if (event.type === 'round') {
+          say(`🎯 Round ${event.round}${event.status === 'done' ? ' — goal met' : event.status === 'stuck' ? ' — stuck' : ''}: ${event.message}`);
+        } else if (event.type === 'step' && !event.ok) {
+          say(`✗ ${event.step.label} — ${event.error}`);
+        } else if (event.type === 'verify') {
+          say(event.ok ? '✅ Fresh replay passed — test verified' : `⚠️ Fresh replay failed: ${event.error}`);
+        }
+      },
+    };
+
+    try {
+      const result = await runGoal(goal, deps, { setup, maxSteps: 25, maxConsecutiveFailures: 3, requireApproval: !readOnlyWeb, signal: controller.signal });
+      say(result.status === 'done'
+        ? `🏁 ${result.message} — ${result.steps.length} step(s) in ${result.rounds} round(s)`
+        : `🛑 ${result.message} — ${result.steps.length} step(s) kept`);
+      return result;
+    } catch (err) {
+      say(`Goal mode error: ${(err as Error).message}`);
+      return null;
+    } finally {
+      if (goalAbort === controller) goalAbort = null;
+    }
+  });
 
   // Override step execution to use BrowserView with visual QA
   ipcMain.removeHandler(IPC.STEP_EXECUTE);

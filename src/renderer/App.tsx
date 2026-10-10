@@ -19,6 +19,7 @@ export function App() {
   const [iosScreen, setIosScreen] = useState('');
   // Watch mode replays slowly, showing each target before acting
   const [watchMode, setWatchMode] = useState(false);
+  const [goalRunning, setGoalRunning] = useState(false);
   const [tapMarker, setTapMarker] = useState<{ frame: number[]; screen: number[]; label: string } | null>(null);
   const [mode, setMode] = useState<AppMode>('command');
   const defaultBlock: TestBlock = { id: 'block-1', name: 'Untitled Test', steps: [] };
@@ -874,6 +875,14 @@ export function App() {
           >
             {watchMode ? '👀 Watching' : '⚡ Fast'}
           </button>
+          {goalRunning && (
+            <button
+              onClick={() => window.suziqai.stopGoal()}
+              style={{ background: 'var(--accent-red)', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 8px', fontSize: 11, cursor: 'pointer', marginRight: 8 }}
+            >
+              ■ Stop goal
+            </button>
+          )}
           {platform === 'web' && <button
             onClick={() => setShowVideoImport(true)}
             style={{
@@ -981,7 +990,14 @@ export function App() {
               };
               setMessages(prev => [...prev, userMsg]);
               setIsChatLoading(true);
-              window.suziqai.sendChat(content);
+              if (mode === 'goal') {
+                setGoalRunning(true);
+                // A goal runs like a test: fresh start, then the suite's setup hooks (e.g. login)
+                const setup = currentSuite ? [...currentSuite.beforeAll, ...currentSuite.beforeEach].map(s => ({ id: s.id, label: s.label, action: s.action })) : [];
+                window.suziqai.runGoal(content, setup).finally(() => { setGoalRunning(false); setIsChatLoading(false); });
+              } else {
+                window.suziqai.sendChat(content);
+              }
             }}
             isLoading={isChatLoading}
           />

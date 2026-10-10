@@ -83,6 +83,8 @@ declare global {
       onStepResolved: (callback: (stepId: string, selector: string) => void) => void;
       setWatchMode: (on: boolean) => Promise<void>;
       runFresh: () => Promise<void>;
+      runGoal: (goal: string, setup?: Array<{ id: string; label: string; action: unknown }>) => Promise<{ status: string; message: string; verified: boolean; steps: unknown[] } | null>;
+      stopGoal: () => Promise<void>;
       onIosTapMarker: (callback: (marker: { frame: number[]; screen: number[]; label: string }) => void) => void;
     };
   }

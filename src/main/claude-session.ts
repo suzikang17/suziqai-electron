@@ -244,6 +244,38 @@ async function runQueryWithTwoImages(
   return result;
 }
 
+export interface GoalPlanInput {
+  goal: string;
+  done: string[];
+  lastError?: string;
+  round: number;
+  url: string;
+  screen: string;
+  screenshot: Buffer;
+  /** e.g. the iOS prefix, so steps use device descriptions instead of web locators */
+  platformHint?: string;
+}
+
+export interface GoalPlan {
+  status: 'continue' | 'done' | 'stuck';
+  message: string;
+  steps: Array<{ label: string; action: StepAction }>;
+}
+
+const GOAL_PROMPT = `## Goal mode
+
+You are driving the app toward a goal one screen at a time. You only see the CURRENT screen; plan only what is visible on it.
+
+Respond with JSON: { "status": "continue" | "done" | "stuck", "message": "...", "steps": [...] }
+- "continue": steps = the next 1-3 steps that can be performed on THIS screen. Stop at the first step that changes the screen (a navigation, opening a dialog, submitting) — you will be asked again afterwards.
+- "done": the goal is achieved on this screen. steps = 1-3 assertion steps that prove it (e.g. the saved item is visible). Do not add action steps.
+- "stuck": you cannot make progress (the needed control doesn't exist, access is denied, the app errored). message = why, in one sentence.
+
+Rules:
+- Never repeat a completed step. If the previous attempt failed, do something different (another element, another route).
+- Keep labels short and human: "Tap Add", "Type Dr. Paws into Name".
+- Keep "message" to one short sentence about what you are doing next.`;
+
 export class ClaudeSession {
   private snapshots: Snapshot[] = [];
 
@@ -270,6 +302,35 @@ export class ClaudeSession {
     }
 
     return this.parseResponse(text);
+  }
+
+  /** One round of goal mode: given the goal, progress so far and the current screen, what next? */
+  async planGoal(input: GoalPlanInput): Promise<GoalPlan> {
+    const done = input.done.length ? input.done.map((d, i) => `${i + 1}. ${d}`).join('\n') : '(nothing yet)';
+    const text = [
+      input.platformHint ?? '',
+      `Goal: ${input.goal}`,
+      `Round ${input.round}. Steps completed so far:\n${done}`,
+      input.lastError ? `The previous attempt failed: ${input.lastError}` : '',
+      `[Current page: ${input.url}]`,
+      `[Screen: ${input.screen}]`,
+    ].filter(Boolean).join('\n\n');
+
+    const raw = input.screenshot.length > 0
+      ? await runQueryWithImage(text, input.screenshot.toString('base64'), `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`)
+      : await runQuery(text, `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`);
+
+    const parsed = this.parseResponse(raw);
+    let status: GoalPlan['status'] = 'continue';
+    try {
+      const match = raw.match(/\{[\s\S]*\}/);
+      const s = match ? JSON.parse(match[0]).status : undefined;
+      if (s === 'done' || s === 'stuck' || s === 'continue') status = s;
+    } catch {
+      // keep 'continue'; parseResponse already handled a malformed reply
+    }
+    if (status === 'continue' && parsed.steps.length === 0) status = 'stuck';
+    return { status, message: parsed.message, steps: parsed.steps };
   }
 
   async requestVisualQA(

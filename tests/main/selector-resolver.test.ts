@@ -170,12 +170,24 @@ describe('executeOnPage assertions and placeholders', () => {
     await expect(executeOnPage(page, { type: 'assert', assertionType: 'attribute', attribute: 'aria-pressed', expected: 'false', selector: "getByRole('button', { name: 'Week' })" }, 500)).rejects.toThrow();
 
     await executeOnPage(page, { type: 'assert', assertionType: 'url', expected: '/^about:blank$/' });
-    await expect(executeOnPage(page, { type: 'assert', assertionType: 'url', expected: '/^https:/' })).rejects.toThrow(/URL/);
+    await expect(executeOnPage(page, { type: 'assert', assertionType: 'url', expected: '/^https:/' }, 300)).rejects.toThrow(/URL/);
     await executeOnPage(page, { type: 'assert', assertionType: 'count', expected: '1', selector: "getByRole('button')" });
 
     process.env.SUZIQAI_TEST_EMAIL = 'qa@example.com';
     await executeOnPage(page, { type: 'fill', selector: "getByLabel('Email')", value: '{{env.SUZIQAI_TEST_EMAIL}}' });
     expect(await page.getByLabel('Email').inputValue()).toBe('qa@example.com');
+  });
+});
+
+describe('assertions wait for the condition, like Playwright expect', () => {
+  it('passes when text and URL change within the timeout, fails after it', async () => {
+    const { executeOnPage } = await import('../../src/main/browser-actions');
+    await page.setContent(`<div id="out"></div><script>setTimeout(() => { document.getElementById('out').textContent = 'Loaded'; location.hash = 'done'; }, 400)</script>`);
+    const t0 = Date.now();
+    await executeOnPage(page, { type: 'assert', assertionType: 'text', expected: 'Loaded' }, 3000);
+    await executeOnPage(page, { type: 'assert', assertionType: 'url', expected: '#done' }, 3000);
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(350);
+    await expect(executeOnPage(page, { type: 'assert', assertionType: 'text', expected: 'Nope', selector: '#out' }, 300)).rejects.toThrow(/"Nope" not found in #out/);
   });
 });
 
