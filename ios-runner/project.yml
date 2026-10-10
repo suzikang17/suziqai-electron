@@ -1,0 +1,36 @@
+name: SuziQaiRunner
+options:
+  bundleIdPrefix: dev.suziqai
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  # XCUITest bundles need a host app; the runner itself drives other apps by bundle id.
+  RunnerHost:
+    type: application
+    platform: iOS
+    sources: [RunnerHost]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        PRODUCT_BUNDLE_IDENTIFIER: dev.suziqai.RunnerHost
+  SuziQaiRunnerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [SuziQaiRunnerUITests]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: dev.suziqai.RunnerUITests
+        TEST_TARGET_NAME: RunnerHost
+    dependencies:
+      - target: RunnerHost
+schemes:
+  SuziQaiRunner:
+    build:
+      targets:
+        RunnerHost: all
+        SuziQaiRunnerUITests: [test]
+    test:
+      targets:
+        - SuziQaiRunnerUITests

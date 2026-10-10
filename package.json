@@ -10,7 +10,8 @@
     "build": "npm run build:renderer && npm run build:main",
     "test": "vitest run",
     "test:watch": "vitest",
-    "package": "electron-builder"
+    "package": "electron-builder",
+    "ios-runner:build": "cd ios-runner && xcodegen generate && xcodebuild build-for-testing -project SuziQaiRunner.xcodeproj -scheme SuziQaiRunner -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO -quiet"
   },
   "author": "",
   "license": "MIT",
