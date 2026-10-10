@@ -231,6 +231,9 @@ export const IPC = {
   // Playwright config
   PLAYWRIGHT_CONFIG_SAVE: 'playwright:config-save',
 
+  // CI
+  CI_SETUP: 'ci:setup',
+
   // Video import
   VIDEO_IMPORT: 'video:import',
   VIDEO_IMPORT_PROGRESS: 'video:import:progress',

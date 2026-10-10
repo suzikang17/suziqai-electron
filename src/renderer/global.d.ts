@@ -76,6 +76,9 @@ declare global {
       // Playwright config
       savePlaywrightConfig: (config: any, projectPath: string) => Promise<void>;
 
+      // CI: writes .github/workflows/suziqai-tests.yml at the repo root
+      setUpCi: () => Promise<{ path: string; secrets: string[] }>;
+
       // Video import
       importVideo: (filePath: string) => Promise<VideoImportResult>;
       onVideoImportProgress: (callback: (progress: VideoImportProgress) => void) => void;

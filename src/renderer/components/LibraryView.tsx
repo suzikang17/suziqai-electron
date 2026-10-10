@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Workflow } from 'lucide-react';
 import type { LibraryEntry } from '@shared/types';
 
 interface LibraryViewProps {
@@ -6,6 +7,8 @@ interface LibraryViewProps {
   onLoad: (fileName: string) => void;
   onDelete: (fileName: string) => void;
   onRefresh: () => void;
+  /** Writes a GitHub Actions workflow that runs these saved tests; omitted = no button. */
+  onSetUpCi?: () => void;
 }
 
 function RelativeTime({ date }: { date: string }) {
@@ -27,7 +30,7 @@ function RelativeTime({ date }: { date: string }) {
   return <span>{label}</span>;
 }
 
-export function LibraryView({ entries, onLoad, onDelete, onRefresh }: LibraryViewProps) {
+export function LibraryView({ entries, onLoad, onDelete, onRefresh, onSetUpCi }: LibraryViewProps) {
   const [hoveredEntry, setHoveredEntry] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -62,6 +65,27 @@ export function LibraryView({ entries, onLoad, onDelete, onRefresh }: LibraryVie
         <span style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
           {entries.length} test{entries.length !== 1 ? 's' : ''}
         </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {onSetUpCi && (
+          <button
+            onClick={onSetUpCi}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              background: 'none',
+              color: 'var(--text-muted)',
+              fontSize: 11,
+              cursor: 'pointer',
+              padding: '2px 4px',
+              borderRadius: 3,
+            }}
+            title="Write a GitHub Actions workflow that runs these tests on push, pull requests and nightly"
+          >
+            <Workflow size={11} />
+            Set up CI
+          </button>
+        )}
         <button
           onClick={onRefresh}
           style={{
@@ -76,6 +100,7 @@ export function LibraryView({ entries, onLoad, onDelete, onRefresh }: LibraryVie
         >
           Refresh
         </button>
+        </div>
       </div>
 
       {entries.map(entry => {

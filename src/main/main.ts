@@ -9,6 +9,7 @@ import { TestExporter } from './test-exporter';
 import { ProjectConfigManager } from './project-config';
 import { TestLibrary } from './test-library';
 import { registerIpcHandlers } from './ipc-handlers';
+import { setUpCi } from './ci-setup';
 import { IPC } from '../shared/types';
 import { executeActionOnView, disconnectPlaywright, connectToElectron, setExpectedUrlProvider, resolveLocator } from './browser-actions';
 import { generateSelectors } from './element-picker';
@@ -202,6 +203,15 @@ function registerAllIpcHandlers(): void {
   ipcMain.handle('clipboard:copy', async (_event, text: string) => {
     const { clipboard } = await import('electron');
     clipboard.writeText(text);
+  });
+
+  // CI runs what's saved on disk, so collect secrets from the library rather than the open session
+  ipcMain.handle(IPC.CI_SETUP, async () => {
+    const projectPath = projectConfig.getProjectPath();
+    if (!projectPath) throw new Error('Open a project first.');
+    const entries = await testLibrary.list();
+    const suites = await Promise.all(entries.map((e) => testLibrary.load(e.fileName).catch(() => null)));
+    return setUpCi(projectPath, projectConfig.getConfig(), suites.filter((s) => s !== null));
   });
 }
 

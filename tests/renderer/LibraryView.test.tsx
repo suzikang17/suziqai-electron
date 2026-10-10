@@ -57,4 +57,13 @@ describe('LibraryView', () => {
     render(<LibraryView entries={[]} onLoad={vi.fn()} onDelete={vi.fn()} onRefresh={vi.fn()} />);
     expect(screen.getByText(/no saved tests/i)).toBeDefined();
   });
+
+  it('offers "Set up CI" for saved tests when the app provides it', () => {
+    const onSetUpCi = vi.fn();
+    const { rerender } = render(<LibraryView entries={mockEntries} onLoad={vi.fn()} onDelete={vi.fn()} onRefresh={vi.fn()} />);
+    expect(screen.queryByText('Set up CI')).toBeNull();
+    rerender(<LibraryView entries={mockEntries} onLoad={vi.fn()} onDelete={vi.fn()} onRefresh={vi.fn()} onSetUpCi={onSetUpCi} />);
+    fireEvent.click(screen.getByText('Set up CI'));
+    expect(onSetUpCi).toHaveBeenCalledOnce();
+  });
 });
