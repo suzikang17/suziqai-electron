@@ -86,6 +86,8 @@ export interface Scenario {
   name: string;
   kind: 'happy' | 'edge' | 'permission';
   goal: string;
+  /** The planner's goal before its preconditions were folded in (see parseFeaturePlan). */
+  rawGoal?: string;
   preconditions: string;
   data: string;
   expected: string;

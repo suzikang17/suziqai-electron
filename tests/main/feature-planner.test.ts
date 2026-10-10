@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { parseFeaturePlan } from '../../src/main/feature-planner';
+import { parseFeaturePlan, foldPreconditions } from '../../src/main/feature-planner';
 
 const reply = `Here is the plan:
 \`\`\`json
@@ -30,6 +30,23 @@ describe('parseFeaturePlan', () => {
 
   it('lets write scenarios run when the app is not read-only', () => {
     expect(parseFeaturePlan(reply, 'x', false).scenarios.map((s) => s.runnable)).toEqual(['now', 'now', 'now']);
+  });
+
+  it('folds non-trivial preconditions into the goal, since every scenario starts fresh', () => {
+    expect(foldPreconditions('Tap the row for Dr. Sarah Chen and change the clinic to Green Valley.', 'A vet named Dr. Sarah Chen exists.')).toEqual({
+      goal: 'First, a vet named Dr. Sarah Chen exists. Then Tap the row for Dr. Sarah Chen and change the clinic to Green Valley.',
+      rawGoal: 'Tap the row for Dr. Sarah Chen and change the clinic to Green Valley.',
+    });
+    // harness-provided preconditions and goals that already set themselves up are left alone
+    expect(foldPreconditions('Open the board.', 'Logged in as admin')).toEqual({ goal: 'Open the board.' });
+    expect(foldPreconditions('Open the board.', 'none')).toEqual({ goal: 'Open the board.' });
+    expect(foldPreconditions('Add a vet named Dr. X, then edit it.', 'A vet exists')).toEqual({ goal: 'Add a vet named Dr. X, then edit it.' });
+
+    const plan = parseFeaturePlan(JSON.stringify({ scenarios: [
+      { name: 'Edit', goal: 'Change the clinic to Green Valley and check it shows.', preconditions: 'A vet named Dr. Sarah Chen exists', writes: true },
+    ] }), 'x', false);
+    expect(plan.scenarios[0].goal).toMatch(/^First, a vet named Dr\. Sarah Chen exists\. Then Change/);
+    expect(plan.scenarios[0].rawGoal).toBe('Change the clinic to Green Valley and check it shows.');
   });
 
   it('fails clearly on a non-plan reply', () => {

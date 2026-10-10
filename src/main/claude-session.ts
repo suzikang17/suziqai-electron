@@ -123,7 +123,7 @@ function captureStats(message: any): void {
   };
 }
 
-async function runQuery(prompt: string, systemPrompt: string): Promise<string> {
+async function runQuery(prompt: string, systemPrompt: string, model?: string): Promise<string> {
   let result = '';
   for await (const message of query({
     prompt,
@@ -131,6 +131,7 @@ async function runQuery(prompt: string, systemPrompt: string): Promise<string> {
       systemPrompt,
       maxTurns: 1,
       allowedTools: [],
+      ...(model ? { model } : {}),
     },
   })) {
     if ('result' in message && message.type === 'result') {
@@ -145,6 +146,7 @@ async function runQueryWithImage(
   textContent: string,
   imageBase64: string,
   systemPrompt: string,
+  model?: string,
 ): Promise<string> {
   const userMessage = {
     type: 'user' as const,
@@ -178,6 +180,7 @@ async function runQueryWithImage(
       systemPrompt,
       maxTurns: 1,
       allowedTools: [],
+      ...(model ? { model } : {}),
     },
   })) {
     if ('result' in message && message.type === 'result') {
@@ -267,7 +270,7 @@ const GOAL_PROMPT = `## Goal mode
 You are driving the app toward a goal one screen at a time. You only see the CURRENT screen; plan only what is visible on it.
 
 Respond with JSON: { "status": "continue" | "done" | "stuck", "message": "...", "steps": [...] }
-- "continue": steps = the next 1-3 steps that can be performed on THIS screen. Stop at the first step that changes the screen (a navigation, opening a dialog, submitting) — you will be asked again afterwards.
+- "continue": steps = the next 1-5 steps that can ALL be performed on THIS screen without it changing (e.g. typing into several fields of one form is one batch). Stop at the first step that changes the screen (a navigation, opening a dialog, submitting) — include that step as the last one; you will be asked again afterwards.
 - "done": the goal is achieved on this screen. steps = 1-3 assertion steps that prove it (e.g. the saved item is visible). Do not add action steps.
 - "stuck": you cannot make progress (the needed control doesn't exist, access is denied, the app errored). message = why, in one sentence.
 
@@ -316,9 +319,12 @@ export class ClaudeSession {
       `[Screen: ${input.screen}]`,
     ].filter(Boolean).join('\n\n');
 
+    // Goal rounds are many small decisions; a faster model (e.g. SUZIQAI_GOAL_MODEL=claude-sonnet-5-5)
+    // cuts round latency noticeably. Unset = the session's default model.
+    const model = process.env.SUZIQAI_GOAL_MODEL || undefined;
     const raw = input.screenshot.length > 0
-      ? await runQueryWithImage(text, input.screenshot.toString('base64'), `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`)
-      : await runQuery(text, `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`);
+      ? await runQueryWithImage(text, input.screenshot.toString('base64'), `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`, model)
+      : await runQuery(text, `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`, model);
 
     const parsed = this.parseResponse(raw);
     let status: GoalPlan['status'] = 'continue';
