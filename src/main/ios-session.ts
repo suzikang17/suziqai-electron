@@ -169,6 +169,23 @@ export class IosSession {
         if (!element) throw new Error(`Field "${target}" is not on screen`);
         if ((element.value ?? '') !== action.expected) throw new Error(`Expected value "${action.expected}", got "${element.value ?? ''}"`);
         return result;
+      case 'enabled':
+        if (!element) throw new Error(`"${target}" is not on screen`);
+        if (!element.enabled) throw new Error(`"${target}" is disabled (expected enabled)`);
+        return result;
+      case 'disabled':
+        if (!element) throw new Error(`"${target}" is not on screen`);
+        if (element.enabled) throw new Error(`"${target}" is enabled (expected disabled)`);
+        return result;
+      // XCUITest reports switches/checkboxes with value "1" (on) or "0" (off)
+      case 'checked':
+        if (!element) throw new Error(`"${target}" is not on screen`);
+        if (element.value !== '1') throw new Error(`"${target}" is not checked (value "${element.value ?? ''}")`);
+        return result;
+      case 'unchecked':
+        if (!element) throw new Error(`"${target}" is not on screen`);
+        if (element.value === '1') throw new Error(`"${target}" is checked (expected unchecked)`);
+        return result;
       default:
         throw new Error(`"${action.assertionType}" assertions aren't supported on iOS yet`);
     }

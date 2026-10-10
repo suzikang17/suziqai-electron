@@ -132,6 +132,20 @@ describe('IosSession.execute', () => {
     await expect(session.execute('Wait', { type: 'waitFor', selector: 'spinner' }, 600)).rejects.toThrow(/did not appear/);
   });
 
+  it('checks enabled/disabled and checked/unchecked on resolved elements', async () => {
+    const save = { ...node('button', 'Save', '', [0, 0, 10, 10]), enabled: false };
+    const toggle = { ...node('switch', 'Reminders', '', [0, 0, 10, 10]), value: '1' };
+    driver.tree = vi.fn(async () => ({ ...node('application'), children: [save, toggle] }));
+    const session = new IosSession(driver, null, app);
+    const saveSel = JSON.stringify({ type: 'button', label: 'Save', index: 0 });
+    const toggleSel = JSON.stringify({ type: 'switch', label: 'Reminders', index: 0 });
+
+    await expect(session.execute('Save disabled', { type: 'assert', assertionType: 'disabled', expected: '', selector: saveSel })).resolves.toEqual({});
+    await expect(session.execute('Save enabled', { type: 'assert', assertionType: 'enabled', expected: '', selector: saveSel })).rejects.toThrow(/is disabled/);
+    await expect(session.execute('Reminders on', { type: 'assert', assertionType: 'checked', expected: '', selector: toggleSel })).resolves.toEqual({});
+    await expect(session.execute('Reminders off', { type: 'assert', assertionType: 'unchecked', expected: '', selector: toggleSel })).rejects.toThrow(/is checked/);
+  });
+
   it('relaunches the app for navigate steps', async () => {
     const session = new IosSession(driver, null, app);
     await session.execute('Restart', { type: 'navigate', url: '' });

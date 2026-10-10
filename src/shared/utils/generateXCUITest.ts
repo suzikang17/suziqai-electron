@@ -89,6 +89,10 @@ function stepLines(step: Step): string[] {
       if (a.assertionType === 'hidden') return [comment, `XCTAssertFalse(${el}.exists)`];
       if (a.assertionType === 'text') return [comment, waitFor(el), `XCTAssertTrue(${el}.label.contains(${swiftString(a.expected)}))`];
       if (a.assertionType === 'value') return [comment, waitFor(el), `XCTAssertEqual(${el}.value as? String, ${swiftString(a.expected)})`];
+      if (a.assertionType === 'enabled') return [comment, waitFor(el), `XCTAssertTrue(${el}.isEnabled)`];
+      if (a.assertionType === 'disabled') return [comment, waitFor(el), `XCTAssertFalse(${el}.isEnabled)`];
+      if (a.assertionType === 'checked') return [comment, waitFor(el), `XCTAssertEqual(${el}.value as? String, "1")`];
+      if (a.assertionType === 'unchecked') return [comment, waitFor(el), `XCTAssertEqual(${el}.value as? String, "0")`];
       return [`// TODO: "${a.assertionType}" assertions aren't supported on iOS yet — "${step.label}"`];
   }
 }
