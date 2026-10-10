@@ -66,6 +66,7 @@ interface StepSidebarProps {
   onLoadFromLibrary: (fileName: string) => void;
   onDeleteFromLibrary: (fileName: string) => void;
   onRefreshLibrary: () => void;
+  onSetUpCi?: () => void;
   onUpdateSuiteDevices: (suiteId: string, devices: DeviceConfig[]) => void;
   playwrightConfig?: PlaywrightConfig;
   onPlaywrightConfigChange?: (config: PlaywrightConfig) => void;
@@ -111,6 +112,7 @@ export function StepSidebar({
   onLoadFromLibrary,
   onDeleteFromLibrary,
   onRefreshLibrary,
+  onSetUpCi,
   onUpdateSuiteDevices,
   playwrightConfig,
   onPlaywrightConfigChange,
@@ -1041,6 +1043,7 @@ export function StepSidebar({
             onLoad={onLoadFromLibrary}
             onDelete={onDeleteFromLibrary}
             onRefresh={onRefreshLibrary}
+            onSetUpCi={onSetUpCi}
           />
         </>
       )}

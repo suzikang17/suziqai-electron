@@ -286,6 +286,19 @@ export function App() {
     setLibraryEntries(entries);
   };
 
+  const setUpCi = async () => {
+    try {
+      const { path, secrets } = await window.suziqai.setUpCi();
+      log(`CI workflow written to ${path}. Commit and push it to run your saved tests on push, pull requests and nightly.`
+        + (secrets.length
+          ? ` Add these repo secrets first (Settings → Secrets and variables → Actions): ${secrets.join(', ')}.`
+          : ''));
+    } catch (err) {
+      // ipcRenderer.invoke wraps the main-process error message
+      log(`CI setup failed: ${(err as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')}`);
+    }
+  };
+
   const updateSuiteDevices = (suiteId: string, devices: import('@shared/types').DeviceConfig[]) => {
     setSuites(prev => prev.map(s => s.id === suiteId ? { ...s, devices } : s));
   };
@@ -986,6 +999,7 @@ export function App() {
           onLoadFromLibrary={loadFromLibrary}
           onDeleteFromLibrary={deleteFromLibrary}
           onRefreshLibrary={refreshLibrary}
+          onSetUpCi={setUpCi}
           onUpdateSuiteDevices={updateSuiteDevices}
           playwrightConfig={playwrightConfig}
           onPlaywrightConfigChange={setPlaywrightConfig}
