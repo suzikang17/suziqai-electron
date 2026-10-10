@@ -79,6 +79,9 @@ export class BrowserManager {
       case 'fill':
         await this.page.fill(action.selector, action.value);
         break;
+      case 'press':
+        await this.page.press(action.selector, action.key);
+        break;
       case 'waitFor':
         await this.page.waitForSelector(action.selector);
         break;

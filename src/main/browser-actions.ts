@@ -118,7 +118,10 @@ export async function disconnectPlaywright(): Promise<void> {
  * Execute a step action using Playwright's native API.
  */
 export async function executeActionOnView(_view: any, action: any, timeout: number = 5000): Promise<void> {
-  const p = await connectToElectron();
+  await executeOnPage(await connectToElectron(), action, timeout, _view);
+}
+
+export async function executeOnPage(p: Page, action: any, timeout: number = 5000, _view?: any): Promise<void> {
 
   switch (action.type) {
     case 'navigate': {
@@ -141,6 +144,12 @@ export async function executeActionOnView(_view: any, action: any, timeout: numb
     case 'fill': {
       const locator = resolveLocator(p, action.selector);
       await locator.fill(action.value || '', { timeout });
+      break;
+    }
+
+    case 'press': {
+      const locator = resolveLocator(p, action.selector);
+      await locator.press(action.key || 'Enter', { timeout });
       break;
     }
 

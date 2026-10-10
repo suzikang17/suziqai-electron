@@ -21,6 +21,7 @@ You control a browser through these actions:
 - navigate(url): Navigate to a URL
 - click(selector): Click an element
 - fill(selector, value): Type into an input field
+- press(selector, key): Press a key on an element, e.g. Enter to submit a field with no submit button
 - assert(assertionType, expected, selector?): Add a test assertion. Types: url, visible, text, hidden, value
 - screenshot(): Capture the current browser state
 - waitFor(selector): Wait for an element to appear
@@ -32,7 +33,8 @@ When the user describes what to test, respond with a JSON object:
   "message": "Your conversational response explaining what you'll do",
   "steps": [
     { "label": "Human-readable step description", "action": { "type": "navigate", "url": "/login" } },
-    { "label": "Fill in email", "action": { "type": "fill", "selector": "getByLabel('Email')", "value": "test@test.com" } }
+    { "label": "Fill in email", "action": { "type": "fill", "selector": "getByLabel('Email')", "value": "test@test.com" } },
+    { "label": "Submit with Enter", "action": { "type": "press", "selector": "getByLabel('Email')", "key": "Enter" } }
   ]
 }
 

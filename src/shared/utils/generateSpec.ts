@@ -12,6 +12,10 @@ function actionToPlaywright(action: StepAction): string {
       const sel = selectorToPlaywright(action.selector);
       return `await ${sel}.fill('${action.value.replace(/'/g, "\\'")}');`;
     }
+    case 'press': {
+      const sel = selectorToPlaywright(action.selector);
+      return `await ${sel}.press('${action.key.replace(/'/g, "\\'")}');`;
+    }
     case 'assert': {
       switch (action.assertionType) {
         case 'url':

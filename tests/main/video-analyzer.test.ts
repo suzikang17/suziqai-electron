@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { batchFrames, mergeVideoSteps } from '../../src/main/video-analyzer';
+import { batchFrames, mergeVideoSteps, analysisMaxTurns } from '../../src/main/video-analyzer';
 import type { VideoStep } from '../../src/shared/types';
 
 describe('batchFrames', () => {
@@ -104,5 +104,12 @@ describe('mergeVideoSteps', () => {
   it('handles empty batches', () => {
     expect(mergeVideoSteps([])).toHaveLength(0);
     expect(mergeVideoSteps([[]])).toHaveLength(0);
+  });
+});
+
+describe('analysisMaxTurns', () => {
+  it('allows a turn per frame plus headroom, so sequential reads cannot exhaust it', () => {
+    expect(analysisMaxTurns(10)).toBeGreaterThan(10);
+    expect(analysisMaxTurns(20)).toBeGreaterThan(20);
   });
 });

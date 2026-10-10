@@ -63,6 +63,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
     else if (action.type === 'navigate') setEditSelector(action.url);
     else setEditSelector('');
     if ('value' in action) setEditValue(action.value);
+    else if (action.type === 'press') setEditValue(action.key);
     else if (action.type === 'assert') { setEditValue(action.expected); setEditAssertType(action.assertionType); }
     else setEditValue('');
     setEditTimeout(step.timeout ?? 5000);
@@ -83,6 +84,9 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
 
     m = c.match(/^(?:page\.)?fill\(['"](.+?)['"],\s*['"](.+?)['"]\)$/);
     if (m) return { type: 'fill', selector: m[1], value: m[2], assertType: '' };
+
+    m = c.match(/^(?:page\.)?press\(['"](.+?)['"],\s*['"](.+?)['"]\)$/);
+    if (m) return { type: 'press', selector: m[1], value: m[2], assertType: '' };
 
     m = c.match(/^(?:page\.)?waitFor\(['"](.+?)['"]\)$/);
     if (m) return { type: 'waitFor', selector: m[1], value: '', assertType: '' };
@@ -112,6 +116,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
       case 'navigate': code = `goto('${editSelector}')`; break;
       case 'click': code = `click('${editSelector}')`; break;
       case 'fill': code = `fill('${editSelector}', '${editValue}')`; break;
+      case 'press': code = `press('${editSelector}', '${editValue || 'Enter'}')`; break;
       case 'assert': code = `expect(${editSelector || 'page'}).${editAssertType}('${editValue}')`; break;
       case 'waitFor': code = `waitFor('${editSelector}')`; break;
       case 'screenshot': code = `screenshot()`; break;
@@ -143,6 +148,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
       case 'navigate': action = { type: 'navigate', url: selector }; break;
       case 'click': action = { type: 'click', selector }; break;
       case 'fill': action = { type: 'fill', selector, value }; break;
+      case 'press': action = { type: 'press', selector, key: value || 'Enter' }; break;
       case 'assert': action = { type: 'assert', assertionType: assertType, expected: value, selector: selector || undefined }; break;
       case 'waitFor': action = { type: 'waitFor', selector }; break;
       case 'screenshot': action = { type: 'screenshot' }; break;
@@ -173,7 +179,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
 
   const showSelector = editType !== 'screenshot' && !(editType === 'assert' && editAssertType === 'url');
   const assertNeedsExpected = editAssertType === 'text' || editAssertType === 'url' || editAssertType === 'value' || editAssertType === 'count';
-  const showValue = editType === 'fill' || (editType === 'assert' && assertNeedsExpected);
+  const showValue = editType === 'fill' || editType === 'press' || (editType === 'assert' && assertNeedsExpected);
 
   return (
     <div
@@ -342,6 +348,7 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
                     <option value="navigate">Navigate</option>
                     <option value="click">Click</option>
                     <option value="fill">Fill</option>
+                    <option value="press">Press Key</option>
                     <option value="screenshot">Screenshot</option>
                     <option value="waitFor">Wait For</option>
                   </select>
@@ -366,8 +373,8 @@ export function StepItem({ step, index, onAccept, onDeny, onReset, onUpdate, onA
               )}
               {showValue && (
                 <div>
-                  <div style={labelStyle}>{editType === 'fill' ? 'Value' : 'Expected'}</div>
-                  <input value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder={editType === 'fill' ? 'Text to type...' : 'Expected value...'} style={fieldStyle} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }} />
+                  <div style={labelStyle}>{editType === 'fill' ? 'Value' : editType === 'press' ? 'Key' : 'Expected'}</div>
+                  <input value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder={editType === 'fill' ? 'Text to type...' : editType === 'press' ? 'Enter' : 'Expected value...'} style={fieldStyle} onKeyDown={(e) => { if (e.key === 'Escape') setEditing(false); }} />
                 </div>
               )}
             </>
@@ -398,6 +405,7 @@ function formatAction(action: Step['action']): string {
     case 'navigate': return `goto('${action.url}')`;
     case 'click': return `click('${action.selector}')`;
     case 'fill': return `fill('${action.selector}', '${action.value}')`;
+    case 'press': return `press('${action.selector}', '${action.key}')`;
     case 'assert': {
       const sel = action.selector ? `(${action.selector})` : '';
       switch (action.assertionType) {

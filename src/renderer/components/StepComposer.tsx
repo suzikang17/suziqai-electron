@@ -8,7 +8,7 @@ interface StepComposerProps {
 
 type ComposerMode = 'ai' | 'manual';
 
-const actionTypes = ['click', 'fill', 'navigate', 'assert', 'waitFor'] as const;
+const actionTypes = ['click', 'fill', 'press', 'navigate', 'assert', 'waitFor'] as const;
 
 export function StepComposer({ onSubmit, onCancel }: StepComposerProps) {
   const [mode, setMode] = useState<ComposerMode>('ai');
@@ -44,6 +44,10 @@ export function StepComposer({ onSubmit, onCancel }: StepComposerProps) {
       case 'fill':
         action = { type: 'fill', selector: selector.trim(), value: value };
         label = `Fill '${selector.trim()}' with '${value}'`;
+        break;
+      case 'press':
+        action = { type: 'press', selector: selector.trim(), key: value.trim() || 'Enter' };
+        label = `Press ${value.trim() || 'Enter'} on '${selector.trim()}'`;
         break;
       case 'navigate':
         action = { type: 'navigate', url: selector.trim() };
@@ -187,7 +191,7 @@ export function StepComposer({ onSubmit, onCancel }: StepComposerProps) {
               marginBottom: 4,
             }}
           />
-          {(actionType === 'fill' || actionType === 'assert') && (
+          {(actionType === 'fill' || actionType === 'press' || actionType === 'assert') && (
             <>
               {actionType === 'assert' && (
                 <select
@@ -214,7 +218,7 @@ export function StepComposer({ onSubmit, onCancel }: StepComposerProps) {
               <input
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder={actionType === 'fill' ? 'Value to type...' : 'Expected value...'}
+                placeholder={actionType === 'fill' ? 'Value to type...' : actionType === 'press' ? 'Key, e.g. Enter' : 'Expected value...'}
                 style={{
                   width: '100%',
                   background: 'var(--bg-secondary)',

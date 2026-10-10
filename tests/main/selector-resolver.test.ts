@@ -142,7 +142,36 @@ describe('resolveSelectors', () => {
   });
 });
 
+describe('press steps', () => {
+  it('resolves the element and keeps the key', async () => {
+    const d = deps({ jev: fakeJev(() => '"Email"') });
+    const result = await resolveSelectors(
+      [{ label: 'Submit email with Enter', actionType: 'press', elementHint: 'email field', key: 'Enter' }],
+      d,
+    );
+    expect(result.steps[0].action).toEqual({ type: 'press', selector: "getByRole('textbox', { name: 'Email' })", key: 'Enter' });
+    expect(d.executeAction).toHaveBeenCalledWith(result.steps[0].action);
+  });
+
+  it('executes a press on a real page', async () => {
+    await page.setContent(`<input aria-label="New todo" onkeydown="if(event.key==='Enter'){document.body.dataset.added=this.value}">`);
+    await page.getByLabel('New todo').fill('Buy milk');
+    const { executeOnPage } = await import('../../src/main/browser-actions');
+    await executeOnPage(page, { type: 'press', selector: "getByLabel('New todo')", key: 'Enter' });
+    expect(await page.evaluate(() => document.body.dataset.added)).toBe('Buy milk');
+  });
+});
+
 describe('safety guards', () => {
+  it('rejects a Claude fallback selector that matches nothing on the page', async () => {
+    const claudeResolve = vi.fn(async () => "getByRole('link', { name: 'Active' })");
+    const d = deps({ jev: fakeJev(() => null), claudeResolve });
+    const result = await resolveSelectors([{ label: 'Click Active filter', actionType: 'click', elementHint: 'Active filter link' }], d);
+    expect(result.unresolvedCount).toBe(1);
+    expect(result.steps[0].label).toBe('[needs selector] Click Active filter');
+    expect(d.executeAction).not.toHaveBeenCalled();
+  });
+
   it('skips navigations without a real URL instead of executing them', async () => {
     const d = deps();
     const result = await resolveSelectors(

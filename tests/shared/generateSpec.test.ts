@@ -49,6 +49,18 @@ describe('generateSpec', () => {
     expect(code).toContain("test('only test'");
   });
 
+  it('exports press steps as locator.press(key)', () => {
+    const suite: TestSuite = {
+      id: 'suite-1', name: 'Todos', fileName: 'todos',
+      beforeAll: [], beforeEach: [], afterEach: [], afterAll: [],
+      tests: [{ id: 'b1', name: 'add todo', steps: [
+        { id: 's1', label: 'Submit', action: { type: 'press', selector: "getByPlaceholder('What needs to be done?')", key: 'Enter' }, status: 'passed' },
+      ]}],
+      devices: [],
+    };
+    expect(generateSpec(suite)).toContain("await page.getByPlaceholder('What needs to be done?').press('Enter');");
+  });
+
   it('skips failed steps', () => {
     const suite: TestSuite = {
       id: 'suite-1', name: 'Test', fileName: 'test',

@@ -27,13 +27,15 @@ I will provide sequential screenshot frames extracted at ~1 second intervals.
 
 For each user action you detect between consecutive frames, output:
 - label: human-readable description of the action
-- actionType: "navigate" | "click" | "fill"
+- actionType: "navigate" | "click" | "fill" | "press"
 - elementHint: detailed visual description of the element acted upon
   (e.g., "purple button labeled 'Save' at bottom of a modal form",
    "text input field with placeholder 'Task Name' inside a card",
    "tab labeled 'Schedule' in the bottom navigation bar")
 - url: the URL navigated to (navigate actions only, if visible in address bar)
 - value: the text entered (fill actions only — infer from the final visible state of the input)
+- key: the key pressed (press actions only), e.g. "Enter". Use a press action when typed text is
+  submitted without clicking a button (the input clears or a new item appears)
 - uncertain: true if you're not confident about this action
 
 Do NOT output Playwright selectors — only describe what you see visually.
@@ -186,6 +188,15 @@ export function batchFrames(framePaths: string[]): string[][] {
   return batches;
 }
 
+/**
+ * Turn budget for a frame batch: one Read per frame (if the model reads them one at a time),
+ * plus headroom for the answer. A fixed cap of 5 made the CLI stop with "Reached max turns"
+ * and no JSON whenever it read frames sequentially.
+ */
+export function analysisMaxTurns(frameCount: number): number {
+  return frameCount + 3;
+}
+
 export async function analyzeFrameBatch(
   framePaths: string[],
   batchIndex: number,
@@ -199,14 +210,17 @@ export async function analyzeFrameBatch(
 
   const prompt = `${VIDEO_ANALYSIS_PROMPT}${batchContext}
 
-Read each of these frame images in order and analyze them:
+Read all of these frame images (issue the Read calls together, in one turn), then analyze them in order:
 ${frameList}`;
 
-  const raw = await invokeClaudeCli(prompt);
+  const raw = await invokeClaudeCli(prompt, analysisMaxTurns(framePaths.length));
 
   // Extract JSON from response (strip markdown fences if present)
   const jsonMatch = raw.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) return [];
+  if (!jsonMatch) {
+    console.warn(`[video-analyzer] batch ${batchIndex + 1}: no JSON array in response: ${raw.slice(0, 300)}`);
+    return [];
+  }
 
   try {
     const parsed = JSON.parse(jsonMatch[0]);
@@ -215,7 +229,7 @@ ${frameList}`;
     return parsed
       .filter((s: any) =>
         s.label &&
-        ['navigate', 'click', 'fill'].includes(s.actionType)
+        ['navigate', 'click', 'fill', 'press'].includes(s.actionType)
       )
       .map((s: any): VideoStep => ({
         label: s.label,
@@ -223,10 +237,12 @@ ${frameList}`;
         elementHint: s.elementHint,
         url: s.url,
         value: s.value,
+        key: s.key,
         uncertain: s.uncertain ?? false,
         frameIndex: s.frameIndex,
       }));
-  } catch {
+  } catch (err) {
+    console.warn(`[video-analyzer] batch ${batchIndex + 1}: unparseable JSON (${(err as Error).message}): ${jsonMatch[0].slice(0, 300)}`);
     return [];
   }
 }

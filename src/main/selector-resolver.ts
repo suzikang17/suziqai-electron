@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import type { Page } from 'playwright';
 import type { Step, StepAction, VideoStep } from '../shared/types';
 import { decide, snapshotCandidates, uniqueLocator, type JevClient } from './jev-decider';
+import { resolveLocator } from './browser-actions';
 
 const RESOLVE_PROMPT = `You are a Playwright selector expert. Given an accessibility tree (ARIA snapshot) of a web page and a visual description of an element, return the single best Playwright selector for that element.
 
@@ -94,6 +95,8 @@ function videoStepToAction(step: VideoStep, selector?: string): StepAction {
       return { type: 'click', selector: selector ?? step.elementHint ?? '' };
     case 'fill':
       return { type: 'fill', selector: selector ?? step.elementHint ?? '', value: step.value ?? '' };
+    case 'press':
+      return { type: 'press', selector: selector ?? step.elementHint ?? '', key: step.key || 'Enter' };
   }
 }
 
@@ -122,7 +125,9 @@ async function jevResolveSelector(jev: JevClient, page: Page, vs: VideoStep): Pr
   const candidates = await snapshotCandidates(page);
   if (candidates.length === 0) return null;
   const instruction =
-    `${vs.label}. Element: ${vs.elementHint}` + (vs.actionType === 'fill' ? ` (type "${vs.value ?? ''}")` : '');
+    `${vs.label}. Element: ${vs.elementHint}` +
+    (vs.actionType === 'fill' ? ` (type "${vs.value ?? ''}")` : '') +
+    (vs.actionType === 'press' ? ` (press ${vs.key || 'Enter'})` : '');
   const decision = await decide(jev, instruction, candidates, { url: page.url(), title: await page.title() });
   if (!decision.confident || !decision.candidate) return null;
   return uniqueLocator(page, decision.candidate);
@@ -185,7 +190,12 @@ export async function resolveSelectors(
         }
         if (!selector) {
           const claudeSelector = await claudeResolve(vs.elementHint, await page.locator('body').ariaSnapshot());
-          selector = claudeSelector && isSelectorLike(claudeSelector) ? claudeSelector : null;
+          // Only keep selectors that match something on the live page — the model invents names otherwise
+          selector =
+            claudeSelector && isSelectorLike(claudeSelector) &&
+            (await resolveLocator(page, claudeSelector).count().catch(() => 0)) > 0
+              ? claudeSelector
+              : null;
           if (selector) console.log(`[selector-resolver] claude: "${vs.label}" → ${selector}`);
           if (selector) resolvedByClaude++;
         }

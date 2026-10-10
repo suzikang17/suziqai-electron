@@ -4,6 +4,7 @@ export type StepAction =
   | { type: 'navigate'; url: string }
   | { type: 'click'; selector: string }
   | { type: 'fill'; selector: string; value: string }
+  | { type: 'press'; selector: string; key: string }
   | { type: 'assert'; assertionType: AssertionType; expected: string; selector?: string }
   | { type: 'screenshot' }
   | { type: 'waitFor'; selector: string };
@@ -80,10 +81,11 @@ export type AppMode = 'command' | 'record' | 'observe';
 // Video import types (Pass 1 output — before selector resolution)
 export interface VideoStep {
   label: string;
-  actionType: 'navigate' | 'click' | 'fill';
+  actionType: 'navigate' | 'click' | 'fill' | 'press';
   elementHint?: string;   // visual description, e.g. "purple button labeled 'Save' at bottom of modal"
   url?: string;           // for navigate actions
   value?: string;         // for fill actions
+  key?: string;           // for press actions, e.g. 'Enter'
   uncertain?: boolean;    // flagged by Claude as low-confidence
   frameIndex?: number;    // source frame index for debugging
 }

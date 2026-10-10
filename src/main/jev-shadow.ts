@@ -33,7 +33,9 @@ export function selectorKind(selector: string): string {
 }
 
 export function instructionFor(label: string, action: StepAction): string {
-  return action.type === 'fill' ? `${label} (type "${action.value}")` : label;
+  if (action.type === 'fill') return `${label} (type "${action.value}")`;
+  if (action.type === 'press') return `${label} (press ${action.key})`;
+  return label;
 }
 
 /** Does Claude's selector resolve to the same DOM node as Jev's pick? */
@@ -53,8 +55,8 @@ export async function runJevShadow(opts: {
 }): Promise<ShadowRecord[]> {
   const { page, client, logPath, userMessage, steps, claudeStats } = opts;
   const targeted = steps.filter(
-    (s): s is { label: string; action: Extract<StepAction, { type: 'click' | 'fill' }> } =>
-      s.action.type === 'click' || s.action.type === 'fill',
+    (s): s is { label: string; action: Extract<StepAction, { type: 'click' | 'fill' | 'press' }> } =>
+      s.action.type === 'click' || s.action.type === 'fill' || s.action.type === 'press',
   );
   if (targeted.length === 0) return [];
 
