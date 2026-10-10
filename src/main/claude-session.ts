@@ -97,6 +97,27 @@ function buildStepsSummary(steps?: Array<{ label: string; status: string }>): st
   return `\nCurrent test steps:\n${lines.join('\n')}`;
 }
 
+export interface QueryStats {
+  durationMs: number;
+  costUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+let lastStats: QueryStats | null = null;
+
+function captureStats(message: any): void {
+  lastStats = {
+    durationMs: message.duration_ms ?? 0,
+    costUsd: message.total_cost_usd ?? 0,
+    inputTokens:
+      (message.usage?.input_tokens ?? 0) +
+      (message.usage?.cache_read_input_tokens ?? 0) +
+      (message.usage?.cache_creation_input_tokens ?? 0),
+    outputTokens: message.usage?.output_tokens ?? 0,
+  };
+}
+
 async function runQuery(prompt: string, systemPrompt: string): Promise<string> {
   let result = '';
   for await (const message of query({
@@ -109,6 +130,7 @@ async function runQuery(prompt: string, systemPrompt: string): Promise<string> {
   })) {
     if ('result' in message && message.type === 'result') {
       result = (message as any).result ?? '';
+      captureStats(message);
     }
   }
   return result;
@@ -155,6 +177,7 @@ async function runQueryWithImage(
   })) {
     if ('result' in message && message.type === 'result') {
       result = (message as any).result ?? '';
+      captureStats(message);
     }
   }
   return result;
@@ -210,6 +233,7 @@ async function runQueryWithTwoImages(
   })) {
     if ('result' in message && message.type === 'result') {
       result = (message as any).result ?? '';
+      captureStats(message);
     }
   }
   return result;
@@ -280,6 +304,11 @@ ${JSON.stringify(rawEvents, null, 2)}`;
       stepId,
       timestamp: Date.now(),
     });
+  }
+
+  /** Duration, cost and tokens of the most recent Claude call. */
+  getLastStats(): QueryStats | null {
+    return lastStats;
   }
 
   getSnapshots(): Snapshot[] {

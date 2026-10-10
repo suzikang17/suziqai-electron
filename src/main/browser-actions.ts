@@ -221,7 +221,7 @@ export async function executeActionOnView(_view: any, action: any, timeout: numb
  * Resolve a Playwright-style selector string into a Playwright Locator.
  * Supports: getByText, getByRole, getByLabel, getByTestId, getByPlaceholder, and CSS selectors.
  */
-function resolveLocator(page: Page, selector: string) {
+export function resolveLocator(page: Page, selector: string) {
   let m: RegExpMatchArray | null;
 
   // getByText('...')

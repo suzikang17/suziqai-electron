@@ -11,6 +11,18 @@ import { TestLibrary } from './test-library';
 import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
 import { executeActionOnView, disconnectPlaywright, connectToElectron } from './browser-actions';
+import { TypeSafeClient } from '@typesafe-ai/sdk';
+import { runJevShadow } from './jev-shadow';
+
+// Local secrets (e.g. TYPESAFE_API_KEY) — gitignored, optional
+try {
+  process.loadEnvFile(path.join(app.getAppPath(), '.env.local'));
+} catch {
+  // no .env.local
+}
+
+// Jev shadow spike: compares Jev's element picks against Claude's when a key is set
+const jevClient = process.env.TYPESAFE_API_KEY ? new TypeSafeClient({ defaultModel: 'jev-1.13.0' }) : null;
 
 let mainWindow: BrowserWindow | null = null;
 let browserView: BrowserView | null = null;
@@ -360,6 +372,21 @@ function createWindow(): void {
     try {
       const response = await claudeSession.send(message, context);
       win.webContents.send(IPC.CHAT_RESPONSE, response.message);
+
+      if (jevClient && response.steps.length > 0) {
+        connectToElectron()
+          .then((page) =>
+            runJevShadow({
+              page,
+              client: jevClient,
+              logPath: path.join(app.getPath('userData'), 'jev-spike.jsonl'),
+              userMessage: message,
+              steps: response.steps,
+              claudeStats: claudeSession.getLastStats(),
+            }),
+          )
+          .catch((err) => console.error('[jev-shadow] failed:', err));
+      }
 
       if (response.steps && response.steps.length > 0) {
         const steps = response.steps.map((s: any, i: number) => ({
