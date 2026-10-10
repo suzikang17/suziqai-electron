@@ -126,7 +126,9 @@ function webWorkflow(input: CiWorkflowInput, secrets: string[]): string {
   const o = input.options ?? {};
   const cron = o.cron ?? CI_DEFAULTS.cron;
   const branch = o.branch ?? CI_DEFAULTS.branch;
-  const pages = o.pages ?? true;
+  // Pages sites are public on most plans; a read-only project runs against production, whose
+  // reports would show real data. Opt in explicitly there.
+  const pages = o.pages ?? !config.readOnly;
   const wd = o.workingDirectory && o.workingDirectory !== '.' ? o.workingDirectory.replace(/\/+$/, '') : '';
   const at = (p: string) => (wd ? `${wd}/${p}` : p);
   const browser = config.browser && config.browser !== 'chromium' ? config.browser : 'chromium';

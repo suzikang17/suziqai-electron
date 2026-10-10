@@ -138,6 +138,12 @@ describe('generateCiWorkflow: web', () => {
     expect(noPages).not.toContain('pages: write');
   });
 
+  it('keeps production (read-only) reports off public Pages unless asked', () => {
+    const prod = { ...webConfig, readOnly: { allow: [] } };
+    expect(generateCiWorkflow({ config: prod, suites: [login] })).not.toContain('deploy-pages');
+    expect(generateCiWorkflow({ config: prod, suites: [login], options: { pages: true } })).toContain('deploy-pages');
+  });
+
   it('runs from a subdirectory when the project isn’t the repo root', () => {
     const sub = generateCiWorkflow({ config: webConfig, suites: [], options: { workingDirectory: 'apps/web' } });
     expect(sub).toContain('working-directory: "apps/web"');
