@@ -111,6 +111,11 @@ export async function planFeature(input: PlanFeatureInput): Promise<FeaturePlan>
       allowedTools: canRead ? ['Read', 'Grep', 'Glob'] : [],
       disallowedTools: ['Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit', 'WebFetch', 'WebSearch', 'Task', 'Agent'],
       maxTurns: canRead ? 30 : 1,
+      // A bare process: none of the user's settings, MCP servers or plugins (they add seconds of startup)
+      settingSources: [],
+      strictMcpConfig: true,
+      mcpServers: {},
+      ...(process.env.SUZIQAI_MODEL ? { model: process.env.SUZIQAI_MODEL } : {}),
     },
   })) {
     if ('result' in message && message.type === 'result') result = (message as { result?: string }).result ?? '';

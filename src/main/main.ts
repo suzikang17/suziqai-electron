@@ -646,6 +646,7 @@ function createWindow(): void {
       },
     };
 
+    claudeSession.beginGoalRun();
     try {
       const result = await runGoal(goal, deps, { setup, maxSteps: 25, maxConsecutiveFailures: 3, requireApproval: !readOnlyWeb, signal: controller.signal });
       say(result.status === 'done'
@@ -656,6 +657,7 @@ function createWindow(): void {
       say(`Goal mode error: ${(err as Error).message}`);
       return null;
     } finally {
+      claudeSession.endGoalRun();
       if (goalAbort === controller) goalAbort = null;
     }
   });

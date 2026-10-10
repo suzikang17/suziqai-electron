@@ -134,18 +134,20 @@ describe('ClaudeSession', () => {
   describe('planGoal', () => {
     const input = { goal: 'Add a vet', done: [], round: 1, url: 'ios://x', screen: 'screen', screenshot: Buffer.alloc(0) };
 
-    it('parses status and steps, and uses the default model unless SUZIQAI_GOAL_MODEL is set', async () => {
+    it('parses status and steps, and uses Sonnet unless SUZIQAI_GOAL_MODEL is set', async () => {
       delete process.env.SUZIQAI_GOAL_MODEL;
       mockQueryResult(JSON.stringify({ status: 'continue', message: 'tapping', steps: [{ label: 'Tap Add', action: { type: 'click', selector: 'Add' } }] }));
       const plan = await session.planGoal(input);
       expect(plan).toEqual({ status: 'continue', message: 'tapping', steps: [{ label: 'Tap Add', action: { type: 'click', selector: 'Add' } }] });
-      expect(mockQuery.mock.calls[0][0].options).not.toHaveProperty('model');
+      expect(mockQuery.mock.calls[0][0].options.model).toBe('claude-sonnet-5-5');
+      // a bare process: none of the user's settings, MCP servers or plugins
+      expect(mockQuery.mock.calls[0][0].options).toMatchObject({ settingSources: [], strictMcpConfig: true, mcpServers: {}, tools: [] });
 
-      process.env.SUZIQAI_GOAL_MODEL = 'claude-sonnet-5-5';
+      process.env.SUZIQAI_GOAL_MODEL = 'claude-haiku-5-5';
       mockQueryResult(JSON.stringify({ status: 'done', message: 'done', steps: [] }));
       const done = await session.planGoal(input);
       expect(done.status).toBe('done');
-      expect(mockQuery.mock.calls[1][0].options.model).toBe('claude-sonnet-5-5');
+      expect(mockQuery.mock.calls[1][0].options.model).toBe('claude-haiku-5-5');
       delete process.env.SUZIQAI_GOAL_MODEL;
     });
 

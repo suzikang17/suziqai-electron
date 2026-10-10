@@ -1,6 +1,15 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { StepAction, Snapshot } from '../shared/types';
 import { extractJson } from './json-reply';
+import { LEAN_OPTIONS, WarmClaude } from './warm-claude';
+
+/** Goal rounds are many small screen-level decisions: a fast model by default. */
+export const GOAL_MODEL = () => process.env.SUZIQAI_GOAL_MODEL || 'claude-sonnet-5-5';
+/** Chat, visual QA and planning: the SDK's default model unless SUZIQAI_MODEL is set. */
+function modelOption(model?: string): { model?: string } {
+  const m = model || process.env.SUZIQAI_MODEL;
+  return m ? { model: m } : {};
+}
 
 interface PageContext {
   url: string;
@@ -132,8 +141,8 @@ async function runQuery(prompt: string, systemPrompt: string, model?: string): P
     options: {
       systemPrompt,
       maxTurns: 1,
-      allowedTools: [],
-      ...(model ? { model } : {}),
+      ...LEAN_OPTIONS,
+      ...modelOption(model),
     },
   })) {
     if ('result' in message && message.type === 'result') {
@@ -181,8 +190,8 @@ async function runQueryWithImage(
     options: {
       systemPrompt,
       maxTurns: 1,
-      allowedTools: [],
-      ...(model ? { model } : {}),
+      ...LEAN_OPTIONS,
+      ...modelOption(model),
     },
   })) {
     if ('result' in message && message.type === 'result') {
@@ -238,7 +247,8 @@ async function runQueryWithTwoImages(
     options: {
       systemPrompt,
       maxTurns: 1,
-      allowedTools: [],
+      ...LEAN_OPTIONS,
+      ...modelOption(),
     },
   })) {
     if ('result' in message && message.type === 'result') {
@@ -285,6 +295,28 @@ Rules:
 
 export class ClaudeSession {
   private snapshots: Snapshot[] = [];
+  private warm: WarmClaude | null = null;
+
+  private warmIdle: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Keeps one claude process open for goal rounds (see warm-claude.ts). It stays open for a minute
+   * after a run ends, so the scenarios of a feature run share it.
+   */
+  beginGoalRun(): void {
+    if (this.warmIdle) clearTimeout(this.warmIdle);
+    this.warmIdle = null;
+    this.warm ??= new WarmClaude(`${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`, GOAL_MODEL());
+  }
+
+  endGoalRun(idleMs = 60_000): void {
+    if (this.warmIdle) clearTimeout(this.warmIdle);
+    this.warmIdle = setTimeout(() => {
+      this.warm?.close();
+      this.warm = null;
+      this.warmIdle = null;
+    }, idleMs);
+  }
 
   async send(userMessage: string, context: PageContext): Promise<ClaudeResponse> {
     const textParts = [
@@ -323,12 +355,22 @@ export class ClaudeSession {
       `[Screen: ${input.screen}]`,
     ].filter(Boolean).join('\n\n');
 
-    // Goal rounds are many small decisions; a faster model (e.g. SUZIQAI_GOAL_MODEL=claude-sonnet-5-5)
-    // cuts round latency noticeably. Unset = the session's default model.
-    const model = process.env.SUZIQAI_GOAL_MODEL || undefined;
-    const raw = input.screenshot.length > 0
-      ? await runQueryWithImage(text, input.screenshot.toString('base64'), `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`, model)
-      : await runQuery(text, `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`, model);
+    const system = `${SYSTEM_PROMPT}\n\n${GOAL_PROMPT}`;
+    const image = input.screenshot.length > 0 ? input.screenshot.toString('base64') : '';
+    let raw: string;
+    if (this.warm) {
+      // Inside a goal run: the run's warm process, cleared before each round
+      const content = image
+        ? [{ type: 'image' as const, source: { type: 'base64' as const, media_type: 'image/png' as const, data: image } }, { type: 'text' as const, text }]
+        : text;
+      const result = await this.warm.ask(content);
+      captureStats(result.raw);
+      raw = result.text;
+    } else {
+      raw = image
+        ? await runQueryWithImage(text, image, system, GOAL_MODEL())
+        : await runQuery(text, system, GOAL_MODEL());
+    }
 
     const parsed = this.parseResponse(raw);
     let status: GoalPlan['status'] = 'continue';
