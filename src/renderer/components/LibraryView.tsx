@@ -87,14 +87,14 @@ export function LibraryView({ entries, onLoad, onDelete, onRefresh }: LibraryVie
             key={entry.fileName}
             onMouseEnter={() => setHoveredEntry(entry.fileName)}
             onMouseLeave={() => { setHoveredEntry(null); setConfirmDelete(null); }}
-            onClick={() => !entry.imported && !isConfirming && onLoad(entry.fileName)}
+            onClick={() => !isConfirming && onLoad(entry.fileName)}
             style={{
               display: 'flex',
               alignItems: 'center',
               padding: '7px 8px',
               borderRadius: 4,
-              background: isHovered && !entry.imported ? 'var(--bg-primary)' : 'var(--bg-tertiary)',
-              cursor: entry.imported ? 'default' : 'pointer',
+              background: isHovered ? 'var(--bg-primary)' : 'var(--bg-tertiary)',
+              cursor: 'pointer',
               borderLeft: entry.imported
                 ? '3px solid var(--accent-yellow, #d29922)'
                 : '3px solid var(--accent-green)',
@@ -121,7 +121,7 @@ export function LibraryView({ entries, onLoad, onDelete, onRefresh }: LibraryVie
                 gap: 6,
               }}>
                 {entry.imported ? (
-                  <span style={{ color: 'var(--accent-yellow, #d29922)', fontWeight: 500 }}>imported</span>
+                  <span style={{ color: 'var(--accent-yellow, #d29922)', fontWeight: 500 }} title="A hand-written spec: load it to step through or replay; suziQai won't save over or delete it">hand-written · replay only</span>
                 ) : (
                   <>
                     <span>{entry.stepCount} step{entry.stepCount !== 1 ? 's' : ''}</span>

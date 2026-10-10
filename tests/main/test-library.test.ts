@@ -163,4 +163,32 @@ describe('TestLibrary', () => {
     expect((await ios.list()).map((e) => e.fileName)).toEqual(['login-flow']);
     expect(await library.list()).toEqual([]); // web library ignores .swift
   });
+
+  it('imports a hand-written Playwright spec that has no suziQai sidecar', async () => {
+    await writeFile(path.join(testOutputDir, 'board.spec.ts'), `
+import { test, expect } from '@playwright/test';
+test.describe('Board', () => {
+  test('opens', async ({ page }) => {
+    await page.goto('https://app.example.com/board');
+    await page.getByRole('button', { name: 'Next week' }).click();
+    await expect(page).toHaveURL(/weekOf=/);
+  });
+});
+`);
+    const suite = await library.load('board');
+    expect(suite.name).toBe('Board');
+    expect(suite.tests[0].steps.map((s) => s.action.type)).toEqual(['navigate', 'click']);
+    expect(suite.importNotes).toEqual(['Line 7 not imported: await expect(page).toHaveURL(/weekOf=/);']);
+    expect((await library.list()).map((e) => e.fileName)).toContain('board');
+  });
+
+  it('never overwrites a hand-written spec (one without a suziQai sidecar)', async () => {
+    const handWritten = "import { test } from '@playwright/test';\n// guarded live tests\n";
+    await writeFile(path.join(testOutputDir, 'live.spec.ts'), handWritten);
+    const imported = await library.load('live');
+
+    await expect(library.save(imported, 'live')).rejects.toThrow(/hand-written/);
+    await expect(library.delete('live')).rejects.toThrow(/hand-written/);
+    expect(await readFile(path.join(testOutputDir, 'live.spec.ts'), 'utf-8')).toBe(handWritten);
+  });
 });

@@ -25,10 +25,6 @@ function makeDeps(overrides: Record<string, any> = {}) {
       requestVisualQA: vi.fn().mockResolvedValue({ message: '', steps: [] }),
       addSnapshot: vi.fn(),
     },
-    recorder: {
-      start: vi.fn(),
-      stop: vi.fn().mockReturnValue([]),
-    },
     observer: {
       start: vi.fn(),
       stop: vi.fn(),

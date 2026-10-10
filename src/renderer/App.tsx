@@ -273,6 +273,10 @@ export function App() {
       setActiveBlockId(newSuite.tests[0]?.id || '');
       setSidebarMode('session');
       log(`Loaded "${suite.name}" from library`);
+      if (loaded.importNotes?.length) {
+        log(`Imported from a hand-written spec (read-only: saving is disabled). ${loaded.importNotes.length} line(s) couldn't become steps:`);
+        loaded.importNotes.forEach((note: string) => log(`  ${note}`));
+      }
     } catch (err) {
       log(`Load failed: ${(err as Error).message}`);
     }

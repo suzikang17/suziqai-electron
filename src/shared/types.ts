@@ -50,6 +50,8 @@ export interface TestSuite {
   afterAll: Step[];
   tests: TestBlock[];
   devices: DeviceConfig[];  // empty = no device-specific wrapping
+  /** Set when the suite was imported from a hand-written spec: lines that couldn't become steps. */
+  importNotes?: string[];
 }
 
 export interface PlaywrightProject {
@@ -130,6 +132,11 @@ export interface ProjectConfig {
   /** 'web' (default) drives the BrowserView; 'ios' drives a simulator through ios-runner. */
   platform?: 'web' | 'ios';
   ios?: IosProjectSettings;
+  /**
+   * Read-only mode: the BrowserView blocks every non-GET request except these URL regexes
+   * (login, verified read-only RPCs). For recording/replaying against production apps.
+   */
+  readOnly?: { allow: string[] };
   baseUrl: string;
   browser: 'chromium' | 'firefox' | 'webkit';
   testOutputDir: string;

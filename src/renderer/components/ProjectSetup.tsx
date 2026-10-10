@@ -16,6 +16,7 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
   const [platform, setPlatform] = useState<'web' | 'ios'>('web');
   const [bundleId, setBundleId] = useState('');
   const [launchArgs, setLaunchArgs] = useState('');
+  const [readOnly, setReadOnly] = useState(false);
   const [results, setResults] = useState<DirEntry[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -154,7 +155,7 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
         await window.suziqai.openProject(dirPath, undefined, ios);
         await window.suziqai.setLastProject(JSON.stringify({ path: dirPath, ios }));
       } else {
-        await window.suziqai.openProject(dirPath, baseUrl);
+        await window.suziqai.openProject(dirPath, baseUrl, undefined, readOnly);
         await window.suziqai.setLastProject(JSON.stringify({ path: dirPath, url: baseUrl }));
       }
       onProjectOpened(dirPath, baseUrl, platform);
@@ -371,6 +372,10 @@ export function ProjectSetup({ onProjectOpened }: ProjectSetupProps) {
                 fontFamily: 'monospace',
               }}
               />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <input type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} />
+                Read-only: block every write request (use for production apps)
+              </label>
             </div>
           ) : (
             <>

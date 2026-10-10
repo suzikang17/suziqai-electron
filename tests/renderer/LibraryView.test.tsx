@@ -20,9 +20,16 @@ describe('LibraryView', () => {
     expect(screen.getByText('3 steps')).toBeDefined();
   });
 
-  it('shows imported badge for tests without sidecars', () => {
-    render(<LibraryView entries={mockEntries} onLoad={vi.fn()} onDelete={vi.fn()} onRefresh={vi.fn()} />);
-    expect(screen.getByText('imported')).toBeDefined();
+  it('marks hand-written specs (no sidecar) as replay-only, loadable but not deletable', () => {
+    const onLoad = vi.fn();
+    render(<LibraryView entries={mockEntries} onLoad={onLoad} onDelete={vi.fn()} onRefresh={vi.fn()} />);
+    expect(screen.getByText('hand-written · replay only')).toBeDefined();
+
+    const entry = screen.getByText('legacy-test').closest('div[style]')!;
+    fireEvent.mouseEnter(entry);
+    expect(screen.queryByTitle('Delete test')).toBeNull();
+    fireEvent.click(screen.getByText('legacy-test'));
+    expect(onLoad).toHaveBeenCalledWith('legacy-test');
   });
 
   it('calls onLoad when clicking a test entry', () => {

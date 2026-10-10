@@ -28,7 +28,7 @@ declare global {
       onUrlChanged: (callback: (url: string) => void) => void;
 
       // Project
-      openProject: (path: string, baseUrl?: string, ios?: IosProjectSettings) => Promise<ProjectConfig>;
+      openProject: (path: string, baseUrl?: string, ios?: IosProjectSettings, readOnly?: boolean) => Promise<ProjectConfig>;
       onProjectConfig: (callback: (config: unknown) => void) => void;
 
       // Export

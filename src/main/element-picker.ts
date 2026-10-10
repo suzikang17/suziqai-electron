@@ -1,7 +1,77 @@
 import type { BrowserView, BrowserWindow } from 'electron';
 
+/**
+ * In-page function describing an element (text, role, aria, label, placeholder, test id, parents)
+ * for selector generation. Shared by the picker and the recorder.
+ */
+export const DESCRIBE_ELEMENT_FN = `
+function __suziqaiDescribe(el) {
+  var text = '';
+  for (var i = 0; i < el.childNodes.length; i++) {
+    if (el.childNodes[i].nodeType === 3) text += el.childNodes[i].textContent;
+  }
+  text = text.trim();
+
+  var tag = el.tagName.toLowerCase();
+  var result = {
+    tag: tag,
+    text: (el.textContent || '').trim().substring(0, 100),
+    directText: text,
+    id: el.id || null,
+    role: el.getAttribute('role') || null,
+    ariaLabel: el.getAttribute('aria-label') || null,
+    ariaLabelledBy: null,
+    ariaDescribedBy: null,
+    placeholder: el.getAttribute('placeholder') || null,
+    testId: el.getAttribute('data-testid') || el.getAttribute('data-test-id') || null,
+    type: el.getAttribute('type') || null,
+    href: el.getAttribute('href') || null,
+    classes: Array.from(el.classList || []).slice(0, 3),
+    labelFor: null,
+    parentLabelText: null,
+    outerHtml: el.outerHTML.substring(0, 500),
+    parentChain: [],
+  };
+
+  // Capture parent chain (tag + key attrs, 3 levels)
+  var par = el.parentElement;
+  for (var d = 0; d < 3 && par && par !== document.body; d++) {
+    var ptag = par.tagName.toLowerCase();
+    var pattrs = '';
+    if (par.id) pattrs += ' id="' + par.id + '"';
+    if (par.className && typeof par.className === 'string' && par.className.trim()) pattrs += ' class="' + par.className.trim().substring(0, 40) + '"';
+    result.parentChain.push(ptag + pattrs);
+    par = par.parentElement;
+  }
+
+  // Resolve aria-labelledby
+  var labelledBy = el.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    var labelEl = document.getElementById(labelledBy);
+    if (labelEl) result.ariaLabelledBy = labelEl.textContent.trim();
+  }
+
+  // Resolve aria-describedby
+  var describedBy = el.getAttribute('aria-describedby');
+  if (describedBy) {
+    var descEl = document.getElementById(describedBy);
+    if (descEl) result.ariaDescribedBy = descEl.textContent.trim();
+  }
+
+  // Check for associated label
+  if (el.id) {
+    var lbl = document.querySelector('label[for="' + el.id + '"]');
+    if (lbl) result.labelFor = lbl.textContent.trim();
+  }
+  var parentLabel = el.closest('label');
+  if (parentLabel) result.parentLabelText = parentLabel.textContent.trim();
+  return result;
+}
+`;
+
 const PICKER_SCRIPT = `
 (function() {
+  ${DESCRIBE_ELEMENT_FN}
   if (window.__suziqaiPicker) return;
   window.__suziqaiPicker = true;
 
@@ -29,67 +99,7 @@ const PICKER_SCRIPT = `
     e.stopImmediatePropagation();
     if (!currentEl) return false;
 
-    var el = currentEl;
-    var text = '';
-    for (var i = 0; i < el.childNodes.length; i++) {
-      if (el.childNodes[i].nodeType === 3) text += el.childNodes[i].textContent;
-    }
-    text = text.trim();
-
-    var tag = el.tagName.toLowerCase();
-    var result = {
-      tag: tag,
-      text: (el.textContent || '').trim().substring(0, 100),
-      directText: text,
-      id: el.id || null,
-      role: el.getAttribute('role') || null,
-      ariaLabel: el.getAttribute('aria-label') || null,
-      ariaLabelledBy: null,
-      ariaDescribedBy: null,
-      placeholder: el.getAttribute('placeholder') || null,
-      testId: el.getAttribute('data-testid') || el.getAttribute('data-test-id') || null,
-      type: el.getAttribute('type') || null,
-      href: el.getAttribute('href') || null,
-      classes: Array.from(el.classList || []).slice(0, 3),
-      labelFor: null,
-      parentLabelText: null,
-      outerHtml: el.outerHTML.substring(0, 500),
-      parentChain: [],
-    };
-
-    // Capture parent chain (tag + key attrs, 3 levels)
-    var par = el.parentElement;
-    for (var d = 0; d < 3 && par && par !== document.body; d++) {
-      var ptag = par.tagName.toLowerCase();
-      var pattrs = '';
-      if (par.id) pattrs += ' id="' + par.id + '"';
-      if (par.className && typeof par.className === 'string' && par.className.trim()) pattrs += ' class="' + par.className.trim().substring(0, 40) + '"';
-      result.parentChain.push(ptag + pattrs);
-      par = par.parentElement;
-    }
-
-    // Resolve aria-labelledby
-    var labelledBy = el.getAttribute('aria-labelledby');
-    if (labelledBy) {
-      var labelEl = document.getElementById(labelledBy);
-      if (labelEl) result.ariaLabelledBy = labelEl.textContent.trim();
-    }
-
-    // Resolve aria-describedby
-    var describedBy = el.getAttribute('aria-describedby');
-    if (describedBy) {
-      var descEl = document.getElementById(describedBy);
-      if (descEl) result.ariaDescribedBy = descEl.textContent.trim();
-    }
-
-    // Check for associated label
-    if (el.id) {
-      var lbl = document.querySelector('label[for="' + el.id + '"]');
-      if (lbl) result.labelFor = lbl.textContent.trim();
-    }
-    var parentLabel = el.closest('label');
-    if (parentLabel) result.parentLabelText = parentLabel.textContent.trim();
-
+    var result = __suziqaiDescribe(currentEl);
     window.__suziqaiPickResult = result;
     return false;
   }, true);
@@ -111,7 +121,7 @@ true;
 // 4. getByText — non-interactive elements
 // 5. getByTestId — explicit test hooks
 // 6. CSS — last resort, most brittle
-function generateSelectors(info: any): Array<{ type: string; selector: string; confidence: string }> {
+export function generateSelectors(info: any): Array<{ type: string; selector: string; confidence: string }> {
   const selectors: Array<{ type: string; selector: string; confidence: string }> = [];
   const tag = info.tag;
   const text = info.directText || '';

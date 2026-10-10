@@ -2,7 +2,6 @@ import { ipcMain, BrowserWindow } from 'electron';
 import { IPC } from '../shared/types';
 import type { BrowserManager } from './browser-manager';
 import type { ClaudeSession } from './claude-session';
-import type { Recorder } from './recorder';
 import type { Observer } from './observer';
 import type { TestExporter } from './test-exporter';
 import type { TestLibrary } from './test-library';
@@ -13,7 +12,6 @@ import { resolveSelectors, type ResolverDeps } from './selector-resolver';
 interface Deps {
   browserManager: BrowserManager;
   claudeSession: ClaudeSession;
-  recorder: Recorder;
   observer: Observer;
   testExporter: TestExporter;
   getTestLibrary: () => TestLibrary;
@@ -24,7 +22,7 @@ interface Deps {
 }
 
 export function registerIpcHandlers(deps: Deps): void {
-  const { browserManager, claudeSession, recorder, observer, testExporter, getTestLibrary, getWindow } = deps;
+  const { browserManager, claudeSession, observer, testExporter, getTestLibrary, getWindow } = deps;
 
   // Browser navigation
   ipcMain.handle(IPC.BROWSER_NAVIGATE, async (_event, url: string) => {
@@ -97,27 +95,6 @@ export function registerIpcHandlers(deps: Deps): void {
       observer.start();
     } else {
       observer.stop();
-    }
-  });
-
-  // Recording
-  ipcMain.handle(IPC.RECORD_START, async () => {
-    const win = getWindow();
-    if (!win) return;
-    await recorder.start((event) => {
-      win.webContents.send(IPC.RECORD_EVENT, event);
-    });
-  });
-
-  ipcMain.handle(IPC.RECORD_STOP, async () => {
-    const rawEvents = recorder.stop();
-    const win = getWindow();
-    if (!win) return;
-
-    const response = await claudeSession.processRecording(rawEvents);
-    win.webContents.send(IPC.CHAT_RESPONSE, response.message);
-    if (response.steps.length > 0) {
-      win.webContents.send(IPC.STEPS_PROPOSED, response.steps);
     }
   });
 

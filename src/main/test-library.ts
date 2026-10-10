@@ -4,6 +4,7 @@ import type { TestSuite, LibraryEntry, PlaywrightConfig } from '../shared/types'
 import { generateSpec } from '../shared/utils/generateSpec';
 import { generatePlaywrightConfig } from '../shared/utils/generatePlaywrightConfig';
 import { generateXCUITest, type XCUITestOptions } from '../shared/utils/generateXCUITest';
+import { importSpec } from './spec-importer';
 
 export class TestLibrary {
   /** iOS projects (ios set) save XCUITest .swift files; web projects save Playwright .spec.ts. */
@@ -19,6 +20,14 @@ export class TestLibrary {
     const resolvedName = fileName || await this.resolveFileName(suite, suite.fileName);
     const specPath = path.join(this.testOutputDir, `${resolvedName}${this.ext}`);
     const sidecarPath = path.join(this.testOutputDir, `${resolvedName}.suziqai.json`);
+
+    // suziQai writes a sidecar with every spec it saves; a spec without one is hand-written
+    // (possibly with safety guards, like live read-only suites) and must never be overwritten
+    const specExists = await access(specPath).then(() => true, () => false);
+    const sidecarExists = await access(sidecarPath).then(() => true, () => false);
+    if (specExists && !sidecarExists) {
+      throw new Error(`${resolvedName}${this.ext} is a hand-written test; suziQai won't overwrite it. Save under a new name.`);
+    }
 
     // Generate the test file — when useProjects is true, skip device wrapping
     const specContent = this.ios ? generateXCUITest(suite, this.ios) : generateSpec(suite, useProjects);
@@ -96,7 +105,15 @@ export class TestLibrary {
 
   async load(fileName: string): Promise<TestSuite> {
     const sidecarPath = path.join(this.testOutputDir, `${fileName}.suziqai.json`);
-    const data = JSON.parse(await readFile(sidecarPath, 'utf-8'));
+    const sidecar = await readFile(sidecarPath, 'utf-8').catch(() => null);
+    if (sidecar === null && !this.ios) {
+      // Hand-written Playwright spec: import its steps
+      const specPath = path.join(this.testOutputDir, `${fileName}.spec.ts`);
+      const { suite, skipped } = importSpec(await readFile(specPath, 'utf-8'), specPath);
+      return { ...suite, importNotes: skipped.map((s) => `Line ${s.line} not imported: ${s.code}`) };
+    }
+    if (sidecar === null) throw new Error(`No saved suite "${fileName}"`);
+    const data = JSON.parse(sidecar);
     return {
       id: data.id,
       name: data.name,
@@ -119,6 +136,10 @@ export class TestLibrary {
   async delete(fileName: string): Promise<void> {
     const specPath = path.join(this.testOutputDir, `${fileName}${this.ext}`);
     const sidecarPath = path.join(this.testOutputDir, `${fileName}.suziqai.json`);
+    const exists = (p: string) => access(p).then(() => true, () => false);
+    if ((await exists(specPath)) && !(await exists(sidecarPath))) {
+      throw new Error(`${fileName}${this.ext} is a hand-written test; suziQai won't delete it.`);
+    }
 
     await unlink(specPath).catch(() => {});
     await unlink(sidecarPath).catch(() => {});

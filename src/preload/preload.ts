@@ -62,7 +62,7 @@ contextBridge.exposeInMainWorld('suziqai', {
     ipcRenderer.on(IPC.BROWSER_URL_CHANGED, (_event, url) => callback(url)),
 
   // Project
-  openProject: (path: string, baseUrl?: string, ios?: any) => ipcRenderer.invoke(IPC.PROJECT_OPEN, path, baseUrl, ios),
+  openProject: (path: string, baseUrl?: string, ios?: any, readOnly?: boolean) => ipcRenderer.invoke(IPC.PROJECT_OPEN, path, baseUrl, ios, readOnly),
   onProjectConfig: (callback: (config: unknown) => void) =>
     ipcRenderer.on(IPC.PROJECT_CONFIG, (_event, config) => callback(config)),
 

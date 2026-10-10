@@ -10,10 +10,16 @@ import { ProjectConfigManager } from './project-config';
 import { TestLibrary } from './test-library';
 import { registerIpcHandlers } from './ipc-handlers';
 import { IPC } from '../shared/types';
-import { executeActionOnView, disconnectPlaywright, connectToElectron, setExpectedUrlProvider } from './browser-actions';
+import { executeActionOnView, disconnectPlaywright, connectToElectron, setExpectedUrlProvider, resolveLocator } from './browser-actions';
+import { generateSelectors } from './element-picker';
 import { TypeSafeClient } from '@typesafe-ai/sdk';
 import { runJevShadow } from './jev-shadow';
 import { IosMode, IOS_CHAT_PREFIX } from './ios-mode';
+import { applyReadOnlyGuard } from './read-only-guard';
+
+const TARGET_PARTITION = 'persist:suziqai-target';
+// Supabase password login + token refresh; projects add their own verified read-only endpoints
+const DEFAULT_READ_ONLY_ALLOW = '/auth/v1/token\\?grant_type=(password|refresh_token)';
 import type { IosProjectSettings } from '../shared/types';
 
 // Local secrets (e.g. TYPESAFE_API_KEY) — gitignored, optional
@@ -36,7 +42,37 @@ let browserView: BrowserView | null = null;
 let autopilotEnabled = false;
 
 const claudeSession = new ClaudeSession();
-const recorder = new Recorder();
+// Records the target-app BrowserView; each event becomes a step in the sidebar as it happens
+const recorder = new Recorder({
+  async chooseSelector(info, recId) {
+    // Role selectors without a name ("getByRole('textbox')") say little; try them last
+    const candidates = generateSelectors(info)
+      .map((c) => c.selector)
+      .sort((a, b) => Number(/^getByRole\('[^']+'\)$/.test(a)) - Number(/^getByRole\('[^']+'\)$/.test(b)));
+    try {
+      const page = await connectToElectron();
+      const counts = await Promise.all(candidates.map((s) => resolveLocator(page, s).count().catch(() => 0)));
+      const unique = candidates.find((_, i) => counts[i] === 1);
+      if (unique) return unique;
+      // Several matches: pin the one that was actually used, via the tag the recorder put on it
+      for (const [i, selector] of candidates.entries()) {
+        if (counts[i] < 2 || !recId) continue;
+        const index = await resolveLocator(page, selector)
+          .evaluateAll((els, id) => els.findIndex((el) => el.getAttribute('data-suziqai-rec') === id), recId)
+          .catch(() => -1);
+        if (index >= 0) return `${selector}.nth(${index})`;
+      }
+    } catch {
+      // page gone (navigation) — fall back to the best-ranked candidate
+    }
+    return candidates[0];
+  },
+  onStep(step) {
+    mainWindow?.webContents.send(IPC.STEPS_PROPOSED, [
+      { id: `step-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...step, status: 'pending' },
+    ]);
+  },
+});
 const observer = new Observer();
 const testExporter = new TestExporter();
 const projectConfig = new ProjectConfigManager();
@@ -175,7 +211,6 @@ function createWindow(): void {
     registerIpcHandlers({
       browserManager: null as any, // Not used — BrowserView overrides handle all browser actions
       claudeSession,
-      recorder,
       observer,
       testExporter,
       getTestLibrary: () => testLibrary,
@@ -235,12 +270,17 @@ function createWindow(): void {
 
   // Project open handler
   ipcMain.removeHandler(IPC.PROJECT_OPEN);
-  ipcMain.handle(IPC.PROJECT_OPEN, async (_event, projectPath: string, baseUrl?: string, ios?: IosProjectSettings) => {
+  ipcMain.handle(IPC.PROJECT_OPEN, async (_event, projectPath: string, baseUrl?: string, ios?: IosProjectSettings, readOnly?: boolean) => {
     let config = await projectConfig.load(projectPath);
     if (ios) {
       config = await projectConfig.update({ platform: 'ios', ios });
     } else if (baseUrl) {
       config = await projectConfig.update({ platform: 'web', baseUrl });
+    }
+    if (readOnly === true && !config.readOnly) {
+      config = await projectConfig.update({ readOnly: { allow: [DEFAULT_READ_ONLY_ALLOW] } });
+    } else if (readOnly === false && config.readOnly) {
+      config = await projectConfig.update({ readOnly: undefined });
     }
 
     // Re-create TestLibrary with the resolved testOutputDir for this project
@@ -269,7 +309,12 @@ function createWindow(): void {
       webPreferences: {
         contextIsolation: true,
         nodeIntegration: false,
+        // Own session, so read-only mode filters only the target app (not suziQai's UI)
+        partition: TARGET_PARTITION,
       },
+    });
+    applyReadOnlyGuard(browserView.webContents.session, config.readOnly?.allow ?? null, (method, url) => {
+      mainWindow?.webContents.send(IPC.CHAT_RESPONSE, `🛡 Read-only mode blocked ${method} ${url}`);
     });
     mainWindow!.addBrowserView(browserView);
 
@@ -384,6 +429,16 @@ function createWindow(): void {
       }
     }
   }
+
+  // Recording: capture the target app's BrowserView directly (web projects)
+  ipcMain.removeHandler(IPC.RECORD_START);
+  ipcMain.handle(IPC.RECORD_START, async () => {
+    if (browserView) await recorder.start(browserView.webContents);
+  });
+  ipcMain.removeHandler(IPC.RECORD_STOP);
+  ipcMain.handle(IPC.RECORD_STOP, async () => {
+    recorder.stop();
+  });
 
   // Override chat handler to use BrowserView context with screenshot
   ipcMain.removeHandler(IPC.CHAT_SEND);
