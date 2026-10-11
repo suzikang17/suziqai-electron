@@ -1,14 +1,14 @@
 # Resume
 
-**State (2026-10-10, evening):** `main` pushed; 220+ tests green. Three layers now work end to end: steps → **Goal mode** (one sentence → observe/plan/act loop, Jev resolves elements, kept steps verified by a fresh replay) → **Feature mode** (Claude reads the project code → reviewed scenario plan → each scenario run as a goal → coverage report). Proven: TPS prod read-only (goal 6/6 verified; feature run in progress at wrap time — see devlog) and pet-homepage iOS (goal 6/6; feature run 4/7 verified before the `disabled`-assertion and self-contained-scenario fixes landed). Hooks export + run like CI; in-app assertions auto-retry like Playwright `expect`; Watch mode shows targets; read-only mode blocks writes and is built into exported specs. ADR: `docs/decisions/0001`.
+**State (2026-10-11):** `main` pushed at the CI fixes; 277 tests green. Steps → **Goal mode** → **Feature mode** all work end to end. Goal runs keep one warm Claude process (Sonnet 5.5, `/clear` between rounds); deps updated (agent-sdk 0.3, Electron 44, Playwright 1.64, TS pinned 6.0.3). New: swipe action (runner + both exporters), iOS side-by-side layout, "Set up CI" button (writes `.github/workflows/suziqai-tests.yml`), `SUZIQAI_TIMING=1` timing logs. Proven: pet-homepage CareTeam 8/8 in Xcode (pushed on its branch `fix/care-team-row-refresh`, no PR yet); TPS prod read-only feature run 4/8 verified (nothing committed to tps-web, by design).
 
 **Next:**
-1. Re-run the pet-homepage "care team" feature after the merges (expect the 3 stuck scenarios to pass); export and run the XCUITests; commit the suite to `pet-homepage` branch `test/suziqai-journeys`.
-2. CI + reports: GitHub Actions workflow per repo (nightly + on push) running the exported suites with the Playwright HTML report / `xcodebuild` results as private artifacts; then a "Set up CI" action in suziQai that writes it.
-3. Speed: goal rounds are Claude calls (~10–20s each). Try `SUZIQAI_GOAL_MODEL=claude-sonnet-5-5`, bigger batches per round, parallel simulators.
+1. Open the pet-homepage PR for `fix/care-team-row-refresh` (its CI workflow only runs on PRs/main/nightly; may overlap the existing `ios-tests.yml`).
+2. Speed: steps are ~56% of a goal run, mostly XCUITest idle waits (fill ~3.1s, tap ~1.5s); the next lever is parallel simulators per scenario.
+3. TPS stuck scenarios: Clear All popover, New JO dialog state, "More for this job order" missing on prod. iOS `{{env}}` secrets aren't supported in XCUITest export yet.
 
 **Gotchas:**
-- Launch for automation: `SUZIQAI_AUTO_APPROVE=1 SUZIQAI_NO_RESTORE=1 env -u ANTHROPIC_API_KEY npm run dev` (the `ANTHROPIC_API_KEY` in `~/.zshrc` has no credit; last project may be TPS prod). `SUZIQAI_DEVTOOLS=1` for DevTools.
-- Commit before forking worktree agents (they branch from HEAD, not the working tree) and tell them to symlink `node_modules`.
-- TPS: production only, read-only mode always; creds in `.env.local` (`TPS_TEST_*`); never-click list in memory `project_tps_no_safe_env`. Rotate the TypeSafe key and the TPS test password (both passed through chat).
-- Build the iOS runner first (`npm run ios-runner:build`); Jev key in `.env.local` as `TYPESAFE_API_KEY`.
+- Launch for automation: `SUZIQAI_AUTO_APPROVE=1 SUZIQAI_NO_RESTORE=1 env -u ANTHROPIC_API_KEY npm run dev` (zshrc key has no credit).
+- TypeScript 7 drops the JS compiler API spec-importer uses: stay on ~6.0. After Playwright upgrades run `npx playwright install chromium`.
+- Shut down the suziQai iOS runner before `xcodebuild test` on the same simulator, or it hangs. Never launch pet-homepage without `--uitest` (real CloudKit store).
+- TPS: production, read-only always; never-click list in memory `project_tps_no_safe_env`; creds only in `.env.local`. Rotate the TypeSafe key and TPS test password (both went through chat).
